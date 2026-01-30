@@ -7,18 +7,7 @@ import type { ProjectSummary } from '../../types'
 import { useAuth } from '../../context/AuthContext'
 import { useToast } from '../../context/ToastContext'
 
-// Импорт иконок
-import ProjectsIcon from '../assets/icons/projects.svg'
-import ProfileIcon from '../assets/icons/profile.svg'
-import OptionsIcon from '../assets/icons/options.svg'
-import HelpIcon from '../assets/icons/help.svg'
-import MembersIcon from '../assets/icons/members.svg'
-import VideoIcon from '../assets/icons/video.svg'
-import EditsIcon from '../assets/icons/edits.svg'
-import DeadlineIcon from '../assets/icons/deadline.svg'
-import CommentsIcon from '../assets/icons/comments.svg'
 import logo from '../assets/logo.svg'
-import DeadlineThisWeekIcon from '../assets/icons/deadlinethisweek.svg'
 
 const Home: React.FC = () => {
   const navigate = useNavigate()
@@ -26,37 +15,6 @@ const Home: React.FC = () => {
   const { showToast } = useToast()
   const [projects, setProjects] = useState<ProjectSummary[]>([])
   const [loading, setLoading] = useState(true)
-
-  const menuItems = [
-    {
-      id: 1,
-      title: 'Проекты',
-      path: '/dashboard',
-      color: 'var(--accent-primary)',
-      icon: ProjectsIcon
-    },
-    {
-      id: 2,
-      title: 'Профиль',
-      path: '/profile',
-      color: 'var(--link-content)',
-      icon: ProfileIcon
-    },
-    {
-      id: 3,
-      title: 'Настройки',
-      path: '/settings',
-      color: 'var(--ui-assist-200)',
-      icon: OptionsIcon
-    },
-    {
-      id: 4,
-      title: 'Помощь',
-      path: '/help',
-      color: 'var(--success)',
-      icon: HelpIcon
-    }
-  ]
 
   useEffect(() => {
     let isMounted = true
@@ -109,41 +67,11 @@ const Home: React.FC = () => {
       <Header
         title="Добро пожаловать"
         subtitle={auth.user?.nickname || 'Пользователь'}
-        showUserInfo={true}
-        showLogoutButton={true}
+        showUserInfo={false}
+        showLogoutButton={false}
       />
 
-      <div className="home-layout">
-        <aside className="home-sidebar">
-          <div className="sidebar-title">Навигация</div>
-          <button className="sidebar-btn sidebar-cta" onClick={() => navigate('/dashboard')}>
-            <span className="sidebar-icon">+</span>
-            <span>Создать</span>
-          </button>
-          {menuItems.filter(item => item.title !== 'Профиль').map(item => (
-            <button
-              key={item.id}
-              className="sidebar-btn"
-              onClick={() => navigate(item.path)}
-            >
-              <span className="sidebar-icon">
-                <img src={item.icon} alt={item.title} />
-              </span>
-              <span>{item.title}</span>
-            </button>
-          ))}
-          <button
-            className="sidebar-btn sidebar-bottom"
-            onClick={() => navigate('/profile')}
-          >
-            <span className="sidebar-icon">
-              <img src={ProfileIcon} alt="Профиль" />
-            </span>
-            <span>Профиль</span>
-          </button>
-        </aside>
-
-        <main className="home-main">
+      <main className="home-main">
           <section className="hero">
             <div className="hero-logo">
               <img src={logo} alt="SyncHub" />
@@ -202,8 +130,7 @@ const Home: React.FC = () => {
               </div>
             </div>
           </section>
-        </main>
-      </div>
+      </main>
     </div>
   )
 }

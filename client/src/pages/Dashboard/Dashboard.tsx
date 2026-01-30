@@ -103,8 +103,8 @@ const Dashboard: React.FC = () => {
      <Header
          title="Мои проекты"
         showHomeButton={true}
-       showUserInfo={true}
-           showLogoutButton={true}
+       showUserInfo={false}
+           showLogoutButton={false}
       />
 
       <main className="dashboard-main">

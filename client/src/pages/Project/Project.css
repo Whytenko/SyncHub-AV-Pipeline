@@ -47,7 +47,7 @@
 .play-icon {
   width: 28px;
   height: 28px;
-  filter: invert(1) brightness(2);
+  filter: var(--icon-filter);
 }
 
 .time-display {
@@ -120,7 +120,7 @@
 .marker-icon {
   width: 20px;
   height: 20px;
-  filter: invert(1) brightness(2);
+  filter: var(--icon-filter);
 }
 
 .timeline-cursor {
@@ -190,12 +190,12 @@
 .add-marker-icon {
   width: 20px;
   height: 20px;
-  filter: invert(0.8) brightness(1.5);
+  filter: var(--icon-filter);
   transition: all 0.3s ease;
 }
 
 .add-marker-btn:hover .add-marker-icon {
-  filter: invert(1) brightness(2);
+  filter: var(--icon-filter);
 }
 
 /* Легенда маркеров */
@@ -350,7 +350,7 @@
 }
 
 .media-item:hover .media-icon img {
-  filter: invert(1) brightness(2);
+  filter: var(--icon-filter);
 }
 
 .media-icon {
@@ -365,7 +365,7 @@
 .media-icon img {
   width: 28px;
   height: 28px;
-  filter: invert(0.7) brightness(1.5);
+  filter: var(--icon-filter);
   transition: all 0.3s ease;
 }
 
@@ -416,12 +416,12 @@
 .upload-icon {
   width: 20px;
   height: 20px;
-  filter: invert(0.7) brightness(1.5);
+  filter: var(--icon-filter);
   transition: all 0.3s ease;
 }
 
 .upload-btn:hover .upload-icon {
-  filter: invert(1) brightness(2);
+  filter: var(--icon-filter);
 }
 
 /* Центральная колонка - Превью */
@@ -453,7 +453,7 @@
   width: 64px;
   height: 64px;
   margin-bottom: 16px;
-  filter: invert(0.7) brightness(1.5);
+  filter: var(--icon-filter);
 }
 
 .video-placeholder-text {
@@ -595,12 +595,12 @@
 .reply-icon {
   width: 16px;
   height: 16px;
-  filter: invert(0.7) brightness(1.5);
+  filter: var(--icon-filter);
   transition: all 0.3s ease;
 }
 
 .reply-btn:hover .reply-icon {
-  filter: invert(1) brightness(2);
+  filter: var(--icon-filter);
 }
 
 .add-comment-btn {
@@ -629,12 +629,12 @@
 .add-comment-icon {
   width: 20px;
   height: 20px;
-  filter: invert(0.8) brightness(1.5);
+  filter: var(--icon-filter);
   transition: all 0.3s ease;
 }
 
 .add-comment-btn:hover .add-comment-icon {
-  filter: invert(1) brightness(2);
+  filter: var(--icon-filter);
 }
 
 /* ==================== */

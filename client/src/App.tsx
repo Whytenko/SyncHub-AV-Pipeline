@@ -11,18 +11,21 @@ import Help from './pages/Help/Help'
 import './App.css'
 import { AuthProvider } from './context/AuthContext'
 import { ToastProvider } from './context/ToastContext'
+import { HintProvider } from './context/HintContext'
 import ProtectedRoute from './components/ProtectedRoute'
 import ErrorBoundary from './components/ErrorBoundary'
 import ErrorReporter from './components/ErrorReporter'
+import AppLayout from './components/AppLayout'
 
 const App: React.FC = () => {
   return (
     <AuthProvider>
       <ToastProvider>
-        <ErrorReporter />
-        <BrowserRouter>
-          <ErrorBoundary>
-            <Routes>
+        <HintProvider>
+          <ErrorReporter />
+          <BrowserRouter>
+            <ErrorBoundary>
+              <Routes>
             <Route path="/" element={<Login />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
@@ -30,7 +33,9 @@ const App: React.FC = () => {
               path="/home"
               element={
                 <ProtectedRoute>
-                  <Home />
+                  <AppLayout>
+                    <Home />
+                  </AppLayout>
                 </ProtectedRoute>
               }
             />
@@ -38,7 +43,9 @@ const App: React.FC = () => {
               path="/dashboard"
               element={
                 <ProtectedRoute>
-                  <Dashboard />
+                  <AppLayout>
+                    <Dashboard />
+                  </AppLayout>
                 </ProtectedRoute>
               }
             />
@@ -46,7 +53,9 @@ const App: React.FC = () => {
               path="/profile"
               element={
                 <ProtectedRoute>
-                  <Profile />
+                  <AppLayout>
+                    <Profile />
+                  </AppLayout>
                 </ProtectedRoute>
               }
             />
@@ -54,7 +63,9 @@ const App: React.FC = () => {
               path="/settings"
               element={
                 <ProtectedRoute>
-                  <Settings />
+                  <AppLayout>
+                    <Settings />
+                  </AppLayout>
                 </ProtectedRoute>
               }
             />
@@ -62,7 +73,9 @@ const App: React.FC = () => {
               path="/help"
               element={
                 <ProtectedRoute>
-                  <Help />
+                  <AppLayout>
+                    <Help />
+                  </AppLayout>
                 </ProtectedRoute>
               }
             />
@@ -75,9 +88,10 @@ const App: React.FC = () => {
               }
             />
             <Route path="*" element={<Navigate to="/home" replace />} />
-            </Routes>
-          </ErrorBoundary>
-        </BrowserRouter>
+              </Routes>
+            </ErrorBoundary>
+          </BrowserRouter>
+        </HintProvider>
       </ToastProvider>
     </AuthProvider>
   )

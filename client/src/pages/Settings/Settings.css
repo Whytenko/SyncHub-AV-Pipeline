@@ -32,14 +32,42 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: rgba(0, 0, 0, 0.2);
+  background: transparent;
   padding: 12px 16px;
   border-radius: 12px;
+  border: 1px solid var(--border-muted);
 }
 
 .settings-item input[type="checkbox"] {
-  width: 18px;
-  height: 18px;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 1px solid var(--border-strong);
+  background: transparent;
+  display: inline-grid;
+  place-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.settings-item input[type="checkbox"]::after {
+  content: '';
+  width: 8px;
+  height: 5px;
+  border-left: 2px solid #000;
+  border-bottom: 2px solid #000;
+  transform: rotate(-45deg) scale(0);
+  transition: transform 0.15s ease;
+}
+
+.settings-item input[type="checkbox"]:checked {
+  background: #ffffff;
+  border-color: #ffffff;
+}
+
+.settings-item input[type="checkbox"]:checked::after {
+  transform: rotate(-45deg) scale(1);
 }
 
 .settings-meta {

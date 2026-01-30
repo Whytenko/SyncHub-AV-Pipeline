@@ -240,12 +240,12 @@
 .stat-icon img {
   width: 22px;  /* Увеличен с 16px */
   height: 22px; /* Увеличен с 16px */
-  filter: invert(0.7) brightness(1.5);
+  filter: var(--icon-filter);
   transition: all 0.3s ease;
 }
 
 .project-card:hover .stat-icon img {
-  filter: invert(1) brightness(2);
+  filter: var(--icon-filter);
 }
 
 .stat-text {
@@ -282,12 +282,12 @@
 .deadline-icon img {
   width: 100%;
   height: 100%;
-  filter: invert(1) brightness(2);
+  filter: var(--icon-filter);
   transition: all 0.3s ease;
 }
 
 .project-card:hover .deadline-icon img {
-  filter: invert(1) brightness(2);
+  filter: var(--icon-filter);
 }
 
 .project-deadline strong {
@@ -395,7 +395,7 @@
 .create-icon {
   width: 28px;  /* Увеличен с 20px */
   height: 28px; /* Увеличен с 20px */
-  filter: invert(0) brightness(0);
+  filter: var(--icon-filter);
   transition: all 0.3s ease;
 }
 

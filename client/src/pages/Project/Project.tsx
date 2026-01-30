@@ -471,10 +471,10 @@ const ProjectPage: React.FC = () => {
         backButtonPath="/dashboard"
         backButtonIcon={BackToProjectIcon}
         showHomeButton={true}
-        showUserInfo={true}
+        showUserInfo={false}
         showExportButton={true}
         showSettingsButton={true}
-        showLogoutButton={true}
+        showLogoutButton={false}
         teamCount={Array.isArray(project.members) ? project.members.length : 0}
         onExportClick={handleExport}
         onSettingsClick={() => setShowProjectSettings(true)}

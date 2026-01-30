@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import './Header.css';
 import logo from '../assets/logo.svg';
 import { useAuth } from '../../context/AuthContext';
+import { useHint } from '../../context/HintContext';
 
 // Импорт иконок
 import HomeIcon from '../assets/icons/home.svg';
@@ -44,7 +45,7 @@ const Header: React.FC<HeaderProps> = ({
   showExportButton = false,
   showSettingsButton = false,
   showLogoutButton = true,
-  showLogo = true,
+  showLogo = false,
   username,
   teamCount = 0,
   onExportClick,
@@ -53,6 +54,7 @@ const Header: React.FC<HeaderProps> = ({
 }) => {
   const navigate = useNavigate();
   const auth = useAuth();
+  const { hint } = useHint();
   const displayName = username || auth.user?.nickname || 'Пользователь';
 
   const handleBackClick = () => {
@@ -84,20 +86,18 @@ const Header: React.FC<HeaderProps> = ({
         )}
         
         {showBackButton && (
-          <button className="header-btn back-btn" onClick={handleBackClick}>
+          <button className="header-btn back-btn" onClick={handleBackClick} title={backButtonText}>
             {backButtonIcon ? (
-              <img src={backButtonIcon} alt="Назад" className="back-icon" />
+              <img src={backButtonIcon} alt={backButtonText} className="back-icon" />
             ) : (
               <span className="back-arrow">←</span>
             )}
-            <span>{backButtonText}</span>
           </button>
         )}
         
         {showHomeButton && (
-          <button className="header-btn home-btn" onClick={handleHomeClick}>
+          <button className="header-btn home-btn" onClick={handleHomeClick} title="Главная">
             <img src={HomeIcon} alt="Главная" className="home-icon" />
-            <span>Главная</span>
           </button>
         )}
       </div>
@@ -110,6 +110,7 @@ const Header: React.FC<HeaderProps> = ({
 
       {/* ПРАВАЯ ЧАСТЬ: Пользователь и действия */}
       <div className="header-right">
+        <div className="header-hint">{hint || 'Подсказка: наведите на элемент'}</div>
         {teamCount > 0 && (
           <button className="header-btn team-btn" title="Участники команды">
             <img src={MembersIcon} alt="Участники" className="team-icon" />

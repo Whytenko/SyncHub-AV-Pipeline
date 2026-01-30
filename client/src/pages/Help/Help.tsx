@@ -11,8 +11,8 @@ const Help: React.FC = () => {
         backButtonText="Назад"
         backButtonPath="/home"
         showHomeButton={true}
-        showUserInfo={true}
-        showLogoutButton={true}
+        showUserInfo={false}
+        showLogoutButton={false}
       />
 
       <main className="help-main">

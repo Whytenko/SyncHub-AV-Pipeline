@@ -44,7 +44,7 @@
 
 /* Логотип-изображение - уменьшен до высоты кнопок */
 .logo-image {
-  height: 24px !important;
+  height: 32px !important;
   width: auto !important;
   display: block;
   filter: invert(1) brightness(1.2);
@@ -64,11 +64,32 @@
 
 /* Специфичные стили для иконок */
 .back-icon {
-  margin-right: 6px;
+  margin-right: 0;
 }
 
 .home-icon {
-  margin-right: 6px;
+  margin-right: 0;
+}
+
+.home-btn img {
+  filter: invert(0) brightness(0);
+}
+
+.back-btn img {
+  filter: invert(0) brightness(0);
+}
+
+.back-btn .back-arrow {
+  color: #000000;
+}
+
+.home-btn:hover img,
+.back-btn:hover img {
+  filter: invert(0) brightness(0);
+}
+
+.back-btn:hover .back-arrow {
+  color: #000000;
 }
 
 .team-icon {
@@ -126,6 +147,18 @@
   flex: 1;
   min-width: 0;
   justify-content: flex-end;
+}
+
+.header-hint {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-right: 0;
+  margin-left: auto;
+  text-align: right;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 320px;
 }
 
 /* Общие стили для всех кнопок */

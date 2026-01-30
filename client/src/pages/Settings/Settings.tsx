@@ -18,6 +18,7 @@ const defaultPrefs: Preferences = {
 const Settings: React.FC = () => {
   const { showToast } = useToast();
   const [prefs, setPrefs] = useState<Preferences>(defaultPrefs);
+  const [theme, setTheme] = useState<'dark' | 'light'>('dark');
 
   useEffect(() => {
     const saved = localStorage.getItem('synchub_prefs');
@@ -28,6 +29,12 @@ const Settings: React.FC = () => {
         setPrefs(defaultPrefs);
       }
     }
+  }, []);
+
+  useEffect(() => {
+    const savedTheme = (localStorage.getItem('synchub_theme') as 'dark' | 'light') || 'dark';
+    setTheme(savedTheme);
+    document.documentElement.setAttribute('data-theme', savedTheme);
   }, []);
 
   const updatePrefs = (next: Partial<Preferences>) => {
@@ -42,6 +49,14 @@ const Settings: React.FC = () => {
     showToast('Локальные настройки очищены', 'success');
   };
 
+  const toggleTheme = () => {
+    const next = theme === 'dark' ? 'light' : 'dark';
+    setTheme(next);
+    localStorage.setItem('synchub_theme', next);
+    document.documentElement.setAttribute('data-theme', next);
+    showToast(`Тема: ${next === 'dark' ? 'тёмная' : 'светлая'}`, 'success');
+  };
+
   return (
     <div className="settings-page">
       <Header
@@ -50,14 +65,22 @@ const Settings: React.FC = () => {
         backButtonText="Назад"
         backButtonPath="/home"
         showHomeButton={true}
-        showUserInfo={true}
-        showLogoutButton={true}
+        showUserInfo={false}
+        showLogoutButton={false}
       />
 
       <main className="settings-main">
         <div className="settings-card">
           <h2>Персональные предпочтения</h2>
           <div className="settings-list">
+            <label className="settings-item">
+              <span>Светлая тема</span>
+              <input
+                type="checkbox"
+                checked={theme === 'light'}
+                onChange={toggleTheme}
+              />
+            </label>
             <label className="settings-item">
               <span>Уведомления о событиях</span>
               <input

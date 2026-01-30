@@ -11,7 +11,6 @@ import type { ProjectSummary } from '../../types'
 
 const Profile: React.FC = () => {
   const navigate = useNavigate()
-  const [isEditing] = useState(true)
   const { user, setUser, logout } = useAuth()
   const { showToast } = useToast()
   const [profile, setProfile] = useState({
@@ -22,6 +21,15 @@ const Profile: React.FC = () => {
     avatar: '👤',
     nickname: ''
   })
+  const [originalProfile, setOriginalProfile] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    role: '',
+    avatar: '👤',
+    nickname: ''
+  })
+  const [heroEditable, setHeroEditable] = useState(false)
   const [showPasswordModal, setShowPasswordModal] = useState(false)
   const [showAvatarModal, setShowAvatarModal] = useState(false)
   const [passwordForm, setPasswordForm] = useState({ currentPassword: '', newPassword: '' })
@@ -34,14 +42,16 @@ const Profile: React.FC = () => {
   
   useEffect(() => {
     if (user) {
-      setProfile({
+      const nextProfile = {
         firstName: user.firstName,
         lastName: user.lastName,
         email: user.email,
         role: user.role,
         avatar: user.avatar || '👤',
         nickname: user.nickname
-      })
+      }
+      setProfile(nextProfile)
+      setOriginalProfile(nextProfile)
     }
   }, [user])
 
@@ -69,8 +79,15 @@ const Profile: React.FC = () => {
         avatar: profile.avatar
       })
       setUser(response.user)
+      setOriginalProfile({
+        firstName: response.user.firstName,
+        lastName: response.user.lastName,
+        email: response.user.email,
+        role: response.user.role,
+        avatar: response.user.avatar || '👤',
+        nickname: response.user.nickname
+      })
       showToast('Профиль обновлен', 'success')
-      setIsEditing(false)
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Не удалось обновить профиль'
       showToast(message, 'error')
@@ -111,10 +128,15 @@ const Profile: React.FC = () => {
     : '—'
 
   const activeProjects = projects.slice(0, 3)
-  const completedProjects = projects.filter((project) => project.deadline && new Date(project.deadline) < new Date())
-  const favoriteComments = projects
-    .flatMap((project) => project.commentsCount > 0 ? [{ project: project.name, count: project.commentsCount }] : [])
-    .slice(0, 2)
+
+  const isDirty =
+    profile.firstName !== originalProfile.firstName ||
+    profile.lastName !== originalProfile.lastName ||
+    profile.email !== originalProfile.email ||
+    profile.role !== originalProfile.role ||
+    profile.avatar !== originalProfile.avatar
+
+  const displayName = `${profile.firstName} ${profile.lastName}`.trim() || profile.nickname || 'Пользователь'
 
   const handleCreateProject = async () => {
     if (!createData.name.trim()) {
@@ -142,39 +164,56 @@ const Profile: React.FC = () => {
 
   return (
     <div className="profile-page">
-     <Header
+      <Header
         title="Профиль"
         showBackButton={true}
         backButtonText="К проектам"
         backButtonPath="/dashboard"
         showHomeButton={true}
-        showUserInfo={true}
-        showLogoutButton={true}
+        showUserInfo={false}
+        showLogoutButton={false}
       />
 
       <main className="profile-main">
-        <div className="profile-layout">
-          <aside className="profile-sidebar">
-            <div className="profile-photo">{profile.avatar}</div>
-            <button className="photo-btn" onClick={() => setShowAvatarModal(true)}>
-              Заменить фото
-            </button>
-            <div className="profile-name">{profile.nickname || 'Пользователь'}</div>
-            <div className="profile-role">{profile.role || 'Участник'}</div>
-            <div className="sidebar-actions">
-              <button className="secondary-btn" onClick={handleSaveProfile}>
-                Сохранить
-              </button>
-              <button className="secondary-btn" onClick={() => setShowPasswordModal(true)}>
-                Пароль
-              </button>
-              <button className="secondary-btn" onClick={() => logout().finally(() => navigate('/'))}>
-                Выйти
-              </button>
-            </div>
-          </aside>
-
           <section className="profile-content">
+            <div className="profile-section profile-hero">
+              <div
+                className={`profile-photo ${heroEditable ? 'editable' : ''}`}
+                onClick={() => heroEditable && setShowAvatarModal(true)}
+              >
+                {profile.avatar}
+              </div>
+              <div className="profile-hero-info">
+                {heroEditable ? (
+                  <div className="profile-hero-inputs">
+                    <input
+                      className="profile-input"
+                      placeholder="Имя"
+                      value={profile.firstName}
+                      onChange={(e) => setProfile({ ...profile, firstName: e.target.value })}
+                    />
+                    <input
+                      className="profile-input"
+                      placeholder="Фамилия"
+                      value={profile.lastName}
+                      onChange={(e) => setProfile({ ...profile, lastName: e.target.value })}
+                    />
+                  </div>
+                ) : (
+                  <div className="profile-name">{displayName}</div>
+                )}
+                <div className="profile-role">{profile.role || 'Участник'}</div>
+              </div>
+              <div className="profile-hero-actions">
+                <button
+                  className="secondary-btn"
+                  onClick={() => setHeroEditable((prev) => !prev)}
+                >
+                  {heroEditable ? 'Готово' : 'Изменить'}
+                </button>
+              </div>
+            </div>
+
             <div className="profile-section">
               <div className="section-title">Профиль</div>
               <div className="profile-grid">
@@ -221,6 +260,23 @@ const Profile: React.FC = () => {
                   </select>
                 </div>
               </div>
+              {isDirty && (
+                <div className="profile-save">
+                  <button className="primary-btn" onClick={handleSaveProfile}>
+                    Сохранить
+                  </button>
+                </div>
+              )}
+            </div>
+
+            <div className="profile-section">
+              <div className="section-title">Конфиденциальность</div>
+              <div className="privacy-row">
+                <div className="profile-value">Пароль: ••••••••</div>
+                <button className="secondary-btn" onClick={() => setShowPasswordModal(true)}>
+                  Изменить пароль
+                </button>
+              </div>
             </div>
 
             <div className="profile-section">
@@ -251,7 +307,6 @@ const Profile: React.FC = () => {
               </div>
             </div>
           </section>
-        </div>
       </main>
 
       <Modal
