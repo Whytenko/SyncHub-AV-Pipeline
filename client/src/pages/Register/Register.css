@@ -1,0 +1,299 @@
+/* Register.css */
+
+.register-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, var(--bg-core-800) 0%, var(--bg-core-700) 100%);
+  padding: 20px;
+}
+
+.register-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  max-width: 980px;
+}
+
+.register-card {
+  width: 100%;
+  min-height: 380px;
+  background: var(--bg-core-600);
+  border: 1px solid var(--border-muted);
+  border-radius: 25px;
+  padding: 40px 36px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(10px);
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 25px; /* Отступ для футера */
+}
+
+/* Хедер с логотипом */
+.register-header {
+  text-align: left;
+  margin-bottom: 30px;
+}
+
+.register-logo {
+  width: 64px;
+  display: block;
+}
+
+/* Контейнер с двумя колонками */
+.register-content {
+  display: flex;
+  flex: 1;
+  gap: 30px;
+}
+
+/* Левая часть - заголовки */
+.register-left {
+  flex: 1;
+  min-width: 300px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+}
+
+.register-title {
+  font-size: 32px;
+  font-weight: 500;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+  text-align: left;
+}
+
+.register-subtitle {
+  color: var(--text-muted);
+  text-align: left;
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+/* Правая часть - форма */
+.register-right {
+  flex: 1;
+  min-width: 400px;
+  display: flex;
+  flex-direction: column;
+}
+
+.register-form {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.step-content {
+  margin-bottom: 24px;
+  flex: 1;
+}
+
+/* Общие стили для полей ввода */
+.form-input {
+  width: 100%;
+  padding: 14px 16px;
+  font-size: 16px;
+  background: var(--bg-core-500);
+  border: 1px solid var(--border-muted);
+  border-radius: 8px;
+  color: var(--text-primary);
+  transition: all 0.3s ease;
+  box-sizing: border-box;
+  margin-bottom: 0;
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 3px rgba(255, 57, 26, 0.1);
+}
+
+/* Вертикальное расположение полей для первого шага */
+.input-group-vertical {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Строка с датой рождения (день, месяц, год) */
+.date-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+/* Строка с полом */
+.gender-row {
+  width: 100%;
+}
+
+/* Стили для всех select */
+select.form-input {
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23888888' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 16px center;
+  background-size: 16px;
+  padding-right: 40px;
+  cursor: pointer;
+}
+
+/* Стили для опций в выпадающих списках */
+select.form-input option {
+  background: var(--bg-core-600);
+  color: var(--text-primary);
+  padding: 10px;
+}
+
+select.form-input:focus option {
+  background: var(--bg-core-500);
+}
+
+/* Для полей на 3 и 4 шагах */
+.single-input {
+  margin-bottom: 16px;
+}
+
+.single-input:last-child {
+  margin-bottom: 0;
+}
+
+/* Кнопки */
+.button-group {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: auto;
+}
+
+.primary-btn {
+  background: var(--accent-primary);
+  color: white;
+  border: none;
+  padding: 12px 28px;
+  border-radius: 25px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  min-width: 90px;
+}
+
+.primary-btn:hover {
+  background: var(--accent-primary-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(255, 57, 26, 0.3);
+}
+
+/* Футер - теперь вне карточки */
+.register-footer {
+  display: flex;
+  justify-content: right;
+  gap: 24px;
+  width: 100%;
+  padding-right: 10px;
+
+}
+
+.register-footer a {
+  color: var(--text-muted);
+  font-size: 12px;
+  text-decoration: none;
+  transition: color 0.3s ease;
+}
+
+.register-footer a:hover {
+  color: var(--link-content);
+  text-decoration: underline;
+}
+
+/* Адаптивность */
+@media (max-width: 1200px) {
+  .register-container {
+    max-width: 90%;
+  }
+  
+  .register-card {
+    min-height: auto;
+  }
+}
+
+@media (max-width: 992px) {
+  .register-content {
+    flex-direction: column;
+    gap: 40px;
+  }
+  
+  .register-left, .register-right {
+    min-width: 100%;
+  }
+  
+  .date-row {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .register-card {
+    padding: 32px 24px;
+    margin-bottom: 32px;
+  }
+  
+  .date-row {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  
+  .button-group {
+    flex-direction: column;
+  }
+  
+  .button-group button {
+    width: 100%;
+    min-width: auto;
+  }
+  
+  .register-footer {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .register-card {
+    padding: 24px 20px;
+    border-radius: 16px;
+    margin-bottom: 24px;
+  }
+  
+  .register-header {
+    margin-bottom: 32px;
+  }
+  
+  .register-title {
+    font-size: 24px;
+  }
+  
+  .register-subtitle {
+    font-size: 15px;
+  }
+  
+  .form-input {
+    padding: 12px 14px;
+    font-size: 15px;
+  }
+  
+  .register-footer {
+    gap: 12px;
+  }
+  
+  .register-footer a {
+    font-size: 11px;
+  }
+}

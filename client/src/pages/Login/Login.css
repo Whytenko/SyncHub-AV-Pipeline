@@ -1,0 +1,262 @@
+/* Login.css */
+
+.login-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, var(--bg-core-800) 0%, var(--bg-core-700) 100%);
+  padding: 20px;
+}
+
+.login-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  max-width: 980px;
+}
+
+.login-card {
+  width: 100%;
+  min-height: 380px;
+  background: var(--bg-core-600);
+  border: 1px solid var(--border-muted);
+  border-radius: 25px;
+  padding: 40px 36px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(10px);
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 25px;
+}
+
+/* Хедер с логотипом */
+.login-header {
+  text-align: left;
+  margin-bottom: 30px;
+}
+
+.login-logo {
+  width: 64px;
+  display: block;
+}
+
+/* Контейнер с двумя колонками */
+.login-content {
+  display: flex;
+  flex: 1;
+  gap: 30px;
+}
+
+/* Левая часть - заголовки */
+.login-left {
+  flex: 1;
+  min-width: 300px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+}
+
+.login-title {
+  font-size: 32px;
+  font-weight: 500;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+  text-align: left;
+}
+
+.login-subtitle {
+  color: var(--text-muted);
+  text-align: left;
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+/* Правая часть - форма */
+.login-right {
+  flex: 1;
+  min-width: 400px;
+  display: flex;
+  flex-direction: column;
+}
+
+.login-form {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.login-fields {
+  margin-bottom: 24px;
+  flex: 1;
+}
+
+/* Общие стили для полей ввода */
+.login-input {
+  width: 100%;
+  padding: 14px 16px;
+  font-size: 16px;
+  background: var(--bg-core-500);
+  border: 1px solid var(--border-muted);
+  border-radius: 8px;
+  color: var(--text-primary);
+  transition: all 0.3s ease;
+  box-sizing: border-box;
+  margin-bottom: 16px;
+}
+
+.login-input:focus {
+  outline: none;
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 3px rgba(255, 57, 26, 0.1);
+}
+
+.login-input:last-child {
+  margin-bottom: 0;
+}
+
+/* Кнопки */
+.login-button-group {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: auto;
+}
+
+.primary-btn {
+  background: #ffffff;
+  color: #000000;
+  border: none;
+  padding: 12px 28px;
+  border-radius: 25px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  min-width: 90px;
+}
+
+.primary-btn:hover {
+  background: #f2f2f2;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.secondary-btn {
+  background: transparent;
+  color: var(--text-primary);
+  border: 1px solid var(--border-muted);
+  padding: 12px 28px;
+  border-radius: 25px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  min-width: 90px;
+}
+
+.secondary-btn:hover {
+  background: var(--bg-core-500);
+  border-color: var(--border-soft);
+  transform: translateY(-2px);
+}
+
+/* Футер - вне карточки */
+.login-footer {
+  display: flex;
+  justify-content: right;
+  gap: 24px;
+  width: 100%;
+  padding-right: 10px;
+}
+
+.login-footer a {
+  color: var(--text-muted);
+  font-size: 12px;
+  text-decoration: none;
+  transition: color 0.3s ease;
+}
+
+.login-footer a:hover {
+  color: var(--link-content);
+  text-decoration: underline;
+}
+
+/* Адаптивность */
+@media (max-width: 1200px) {
+  .login-container {
+    max-width: 90%;
+  }
+  
+  .login-card {
+    min-height: auto;
+  }
+}
+
+@media (max-width: 992px) {
+  .login-content {
+    flex-direction: column;
+    gap: 40px;
+  }
+  
+  .login-left, .login-right {
+    min-width: 100%;
+  }
+}
+
+@media (max-width: 768px) {
+  .login-card {
+    padding: 32px 24px;
+    margin-bottom: 32px;
+  }
+  
+  .login-button-group {
+    flex-direction: column;
+    gap: 12px;
+  }
+  
+  .login-button-group button {
+    width: 100%;
+    min-width: auto;
+  }
+  
+  .login-footer {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .login-card {
+    padding: 24px 20px;
+    border-radius: 16px;
+    margin-bottom: 24px;
+  }
+  
+  .login-header {
+    margin-bottom: 32px;
+  }
+  
+  .login-title {
+    font-size: 24px;
+  }
+  
+  .login-subtitle {
+    font-size: 15px;
+  }
+  
+  .login-input {
+    padding: 12px 14px;
+    font-size: 15px;
+  }
+  
+  .login-footer {
+    gap: 12px;
+  }
+  
+  .login-footer a {
+    font-size: 11px;
+  }
+}

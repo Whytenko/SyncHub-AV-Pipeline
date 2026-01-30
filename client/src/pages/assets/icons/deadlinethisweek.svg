@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="_Слой_2" data-name="Слой 2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12.03 35.83">
+  <defs>
+    <style>
+      .cls-1 {
+        fill: none;
+        stroke: #575756;
+        stroke-linecap: round;
+        stroke-miterlimit: 10;
+        stroke-width: 2px;
+      }
+    </style>
+  </defs>
+  <g id="deadlinethisweek">
+    <circle class="cls-1" cx="6.01" cy="31.14" r="3.7"/>
+    <path class="cls-1" d="M6.06,23.72h0c-1.69,0-3.1-1.27-3.28-2.95L1.01,3.87c-.16-1.53,1.04-2.87,2.58-2.87h4.78c1.57,0,2.8,1.36,2.63,2.93l-1.8,16.96c-.17,1.61-1.53,2.83-3.15,2.83Z"/>
+  </g>
+</svg>
