@@ -45,6 +45,7 @@ const buildLocalProject = (payload: { name: string; description?: string; deadli
     directorNotes: '',
     markers: [],
     bodyMarkers: [],
+    bodySilhouettes: [{ id: 1, name: 'Человек 1' }],
     locations: [],
     mediaFiles: [],
     documents: [],

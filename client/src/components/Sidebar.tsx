@@ -39,7 +39,7 @@ const Sidebar: React.FC = () => {
         <img src={logo} alt="SyncHub" />
       </div>
       <div className="sidebar-title">Навигация</div>
-      <button className="sidebar-btn sidebar-cta" onClick={() => navigate('/dashboard')}>
+      <button className="sidebar-btn sidebar-cta" onClick={() => navigate('/dashboard?create=1')}>
         <span className="sidebar-icon">+</span>
         <span>Создать</span>
       </button>

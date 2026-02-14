@@ -173,7 +173,7 @@ select.form-input:focus option {
 
 .primary-btn {
   background: var(--accent-primary);
-  color: white;
+  color: var(--text-on-accent);
   border: none;
   padding: 12px 28px;
   border-radius: 25px;

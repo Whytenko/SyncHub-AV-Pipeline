@@ -12,6 +12,8 @@
   --ui-depth-400: #1f1f1f;
 
   /* Фоны */
+  --bg-core-300: #1f1f1f;
+  --bg-core-400: #161616;
   --bg-core-500: #0f0f0f;
   --bg-core-600: #0b0b0b;
   --bg-core-700: #090909;
@@ -24,6 +26,7 @@
   --text-primary: #ffffff;
   --text-secondary: #c9c9c9;
   --text-muted: #8a8a8a;
+  --text-on-accent: #0a0a0a;
 
   /* Границы */
   --border-soft: #2a2a2a;
@@ -35,6 +38,24 @@
   --warning: #fbbf24;
   --error: #ef4444;
   --icon-filter: invert(1) brightness(1.2);
+  --icon-filter-on-accent: invert(0) brightness(0);
+
+  /* Тосты */
+  --toast-bg: rgba(15, 15, 18, 0.96);
+  --toast-text: #f5f7ff;
+  --toast-border: rgba(255, 255, 255, 0.16);
+  --toast-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+
+  /* Мобильная нижняя навигация */
+  --mobile-nav-bg: rgba(0, 0, 0, 0.86);
+  --mobile-nav-border: rgba(255, 255, 255, 0.14);
+  --mobile-nav-shadow: 0 -12px 28px rgba(0, 0, 0, 0.45);
+  --mobile-nav-text: rgba(255, 255, 255, 0.72);
+  --mobile-nav-active-bg: rgba(255, 255, 255, 0.11);
+  --mobile-nav-active-border: rgba(255, 255, 255, 0.22);
+  --mobile-nav-icon-filter: invert(1) brightness(1.25);
+  --mobile-primary-nav-height: 46px;
+  --mobile-primary-nav-content-offset: 84px;
 }
 
 :root[data-theme='light'] {
@@ -46,6 +67,8 @@
   --ui-depth-300: #fafafa;
   --ui-depth-400: #f0f0f0;
 
+  --bg-core-300: #ffffff;
+  --bg-core-400: #f8f8f8;
   --bg-core-500: #ffffff;
   --bg-core-600: #f9f9f9;
   --bg-core-700: #f5f5f5;
@@ -57,12 +80,27 @@
   --text-primary: #111111;
   --text-secondary: #333333;
   --text-muted: #666666;
+  --text-on-accent: #ffffff;
 
   --border-soft: #d9d9d9;
   --border-muted: rgba(0, 0, 0, 0.08);
   --border-strong: rgba(0, 0, 0, 0.2);
 
   --icon-filter: invert(0) brightness(0.2);
+  --icon-filter-on-accent: invert(1) brightness(2);
+
+  --toast-bg: rgba(255, 255, 255, 0.96);
+  --toast-text: #111111;
+  --toast-border: rgba(0, 0, 0, 0.14);
+  --toast-shadow: 0 10px 24px rgba(0, 0, 0, 0.12);
+
+  --mobile-nav-bg: rgba(255, 255, 255, 0.9);
+  --mobile-nav-border: rgba(0, 0, 0, 0.12);
+  --mobile-nav-shadow: 0 -12px 28px rgba(0, 0, 0, 0.15);
+  --mobile-nav-text: rgba(0, 0, 0, 0.68);
+  --mobile-nav-active-bg: rgba(0, 0, 0, 0.08);
+  --mobile-nav-active-border: rgba(0, 0, 0, 0.16);
+  --mobile-nav-icon-filter: invert(0) brightness(0.2);
 }
 
 * {
@@ -228,12 +266,12 @@ input::placeholder {
 }
 
 .toast {
-  background: rgba(20, 10, 12, 0.95);
-  border: 1px solid var(--border-muted);
-  color: var(--text-primary);
+  background: var(--toast-bg);
+  border: 1px solid var(--toast-border);
+  color: var(--toast-text);
   padding: 10px 14px;
   border-radius: 12px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  box-shadow: var(--toast-shadow);
   min-width: 220px;
 }
 
@@ -249,6 +287,21 @@ input::placeholder {
   border-color: rgba(8, 176, 217, 0.5);
 }
 
+@media (max-width: 992px) {
+  .toast-container {
+    top: calc(10px + env(safe-area-inset-top));
+    right: 12px;
+    left: 12px;
+    bottom: auto;
+    z-index: 1300;
+  }
+
+  .toast {
+    min-width: 0;
+    width: 100%;
+  }
+}
+
 .primary-btn,
 .secondary-btn {
   padding: 8px 12px;
@@ -260,7 +313,7 @@ input::placeholder {
 
 .primary-btn {
   background: var(--accent-primary);
-  color: #fff;
+  color: var(--text-on-accent);
 }
 
 .primary-btn:hover {

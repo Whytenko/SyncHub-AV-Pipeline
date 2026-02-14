@@ -102,7 +102,7 @@
 
 .filter-btn.active {
   background: var(--accent-primary);
-  color: white;
+  color: var(--text-on-accent);
   border-color: var(--accent-primary);
 }
 
@@ -395,7 +395,7 @@
 .create-icon {
   width: 28px;  /* Увеличен с 20px */
   height: 28px; /* Увеличен с 20px */
-  filter: var(--icon-filter);
+  filter: invert(0) brightness(0);
   transition: all 0.3s ease;
 }
 
@@ -469,19 +469,99 @@
   }
 }
 
+@media (max-width: 992px) {
+  .dashboard-main {
+    padding: 20px 14px;
+  }
+
+  .projects-grid {
+    grid-template-columns: 1fr;
+    gap: 14px;
+    margin-bottom: 22px;
+  }
+
+  .project-card {
+    background: linear-gradient(165deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.01));
+    border: 1px solid var(--border-muted);
+    border-radius: 18px;
+    padding: 16px;
+    min-height: 0;
+    box-shadow: 0 10px 22px rgba(0, 0, 0, 0.22);
+  }
+
+  .project-card:hover {
+    border-color: var(--border-strong);
+    transform: none;
+    box-shadow: 0 10px 22px rgba(0, 0, 0, 0.22);
+  }
+
+  .project-header {
+    margin-bottom: 14px;
+    gap: 10px;
+  }
+
+  .project-name {
+    font-size: 17px;
+    min-height: 0;
+    max-height: none;
+  }
+
+  .project-stats {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--border-muted);
+    border-radius: 12px;
+    padding: 10px 12px;
+    margin-bottom: 12px;
+    gap: 8px;
+  }
+
+  .project-deadline {
+    background: var(--bg-core-500);
+    border: 1px solid var(--border-muted);
+    border-left: 4px solid var(--accent-primary);
+    border-radius: 10px;
+    padding: 10px 12px;
+    margin-bottom: 12px;
+  }
+
+  .project-actions {
+    gap: 10px;
+  }
+
+  .open-project-btn,
+  .delete-project-btn {
+    min-height: 46px;
+    padding: 11px 12px;
+    font-size: 14px;
+  }
+
+  .delete-project-btn {
+    min-width: 108px;
+  }
+
+  .dashboard-actions {
+    margin-top: 18px;
+  }
+
+  .dashboard-stats {
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+}
+
 @media (max-width: 768px) {
   .dashboard-main {
-    padding: 20px 12px;
+    padding: 18px 12px;
   }
   
   .projects-grid {
     grid-template-columns: 1fr;
-    gap: 16px;
+    gap: 12px;
   }
   
   .project-card {
-    height: auto;
-    min-height: 300px;
+    padding: 14px;
+    border-radius: 16px;
   }
   
   .dashboard-controls {
@@ -497,8 +577,22 @@
     justify-content: center;
   }
   
+  .project-name {
+    font-size: 16px;
+  }
+
+  .project-actions {
+    flex-direction: column;
+  }
+
+  .open-project-btn,
+  .delete-project-btn {
+    width: 100%;
+  }
+
   .stat-item {
     gap: 10px;
+    font-size: 13px;
   }
   
   .stat-icon {
@@ -519,20 +613,40 @@
 
 @media (max-width: 480px) {
   .dashboard-main {
-    padding: 16px 8px;
+    padding: 14px 8px;
   }
   
   .project-card {
-    padding: 16px;
+    padding: 12px;
+    border-radius: 14px;
   }
   
   .project-header {
-    flex-direction: column;
-    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .project-name {
+    font-size: 15px;
   }
   
   .project-badge {
-    align-self: flex-start;
+    font-size: 11px;
+    padding: 5px 10px;
+  }
+
+  .project-stats {
+    padding: 10px;
+  }
+
+  .project-deadline {
+    font-size: 13px;
+    padding: 9px 10px;
+  }
+
+  .open-project-btn,
+  .delete-project-btn {
+    min-height: 44px;
+    font-size: 13px;
   }
   
   .create-project-btn {
@@ -549,6 +663,7 @@
   .stat-item {
     gap: 8px;
     min-height: 24px;
+    font-size: 13px;
   }
   
   .stat-icon {

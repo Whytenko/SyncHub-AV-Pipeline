@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import Header from '../Header/Header'
 import './Dashboard.css'
 import { projectsApi } from '../../api/projects'
@@ -16,6 +16,7 @@ import NewProjectIcon from '../assets/icons/newproject.svg'
 
 const Dashboard: React.FC = () => {
   const navigate = useNavigate()
+  const location = useLocation()
   const { showToast } = useToast()
   const [projects, setProjects] = useState<ProjectSummary[]>([])
   const [loading, setLoading] = useState(true)
@@ -38,6 +39,14 @@ const Dashboard: React.FC = () => {
   useEffect(() => {
     loadProjects()
   }, [])
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search)
+    if (params.get('create') === '1') {
+      setShowCreate(true)
+      navigate('/dashboard', { replace: true })
+    }
+  }, [location.search, navigate])
 
   const formatRelative = (date: string) => {
     const diff = Date.now() - new Date(date).getTime()
@@ -68,7 +77,7 @@ const Dashboard: React.FC = () => {
     }
     setCreating(true)
     try {
-      const response = await projectsApi.create({
+      await projectsApi.create({
         name: createData.name.trim(),
         description: createData.description.trim(),
         deadline: createData.deadline
@@ -179,7 +188,7 @@ const Dashboard: React.FC = () => {
         <div className="dashboard-actions">
           <button className="create-project-btn" onClick={() => setShowCreate(true)}>
             <img src={NewProjectIcon} alt="Создать проект" className="create-icon" />
-            + Создать новый проект
+            Создать новый проект
           </button>
         </div>
 

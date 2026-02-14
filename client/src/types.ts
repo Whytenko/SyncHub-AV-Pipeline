@@ -53,6 +53,12 @@ export interface BodyMarker {
   comments: ProjectComment[];
   color: string;
   tabId: TabType;
+  personId?: number;
+}
+
+export interface BodySilhouette {
+  id: number;
+  name: string;
 }
 
 export interface Shot {
@@ -100,6 +106,7 @@ export interface Project {
   directorNotes: string;
   markers: ProjectMarker[];
   bodyMarkers: BodyMarker[];
+  bodySilhouettes?: BodySilhouette[];
   locations: Location[];
   mediaFiles: MediaFile[];
   documents: DocumentFile[];

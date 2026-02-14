@@ -5,7 +5,16 @@ import './Project.css';
 import { projectsApi } from '../../api/projects';
 import { useToast } from '../../context/ToastContext';
 import Modal from '../../components/Modal';
-import type { BodyMarker, Location, MediaFile, Project, ProjectComment, ProjectMarker, TabType } from '../../types';
+import type {
+  BodyMarker,
+  BodySilhouette,
+  Location,
+  MediaFile,
+  Project,
+  ProjectComment,
+  ProjectMarker,
+  TabType
+} from '../../types';
 
 // Импорт иконок
 import PlayIcon from '../assets/icons/play.svg';
@@ -24,6 +33,7 @@ import ScenarioIcon from '../assets/icons/scenario.svg';
 import ReplyIcon from '../assets/icons/comments.svg';
 import CostumesIcon from '../assets/icons/costumes.svg';
 import HumanSilhouette from '../assets/icons/human.svg';
+import ActionIcon from '../assets/icons/action.svg';
 
 const tabColors: Record<TabType, string> = {
   script: '#9C27B0',
@@ -39,6 +49,22 @@ const tabNames: Record<TabType, string> = {
   costumes: 'Костюмы',
   makeup: 'Визаж',
   edit: 'Монтаж'
+};
+
+const mobileTabs: Array<{ id: TabType; label: string; icon: string }> = [
+  { id: 'script', label: 'Сценарий', icon: ScenarioIcon },
+  { id: 'director', label: 'Режиссёр', icon: DirectorIcon },
+  { id: 'costumes', label: 'Костюмер', icon: CostumesIcon },
+  { id: 'makeup', label: 'Визажист', icon: MakeupIcon },
+  { id: 'edit', label: 'Монтажер', icon: ActionIcon }
+];
+
+const mobileTabAriaNames: Record<TabType, string> = {
+  script: 'Scenario',
+  director: 'Director',
+  costumes: 'Costumes',
+  makeup: 'Makeup',
+  edit: 'Action'
 };
 
 const iconMap: Record<string, string> = {
@@ -65,6 +91,39 @@ const parseTimeInput = (value: string) => {
   return Number(value);
 };
 
+const sanitizeScriptHtml = (html: string) =>
+  html
+    // Remove hidden bidi-control chars that can flip typing direction.
+    .replace(/[\u200E\u200F\u202A-\u202E\u2066-\u2069]/g, '')
+    // Strip rtl/auto dir attributes from pasted rich text.
+    .replace(/\sdir=(['"]?)(rtl|auto)\1/gi, ' dir="ltr"')
+    // Normalize inline direction styles.
+    .replace(/direction\s*:\s*rtl\s*;?/gi, 'direction:ltr;')
+    .replace(/unicode-bidi\s*:\s*[^;"']+\s*;?/gi, '');
+
+const normalizeSilhouettes = (value: unknown): BodySilhouette[] => {
+  if (!Array.isArray(value)) {
+    return [{ id: 1, name: 'Человек 1' }];
+  }
+
+  const normalized = value
+    .map((item: any, index) => {
+      const rawId = Number(item?.id);
+      const id = Number.isFinite(rawId) && rawId > 0 ? rawId : index + 1;
+      const name = typeof item?.name === 'string' && item.name.trim() ? item.name.trim() : `Человек ${index + 1}`;
+      return { id, name };
+    })
+    .filter((item, index, arr) => arr.findIndex((target) => target.id === item.id) === index)
+    .sort((a, b) => a.id - b.id);
+
+  return normalized.length > 0 ? normalized : [{ id: 1, name: 'Человек 1' }];
+};
+
+const getMarkerPersonId = (marker: BodyMarker) => {
+  const id = Number((marker as any).personId);
+  return Number.isFinite(id) && id > 0 ? id : 1;
+};
+
 const ProjectPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const { showToast } = useToast();
@@ -76,6 +135,7 @@ const ProjectPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabType>('edit');
   const [showAllMarkers, setShowAllMarkers] = useState(true);
   const [scriptText, setScriptText] = useState('');
+  const [initialScriptHtml, setInitialScriptHtml] = useState('');
   const [directorNotes, setDirectorNotes] = useState('');
   const editorRef = useRef<HTMLDivElement>(null);
 
@@ -100,11 +160,24 @@ const ProjectPage: React.FC = () => {
     bodyPart: '',
     x: 50,
     y: 50,
-    tabId: 'costumes' as TabType
+    tabId: 'costumes' as TabType,
+    personId: 1
   });
   const [bodyMarkerEditId, setBodyMarkerEditId] = useState<number | null>(null);
   const [showProjectSettings, setShowProjectSettings] = useState(false);
   const [projectDraft, setProjectDraft] = useState({ name: '', description: '', deadline: '' });
+
+  const normalizeProjectData = (rawProject: Project): Project => {
+    const silhouettes = normalizeSilhouettes((rawProject as any).bodySilhouettes);
+    const bodyMarkersWithPerson = Array.isArray(rawProject.bodyMarkers)
+      ? rawProject.bodyMarkers.map((marker) => ({ ...marker, personId: getMarkerPersonId(marker) }))
+      : [];
+    return {
+      ...rawProject,
+      bodyMarkers: bodyMarkersWithPerson,
+      bodySilhouettes: silhouettes
+    };
+  };
 
   useEffect(() => {
     const loadProject = async () => {
@@ -112,13 +185,16 @@ const ProjectPage: React.FC = () => {
       setLoading(true);
       try {
         const response = await projectsApi.get(id);
-        setProject(response.project);
-        setScriptText(response.project.scriptText || '');
-        setDirectorNotes(response.project.directorNotes || '');
+        const normalizedScript = sanitizeScriptHtml(response.project.scriptText || '');
+        const normalizedProject = normalizeProjectData(response.project);
+        setProject(normalizedProject);
+        setScriptText(normalizedScript);
+        setInitialScriptHtml(normalizedScript);
+        setDirectorNotes(normalizedProject.directorNotes || '');
         setProjectDraft({
-          name: response.project.name || '',
-          description: response.project.description || '',
-          deadline: response.project.deadline || ''
+          name: normalizedProject.name || '',
+          description: normalizedProject.description || '',
+          deadline: normalizedProject.deadline || ''
         });
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Не удалось загрузить проект';
@@ -129,6 +205,13 @@ const ProjectPage: React.FC = () => {
     };
     loadProject();
   }, [id, showToast]);
+
+  useEffect(() => {
+    if (!editorRef.current) return;
+    if (editorRef.current.innerHTML !== initialScriptHtml) {
+      editorRef.current.innerHTML = initialScriptHtml;
+    }
+  }, [initialScriptHtml, project?.id]);
 
   useEffect(() => {
     if (project) {
@@ -144,8 +227,9 @@ const ProjectPage: React.FC = () => {
     if (!project) return;
     try {
       const response = await projectsApi.update(project.id, patch);
-      setProject(response.project);
-      return response.project;
+      const normalizedProject = normalizeProjectData(response.project);
+      setProject(normalizedProject);
+      return normalizedProject;
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Не удалось сохранить изменения';
       showToast(message, 'error');
@@ -154,6 +238,7 @@ const ProjectPage: React.FC = () => {
 
   const markers = project?.markers || [];
   const bodyMarkers = project?.bodyMarkers || [];
+  const bodySilhouettes = normalizeSilhouettes(project?.bodySilhouettes);
   const locations = project?.locations || [];
   const mediaFiles = project?.mediaFiles || [];
   const documents = project?.documents || [];
@@ -165,6 +250,11 @@ const ProjectPage: React.FC = () => {
 
   const resolveMarkerIcon = (marker: ProjectMarker) => {
     return iconMap[marker.icon] || MarkerIcon;
+  };
+
+  const getSilhouetteLabel = (personId: number) => {
+    const person = bodySilhouettes.find((item) => item.id === personId);
+    return person?.name || `Человек ${personId}`;
   };
 
   const handlePlayPause = () => setIsPlaying((prev) => !prev);
@@ -198,19 +288,39 @@ const ProjectPage: React.FC = () => {
   };
 
   const handleEditorInput = () => {
-    if (editorRef.current) {
-      setScriptText(editorRef.current.innerHTML);
+    if (!editorRef.current) return;
+    setScriptText(editorRef.current.innerHTML);
+  };
+
+  const normalizeEditorContent = () => {
+    if (!editorRef.current) return;
+    const normalizedHtml = sanitizeScriptHtml(editorRef.current.innerHTML);
+    if (editorRef.current.innerHTML !== normalizedHtml) {
+      editorRef.current.innerHTML = normalizedHtml;
     }
+    setScriptText(normalizedHtml);
   };
 
   const handleSaveScript = async () => {
-    await saveProject({ scriptText });
+    const currentHtml = editorRef.current ? editorRef.current.innerHTML : scriptText;
+    const normalizedHtml = sanitizeScriptHtml(currentHtml);
+    if (normalizedHtml !== scriptText) {
+      setScriptText(normalizedHtml);
+    }
+    if (editorRef.current && editorRef.current.innerHTML !== normalizedHtml) {
+      editorRef.current.innerHTML = normalizedHtml;
+    }
+    await saveProject({ scriptText: normalizedHtml });
     showToast('Сценарий сохранен', 'success');
   };
 
   const handleAddMarkerToText = async () => {
+    const currentHtml = sanitizeScriptHtml(editorRef.current ? editorRef.current.innerHTML : scriptText);
     const markerLabel = `[Маркер: ${tabNames[activeTab]} / ${formatTime(currentTime)}]`;
-    const nextText = `${scriptText}\n\n${markerLabel}`;
+    const nextText = currentHtml.trim().length > 0 ? `${currentHtml}<br><br>${markerLabel}` : markerLabel;
+    if (editorRef.current) {
+      editorRef.current.innerHTML = nextText;
+    }
     setScriptText(nextText);
     await saveProject({ scriptText: nextText });
     showToast('Маркер добавлен в текст', 'success');
@@ -307,11 +417,56 @@ const ProjectPage: React.FC = () => {
     }
   };
 
+  const handleAddSilhouette = async () => {
+    const lastId = bodySilhouettes.reduce((max, person) => Math.max(max, person.id), 0);
+    const nextSilhouette: BodySilhouette = {
+      id: lastId + 1,
+      name: `Человек ${bodySilhouettes.length + 1}`
+    };
+    const nextSilhouettes = [...bodySilhouettes, nextSilhouette];
+    await saveProject({ bodySilhouettes: nextSilhouettes });
+    showToast('Добавлен новый силуэт', 'success');
+  };
+
+  const handleRemoveSilhouette = async (personId: number) => {
+    if (bodySilhouettes.length <= 1) {
+      showToast('Нельзя удалить последнего человека', 'error');
+      return;
+    }
+
+    const personName = getSilhouetteLabel(personId);
+    const relatedMarkers = bodyMarkers.filter((marker) => getMarkerPersonId(marker) === personId);
+    const confirmed = window.confirm(
+      `Удалить "${personName}"? Будут удалены привязанные маркеры: ${relatedMarkers.length}.`
+    );
+
+    if (!confirmed) return;
+
+    const nextSilhouettes = bodySilhouettes.filter((person) => person.id !== personId);
+    const nextMarkers = bodyMarkers.filter((marker) => getMarkerPersonId(marker) !== personId);
+
+    if (bodyMarkerDraft.personId === personId) {
+      setBodyMarkerDraft((prev) => ({
+        ...prev,
+        personId: nextSilhouettes[0]?.id || 1
+      }));
+      setBodyMarkerEditId(null);
+      setShowBodyMarkerModal(false);
+    }
+
+    await saveProject({
+      bodySilhouettes: nextSilhouettes,
+      bodyMarkers: nextMarkers
+    });
+    showToast(`Удален ${personName}`, 'success');
+  };
+
   const handleAddBodyMarker = async () => {
     if (!bodyMarkerDraft.title.trim()) {
       showToast('Введите название маркера', 'error');
       return;
     }
+    const personId = Math.max(1, Number(bodyMarkerDraft.personId) || 1);
     let updatedMarkers: BodyMarker[] = [];
     if (bodyMarkerEditId) {
       updatedMarkers = bodyMarkers.map((marker) =>
@@ -324,6 +479,7 @@ const ProjectPage: React.FC = () => {
               x: bodyMarkerDraft.x,
               y: bodyMarkerDraft.y,
               tabId: bodyMarkerDraft.tabId,
+              personId,
               color: tabColors[bodyMarkerDraft.tabId]
             }
           : marker
@@ -339,12 +495,21 @@ const ProjectPage: React.FC = () => {
         images: [],
         comments: [],
         color: tabColors[bodyMarkerDraft.tabId],
-        tabId: bodyMarkerDraft.tabId
+        tabId: bodyMarkerDraft.tabId,
+        personId
       };
       updatedMarkers = [...bodyMarkers, newMarker];
     }
     setShowBodyMarkerModal(false);
-    setBodyMarkerDraft({ title: '', description: '', bodyPart: '', x: 50, y: 50, tabId: bodyMarkerDraft.tabId });
+    setBodyMarkerDraft({
+      title: '',
+      description: '',
+      bodyPart: '',
+      x: 50,
+      y: 50,
+      tabId: bodyMarkerDraft.tabId,
+      personId
+    });
     const wasEditing = Boolean(bodyMarkerEditId);
     setBodyMarkerEditId(null);
     await saveProject({ bodyMarkers: updatedMarkers });
@@ -610,9 +775,12 @@ const ProjectPage: React.FC = () => {
                   <div
                     ref={editorRef}
                     className="text-editor-content"
+                    dir="ltr"
                     contentEditable
+                    lang="ru"
+                    suppressContentEditableWarning
                     onInput={handleEditorInput}
-                    dangerouslySetInnerHTML={{ __html: scriptText }}
+                    onBlur={normalizeEditorContent}
                   />
                   <div className="editor-actions">
                     <button className="save-btn" onClick={handleSaveScript}>Сохранить</button>
@@ -740,7 +908,8 @@ const ProjectPage: React.FC = () => {
                                 bodyPart: marker.bodyPart,
                                 x: marker.x,
                                 y: marker.y,
-                                tabId: marker.tabId
+                                tabId: marker.tabId,
+                                personId: getMarkerPersonId(marker)
                               });
                               setBodyMarkerEditId(marker.id);
                               setShowBodyMarkerModal(true);
@@ -749,7 +918,9 @@ const ProjectPage: React.FC = () => {
                             ✏️
                           </button>
                         </div>
-                        <div className="marker-body-part">Часть тела: {marker.bodyPart}</div>
+                        <div className="marker-body-part">
+                          Часть тела: {marker.bodyPart} • {getSilhouetteLabel(getMarkerPersonId(marker))}
+                        </div>
                         <div className="marker-description">{marker.description}</div>
                         <div className="marker-images">
                           {marker.images.length === 0 ? (
@@ -771,7 +942,15 @@ const ProjectPage: React.FC = () => {
                   <button
                     className="add-description-btn"
                     onClick={() => {
-                      setBodyMarkerDraft({ title: '', description: '', bodyPart: '', x: 50, y: 50, tabId: 'costumes' });
+                      setBodyMarkerDraft({
+                        title: '',
+                        description: '',
+                        bodyPart: '',
+                        x: 50,
+                        y: 50,
+                        tabId: 'costumes',
+                        personId: bodySilhouettes[0]?.id || 1
+                      });
                       setBodyMarkerEditId(null);
                       setShowBodyMarkerModal(true);
                     }}
@@ -782,37 +961,73 @@ const ProjectPage: React.FC = () => {
                 </div>
 
                 <div className="human-silhouette-section">
-                  <h3>Силуэт человека</h3>
-                  <div className="silhouette-container">
-                    <div
-                      className="silhouette-wrapper"
-                      onClick={(e) => {
-                        const rect = e.currentTarget.getBoundingClientRect();
-                        const x = ((e.clientX - rect.left) / rect.width) * 100;
-                        const y = ((e.clientY - rect.top) / rect.height) * 100;
-                        setBodyMarkerDraft({ title: '', description: '', bodyPart: 'torso', x, y, tabId: 'costumes' });
-                        setBodyMarkerEditId(null);
-                        setShowBodyMarkerModal(true);
-                      }}
-                    >
-                      <img src={HumanSilhouette} alt="Силуэт человека" className="human-silhouette-img" />
-                      {bodyMarkers.filter((marker) => marker.tabId === 'costumes').map((marker) => (
-                        <div
-                          key={marker.id}
-                          className="body-marker"
-                          style={{ left: `${marker.x}%`, top: `${marker.y}%`, backgroundColor: marker.color }}
-                          title={marker.title}
-                        >
-                          <div className="marker-number">{marker.id}</div>
-                          <div className="marker-tooltip">
-                            <strong>{marker.title}</strong>
-                            <div>{marker.bodyPart}</div>
+                  <div className="silhouette-header">
+                    <h3>Силуэт человека</h3>
+                    <button className="add-person-btn" onClick={handleAddSilhouette}>
+                      + Добавить человека
+                    </button>
+                  </div>
+                  <div className="silhouette-people-grid">
+                    {bodySilhouettes.map((person) => (
+                      <div key={`costumes-${person.id}`} className="silhouette-person-card">
+                        <div className="silhouette-person-head">
+                          <div className="silhouette-person-title">{person.name}</div>
+                          <button
+                            type="button"
+                            className="remove-person-btn"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleRemoveSilhouette(person.id);
+                            }}
+                            disabled={bodySilhouettes.length <= 1}
+                            title="Удалить человека"
+                          >
+                            Удалить
+                          </button>
+                        </div>
+                        <div className="silhouette-container">
+                          <div
+                            className="silhouette-wrapper"
+                            onClick={(e) => {
+                              const rect = e.currentTarget.getBoundingClientRect();
+                              const x = ((e.clientX - rect.left) / rect.width) * 100;
+                              const y = ((e.clientY - rect.top) / rect.height) * 100;
+                              setBodyMarkerDraft({
+                                title: '',
+                                description: '',
+                                bodyPart: 'torso',
+                                x,
+                                y,
+                                tabId: 'costumes',
+                                personId: person.id
+                              });
+                              setBodyMarkerEditId(null);
+                              setShowBodyMarkerModal(true);
+                            }}
+                          >
+                            <img src={HumanSilhouette} alt={person.name} className="human-silhouette-img" />
+                            {bodyMarkers
+                              .filter((marker) => marker.tabId === 'costumes' && getMarkerPersonId(marker) === person.id)
+                              .map((marker) => (
+                                <div
+                                  key={marker.id}
+                                  className="body-marker"
+                                  style={{ left: `${marker.x}%`, top: `${marker.y}%`, backgroundColor: marker.color }}
+                                  title={`${marker.title} • ${person.name}`}
+                                >
+                                  <div className="marker-number">{marker.id}</div>
+                                  <div className="marker-tooltip">
+                                    <strong>{marker.title}</strong>
+                                    <div>{marker.bodyPart}</div>
+                                  </div>
+                                </div>
+                              ))}
                           </div>
                         </div>
-                      ))}
-                    </div>
-                    <div className="silhouette-instructions">Кликните на силуэт, чтобы добавить маркер костюма</div>
+                      </div>
+                    ))}
                   </div>
+                  <div className="silhouette-instructions">Кликните на силуэт, чтобы добавить маркер костюма</div>
                 </div>
 
                 <div className="costume-comments-section">
@@ -871,7 +1086,8 @@ const ProjectPage: React.FC = () => {
                                 bodyPart: marker.bodyPart,
                                 x: marker.x,
                                 y: marker.y,
-                                tabId: marker.tabId
+                                tabId: marker.tabId,
+                                personId: getMarkerPersonId(marker)
                               });
                               setBodyMarkerEditId(marker.id);
                               setShowBodyMarkerModal(true);
@@ -880,7 +1096,9 @@ const ProjectPage: React.FC = () => {
                             ✏️
                           </button>
                         </div>
-                        <div className="marker-body-part">Часть тела: {marker.bodyPart}</div>
+                        <div className="marker-body-part">
+                          Часть тела: {marker.bodyPart} • {getSilhouetteLabel(getMarkerPersonId(marker))}
+                        </div>
                         <div className="marker-description">{marker.description}</div>
                         <div className="marker-images">
                           {marker.images.length === 0 ? (
@@ -902,7 +1120,15 @@ const ProjectPage: React.FC = () => {
                   <button
                     className="add-description-btn"
                     onClick={() => {
-                      setBodyMarkerDraft({ title: '', description: '', bodyPart: 'face', x: 50, y: 25, tabId: 'makeup' });
+                      setBodyMarkerDraft({
+                        title: '',
+                        description: '',
+                        bodyPart: 'face',
+                        x: 50,
+                        y: 25,
+                        tabId: 'makeup',
+                        personId: bodySilhouettes[0]?.id || 1
+                      });
                       setBodyMarkerEditId(null);
                       setShowBodyMarkerModal(true);
                     }}
@@ -913,36 +1139,73 @@ const ProjectPage: React.FC = () => {
                 </div>
 
                 <div className="human-silhouette-section">
-                  <h3>Силуэт для визажа</h3>
-                  <div className="silhouette-container">
-                    <div
-                      className="silhouette-wrapper"
-                      onClick={(e) => {
-                        const rect = e.currentTarget.getBoundingClientRect();
-                        const x = ((e.clientX - rect.left) / rect.width) * 100;
-                        const y = ((e.clientY - rect.top) / rect.height) * 100;
-                        setBodyMarkerDraft({ title: '', description: '', bodyPart: 'face', x, y, tabId: 'makeup' });
-                        setBodyMarkerEditId(null);
-                        setShowBodyMarkerModal(true);
-                      }}
-                    >
-                      <img src={HumanSilhouette} alt="Силуэт человека" className="human-silhouette-img" />
-                      {bodyMarkers.filter((marker) => marker.tabId === 'makeup').map((marker) => (
-                        <div
-                          key={marker.id}
-                          className="body-marker"
-                          style={{ left: `${marker.x}%`, top: `${marker.y}%`, backgroundColor: marker.color }}
-                        >
-                          <div className="marker-number">{marker.id}</div>
-                          <div className="marker-tooltip">
-                            <strong>{marker.title}</strong>
-                            <div>{marker.bodyPart}</div>
+                  <div className="silhouette-header">
+                    <h3>Силуэт для визажа</h3>
+                    <button className="add-person-btn" onClick={handleAddSilhouette}>
+                      + Добавить человека
+                    </button>
+                  </div>
+                  <div className="silhouette-people-grid">
+                    {bodySilhouettes.map((person) => (
+                      <div key={`makeup-${person.id}`} className="silhouette-person-card">
+                        <div className="silhouette-person-head">
+                          <div className="silhouette-person-title">{person.name}</div>
+                          <button
+                            type="button"
+                            className="remove-person-btn"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleRemoveSilhouette(person.id);
+                            }}
+                            disabled={bodySilhouettes.length <= 1}
+                            title="Удалить человека"
+                          >
+                            Удалить
+                          </button>
+                        </div>
+                        <div className="silhouette-container">
+                          <div
+                            className="silhouette-wrapper"
+                            onClick={(e) => {
+                              const rect = e.currentTarget.getBoundingClientRect();
+                              const x = ((e.clientX - rect.left) / rect.width) * 100;
+                              const y = ((e.clientY - rect.top) / rect.height) * 100;
+                              setBodyMarkerDraft({
+                                title: '',
+                                description: '',
+                                bodyPart: 'face',
+                                x,
+                                y,
+                                tabId: 'makeup',
+                                personId: person.id
+                              });
+                              setBodyMarkerEditId(null);
+                              setShowBodyMarkerModal(true);
+                            }}
+                          >
+                            <img src={HumanSilhouette} alt={person.name} className="human-silhouette-img" />
+                            {bodyMarkers
+                              .filter((marker) => marker.tabId === 'makeup' && getMarkerPersonId(marker) === person.id)
+                              .map((marker) => (
+                                <div
+                                  key={marker.id}
+                                  className="body-marker"
+                                  style={{ left: `${marker.x}%`, top: `${marker.y}%`, backgroundColor: marker.color }}
+                                  title={`${marker.title} • ${person.name}`}
+                                >
+                                  <div className="marker-number">{marker.id}</div>
+                                  <div className="marker-tooltip">
+                                    <strong>{marker.title}</strong>
+                                    <div>{marker.bodyPart}</div>
+                                  </div>
+                                </div>
+                              ))}
                           </div>
                         </div>
-                      ))}
-                    </div>
-                    <div className="silhouette-instructions">Кликните на часть тела для добавления точки визажа</div>
+                      </div>
+                    ))}
                   </div>
+                  <div className="silhouette-instructions">Кликните на часть тела для добавления точки визажа</div>
                 </div>
 
                 <div className="makeup-comments-section">
@@ -1068,6 +1331,24 @@ const ProjectPage: React.FC = () => {
           )}
         </div>
       </div>
+
+      <nav className="project-mobile-tabs" aria-label="Разделы проекта">
+        {mobileTabs.map((tab) => (
+          <button
+            key={`mobile-${tab.id}`}
+            className={`project-mobile-tab-btn ${activeTab === tab.id ? 'active' : ''}`}
+            onClick={() => setActiveTab(tab.id)}
+            style={{ ['--tab-accent' as const]: tabColors[tab.id] } as React.CSSProperties}
+          >
+            <img
+              src={tab.icon}
+              alt={mobileTabAriaNames[tab.id]}
+              className="project-mobile-tab-icon"
+            />
+            <span className="project-mobile-tab-label">{tab.label}</span>
+          </button>
+        ))}
+      </nav>
 
       <Modal
         title="Новый маркер"
@@ -1295,6 +1576,17 @@ const ProjectPage: React.FC = () => {
           value={bodyMarkerDraft.bodyPart}
           onChange={(e) => setBodyMarkerDraft({ ...bodyMarkerDraft, bodyPart: e.target.value })}
         />
+        <select
+          className="form-input"
+          value={bodyMarkerDraft.personId}
+          onChange={(e) => setBodyMarkerDraft({ ...bodyMarkerDraft, personId: Number(e.target.value) })}
+        >
+          {bodySilhouettes.map((person) => (
+            <option key={`person-option-${person.id}`} value={person.id}>
+              {person.name}
+            </option>
+          ))}
+        </select>
         <textarea
           className="form-input"
           placeholder="Описание"

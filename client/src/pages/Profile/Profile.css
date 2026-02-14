@@ -166,6 +166,41 @@ select.profile-input {
   gap: 12px;
 }
 
+@media (max-width: 992px) {
+  .profile-main {
+    padding: 20px 16px;
+  }
+
+  .profile-content {
+    gap: 14px;
+  }
+
+  .profile-section {
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    padding: 0 0 14px;
+    border-bottom: 1px solid var(--border-muted);
+  }
+
+  .profile-section:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+  }
+
+  .project-row {
+    border: none;
+    border-radius: 0;
+    background: transparent;
+    border-bottom: 1px dashed var(--border-muted);
+    padding: 12px 0;
+  }
+
+  .project-row:last-child {
+    border-bottom: none;
+  }
+}
+
 @media (max-width: 600px) {
   .profile-main {
     padding: 20px;

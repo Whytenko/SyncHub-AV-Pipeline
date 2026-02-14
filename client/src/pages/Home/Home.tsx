@@ -15,6 +15,15 @@ const Home: React.FC = () => {
   const { showToast } = useToast()
   const [projects, setProjects] = useState<ProjectSummary[]>([])
   const [loading, setLoading] = useState(true)
+  const [showGreeting, setShowGreeting] = useState(true)
+
+  useEffect(() => {
+    const timerId = window.setTimeout(() => {
+      setShowGreeting(false)
+    }, 5000)
+
+    return () => window.clearTimeout(timerId)
+  }, [])
 
   useEffect(() => {
     let isMounted = true
@@ -65,8 +74,8 @@ const Home: React.FC = () => {
   return (
     <div className="home-page">
       <Header
-        title="Добро пожаловать"
-        subtitle={auth.user?.nickname || 'Пользователь'}
+        title={showGreeting ? 'Добро пожаловать' : ''}
+        subtitle={showGreeting ? (auth.user?.nickname || 'Пользователь') : undefined}
         showUserInfo={false}
         showLogoutButton={false}
       />
