@@ -4,6 +4,7 @@ import Header from '../Header/Header'
 import './Dashboard.css'
 import { projectsApi } from '../../api/projects'
 import { useToast } from '../../context/ToastContext'
+import { useI18n } from '../../context/I18nContext'
 import type { ProjectSummary } from '../../types'
 import Modal from '../../components/Modal'
 
@@ -18,18 +19,22 @@ const Dashboard: React.FC = () => {
   const navigate = useNavigate()
   const location = useLocation()
   const { showToast } = useToast()
+  const { t, language } = useI18n()
   const [projects, setProjects] = useState<ProjectSummary[]>([])
   const [loading, setLoading] = useState(true)
   const [showCreate, setShowCreate] = useState(false)
   const [createData, setCreateData] = useState({ name: '', description: '', deadline: '' })
   const [creating, setCreating] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [projectToDelete, setProjectToDelete] = useState<ProjectSummary | null>(null)
+  const [deleting, setDeleting] = useState(false)
 
   const loadProjects = async () => {
     try {
       const response = await projectsApi.list()
       setProjects(response.projects)
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Не удалось загрузить проекты'
+      const message = err instanceof Error ? err.message : t('Не удалось загрузить проекты')
       showToast(message, 'error')
     } finally {
       setLoading(false)
@@ -38,7 +43,7 @@ const Dashboard: React.FC = () => {
 
   useEffect(() => {
     loadProjects()
-  }, [])
+  }, [showToast, t])
 
   useEffect(() => {
     const params = new URLSearchParams(location.search)
@@ -52,14 +57,15 @@ const Dashboard: React.FC = () => {
     const diff = Date.now() - new Date(date).getTime()
     const hours = Math.floor(diff / 3600000)
     const days = Math.floor(diff / 86400000)
-    if (days > 0) return `${days} дн. назад`
-    if (hours > 0) return `${hours} ч. назад`
-    return 'только что'
+    if (days > 0) return t('{count} дн. назад', { count: days })
+    if (hours > 0) return t('{count} ч. назад', { count: hours })
+    return t('только что')
   }
 
   const formatDeadline = (deadline?: string) => {
-    if (!deadline) return 'Без срока'
-    return new Intl.DateTimeFormat('ru-RU').format(new Date(deadline))
+    if (!deadline) return t('Без срока')
+    const locale = language === 'en' ? 'en-US' : language === 'zh' ? 'zh-CN' : 'ru-RU'
+    return new Intl.DateTimeFormat(locale).format(new Date(deadline))
   }
 
   const stats = useMemo(() => {
@@ -72,7 +78,7 @@ const Dashboard: React.FC = () => {
 
   const handleCreate = async () => {
     if (!createData.name.trim()) {
-      showToast('Введите название проекта', 'error')
+      showToast(t('Введите название проекта'), 'error')
       return
     }
     setCreating(true)
@@ -82,35 +88,44 @@ const Dashboard: React.FC = () => {
         description: createData.description.trim(),
         deadline: createData.deadline
       })
-      showToast('Проект создан', 'success')
+      showToast(t('Проект создан'), 'success')
       setShowCreate(false)
       setCreateData({ name: '', description: '', deadline: '' })
       await loadProjects()
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Не удалось создать проект'
+      const message = err instanceof Error ? err.message : t('Не удалось создать проект')
       showToast(message, 'error')
     } finally {
       setCreating(false)
     }
   }
 
-  const handleDelete = async (projectId: string) => {
-    const confirmed = window.confirm('Удалить проект без возможности восстановления?')
-    if (!confirmed) return
+  const handleDelete = async () => {
+    if (!projectToDelete) return
+    setDeleting(true)
     try {
-      await projectsApi.remove(projectId)
-      showToast('Проект удален', 'success')
-      setProjects((prev) => prev.filter((project) => project.id !== projectId))
+      await projectsApi.remove(projectToDelete.id)
+      showToast(t('Проект удален'), 'success')
+      setProjects((prev) => prev.filter((project) => project.id !== projectToDelete.id))
+      setShowDeleteConfirm(false)
+      setProjectToDelete(null)
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Не удалось удалить проект'
+      const message = err instanceof Error ? err.message : t('Не удалось удалить проект')
       showToast(message, 'error')
+    } finally {
+      setDeleting(false)
     }
+  }
+
+  const openDeleteConfirm = (project: ProjectSummary) => {
+    setProjectToDelete(project)
+    setShowDeleteConfirm(true)
   }
 
   return (
     <div className="dashboard">
      <Header
-         title="Мои проекты"
+         title={t('Мои проекты')}
         showHomeButton={true}
        showUserInfo={false}
            showLogoutButton={false}
@@ -118,9 +133,9 @@ const Dashboard: React.FC = () => {
 
       <main className="dashboard-main">
         <div className="projects-grid">
-          {loading && <div className="empty-state">Загрузка проектов...</div>}
+          {loading && <div className="empty-state">{t('Загрузка проектов...')}</div>}
           {!loading && projects.length === 0 && (
-            <div className="empty-state">Проектов пока нет. Создайте первый!</div>
+            <div className="empty-state">{t('Проектов пока нет. Создайте первый!')}</div>
           )}
           {projects.map(project => (
             <div
@@ -130,35 +145,46 @@ const Dashboard: React.FC = () => {
             >
               <div className="project-header">
                 <h3 className="project-name">{project.name}</h3>
-                <span className="project-badge">Обновлён {formatRelative(project.updatedAt)}</span>
+                <span className="project-badge">
+                  {t('Обновлён {value}', { value: formatRelative(project.updatedAt) })}
+                </span>
               </div>
               
               <div className="project-stats">
                 <div className="stat-item">
                   <span className="stat-icon">
-                    <img src={MembersIcon} alt="Участники" />
+                    <img src={MembersIcon} alt={t('Участники')} />
                   </span>
-                  <span className="stat-text">{project.members.length} участника</span>
+                  <span className="stat-text" aria-label={t('Участники: {count}', { count: project.members.length })}>
+                    <span className="stat-count">{project.members.length}</span>
+                    <span className="stat-label">{t('участника')}</span>
+                  </span>
                 </div>
                 <div className="stat-item">
                   <span className="stat-icon">
-                    <img src={VideoIcon} alt="Медиафайлы" />
+                    <img src={VideoIcon} alt={t('Медиафайлы')} />
                   </span>
-                  <span className="stat-text">{project.mediaCount} медиафайлов</span>
+                  <span className="stat-text" aria-label={t('Медиафайлы: {count}', { count: project.mediaCount })}>
+                    <span className="stat-count">{project.mediaCount}</span>
+                    <span className="stat-label">{t('медиафайлов')}</span>
+                  </span>
                 </div>
                 <div className="stat-item">
                   <span className="stat-icon">
-                    <img src={EditsIcon} alt="Правки" />
+                    <img src={EditsIcon} alt={t('Правки')} />
                   </span>
-                  <span className="stat-text">{project.editsCount} новых правок</span>
+                  <span className="stat-text" aria-label={t('Новые правки: {count}', { count: project.editsCount })}>
+                    <span className="stat-count">{project.editsCount}</span>
+                    <span className="stat-label">{t('новых правок')}</span>
+                  </span>
                 </div>
               </div>
 
               <div className="project-deadline">
                 <span className="deadline-icon">
-                  <img src={DeadlineIcon} alt="Дедлайн" />
+                  <img src={DeadlineIcon} alt={t('Дедлайн')} />
                 </span>
-                <strong>Дедлайн:</strong> {formatDeadline(project.deadline)}
+                <strong>{t('Дедлайн:')}</strong> {formatDeadline(project.deadline)}
               </div>
 
               <div className="project-actions">
@@ -169,16 +195,16 @@ const Dashboard: React.FC = () => {
                     navigate(`/project/${project.id}`)
                   }}
                 >
-                  Открыть проект
+                  {t('Открыть проект')}
                 </button>
                 <button 
                   className="delete-project-btn"
                   onClick={(e) => {
                     e.stopPropagation()
-                    handleDelete(project.id)
+                    openDeleteConfirm(project)
                   }}
                 >
-                  Удалить
+                  {t('Удалить')}
                 </button>
               </div>
             </div>
@@ -187,53 +213,86 @@ const Dashboard: React.FC = () => {
 
         <div className="dashboard-actions">
           <button className="create-project-btn" onClick={() => setShowCreate(true)}>
-            <img src={NewProjectIcon} alt="Создать проект" className="create-icon" />
-            Создать новый проект
+            <img src={NewProjectIcon} alt={t('Создать проект')} className="create-icon" />
+            {t('Создать новый проект')}
           </button>
         </div>
 
         <div className="dashboard-stats">
-          <div>Всего проектов: {stats.total}</div>
-          <div>Медиафайлов: {stats.media}</div>
-          <div>Правок: {stats.edits}</div>
+          <div>{t('Всего проектов:')} {stats.total}</div>
+          <div>{t('Медиафайлов:')} {stats.media}</div>
+          <div>{t('Правок:')} {stats.edits}</div>
         </div>
       </main>
 
       <Modal
-        title="Новый проект"
+        title={t('Новый проект')}
         isOpen={showCreate}
         onClose={() => setShowCreate(false)}
         actions={
           <>
             <button className="secondary-btn" onClick={() => setShowCreate(false)}>
-              Отмена
+              {t('Отмена')}
             </button>
             <button className="primary-btn" onClick={handleCreate} disabled={creating}>
-              {creating ? 'Создаем...' : 'Создать'}
+              {creating ? t('Создаем...') : t('Создать')}
             </button>
           </>
         }
       >
         <input
           className="form-input"
-          placeholder="Название проекта"
+          placeholder={t('Название проекта')}
           value={createData.name}
           onChange={(e) => setCreateData({ ...createData, name: e.target.value })}
         />
         <textarea
           className="form-input"
-          placeholder="Описание (необязательно)"
+          placeholder={t('Описание (необязательно)')}
           value={createData.description}
           onChange={(e) => setCreateData({ ...createData, description: e.target.value })}
           rows={3}
         />
-        <div className="form-label">Дедлайн</div>
+        <div className="form-label">{t('Дедлайн')}</div>
         <input
           className="form-input"
           type="date"
           value={createData.deadline}
           onChange={(e) => setCreateData({ ...createData, deadline: e.target.value })}
         />
+      </Modal>
+
+      <Modal
+        title={t('Удалить проект?')}
+        isOpen={showDeleteConfirm}
+        onClose={() => {
+          if (deleting) return
+          setShowDeleteConfirm(false)
+          setProjectToDelete(null)
+        }}
+        actions={
+          <>
+            <button
+              className="secondary-btn"
+              onClick={() => {
+                setShowDeleteConfirm(false)
+                setProjectToDelete(null)
+              }}
+              disabled={deleting}
+            >
+              {t('Отмена')}
+            </button>
+            <button className="primary-btn" onClick={handleDelete} disabled={deleting}>
+              {deleting ? t('Удаляем...') : t('Удалить')}
+            </button>
+          </>
+        }
+      >
+        <div>
+          {projectToDelete
+            ? t('Проект «{name}» будет удален без возможности восстановления.', { name: projectToDelete.name })
+            : t('Проект будет удален без возможности восстановления.')}
+        </div>
       </Modal>
     </div>
   )

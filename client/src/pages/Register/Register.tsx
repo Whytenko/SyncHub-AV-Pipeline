@@ -4,6 +4,7 @@ import './Register.css'
 import logo from '../assets/logo.svg'
 import { useAuth } from '../../context/AuthContext'
 import { useToast } from '../../context/ToastContext'
+import { useI18n } from '../../context/I18nContext'
 
 const Register: React.FC = () => {
   const [step, setStep] = useState(1)
@@ -23,6 +24,7 @@ const Register: React.FC = () => {
   const navigate = useNavigate()
   const auth = useAuth()
   const { showToast } = useToast()
+  const { t } = useI18n()
 
   const handleChange = (field: string, value: string) => {
     setFormData({ ...formData, [field]: value })
@@ -37,10 +39,6 @@ const Register: React.FC = () => {
   const nextStep = () => {
     setError('')
     if (step < 4) setStep(step + 1)
-  }
-
-  const prevStep = () => {
-    if (step > 1) setStep(step - 1)
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -61,10 +59,10 @@ const Register: React.FC = () => {
         gender: formData.gender,
         birthdate
       })
-      showToast('Аккаунт создан!', 'success')
+      showToast(t('Аккаунт создан!'), 'success')
       navigate('/home')
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Не удалось зарегистрироваться'
+      const message = err instanceof Error ? err.message : t('Не удалось зарегистрироваться')
       setError(message)
     } finally {
       setSubmitting(false)
@@ -79,25 +77,25 @@ const Register: React.FC = () => {
 
   // Месяцы
   const months = [
-    { value: '1', label: 'Январь' },
-    { value: '2', label: 'Февраль' },
-    { value: '3', label: 'Март' },
-    { value: '4', label: 'Апрель' },
-    { value: '5', label: 'Май' },
-    { value: '6', label: 'Июнь' },
-    { value: '7', label: 'Июль' },
-    { value: '8', label: 'Август' },
-    { value: '9', label: 'Сентябрь' },
-    { value: '10', label: 'Октябрь' },
-    { value: '11', label: 'Ноябрь' },
-    { value: '12', label: 'Декабрь' }
+    { value: '1', label: t('Январь') },
+    { value: '2', label: t('Февраль') },
+    { value: '3', label: t('Март') },
+    { value: '4', label: t('Апрель') },
+    { value: '5', label: t('Май') },
+    { value: '6', label: t('Июнь') },
+    { value: '7', label: t('Июль') },
+    { value: '8', label: t('Август') },
+    { value: '9', label: t('Сентябрь') },
+    { value: '10', label: t('Октябрь') },
+    { value: '11', label: t('Ноябрь') },
+    { value: '12', label: t('Декабрь') }
   ]
 
   // Гендеры
   const genders = [
-    { value: '', label: 'Не выбирать' },
-    { value: 'male', label: 'Мужской' },
-    { value: 'female', label: 'Женский' }
+    { value: '', label: t('Не выбирать') },
+    { value: 'male', label: t('Мужской') },
+    { value: 'female', label: t('Женский') }
   ]
 
   return (
@@ -113,17 +111,17 @@ const Register: React.FC = () => {
             {/* Левая часть - заголовки */}
             <div className="register-left">
               <h1 className="register-title">
-                {step === 1 && "Создать аккаунт SyncHub"}
-                {step === 2 && "Общие сведения"}
-                {step === 3 && "Создайте никнейм"}
-                {step === 4 && "Придумайте пароль"}
+                {step === 1 && t('Создать аккаунт SyncHub')}
+                {step === 2 && t('Общие сведения')}
+                {step === 3 && t('Создайте никнейм')}
+                {step === 4 && t('Придумайте пароль')}
               </h1>
               
               <p className="register-subtitle">
-                {step === 1 && "Введите своё имя"}
-                {step === 2 && "Укажите свою дату рождения и пол"}
-                {step === 3 && "Укажите уникальное имя пользователя"}
-                {step === 4 && "Введите и повторите пароль"}
+                {step === 1 && t('Введите своё имя')}
+                {step === 2 && t('Укажите свою дату рождения и пол')}
+                {step === 3 && t('Укажите уникальное имя пользователя')}
+                {step === 4 && t('Введите и повторите пароль')}
               </p>
             </div>
 
@@ -135,7 +133,7 @@ const Register: React.FC = () => {
                     <div className="input-group-vertical">
                       <input
                         type="text"
-                        placeholder="Имя"
+                        placeholder={t('Имя')}
                         value={formData.firstName}
                         onChange={(e) => handleChange('firstName', e.target.value)}
                         autoFocus
@@ -143,7 +141,7 @@ const Register: React.FC = () => {
                       />
                       <input
                         type="text"
-                        placeholder="Фамилия (необязательно)"
+                        placeholder={t('Фамилия (необязательно)')}
                         value={formData.lastName}
                         onChange={(e) => handleChange('lastName', e.target.value)}
                         className="form-input"
@@ -161,7 +159,7 @@ const Register: React.FC = () => {
                         onChange={(e) => handleChange('day', e.target.value)}
                         className="form-input date-select"
                       >
-                        <option value="">День</option>
+                        <option value="">{t('День')}</option>
                         {days.map(day => (
                           <option key={day} value={day}>{day}</option>
                         ))}
@@ -172,7 +170,7 @@ const Register: React.FC = () => {
                         onChange={(e) => handleChange('month', e.target.value)}
                         className="form-input date-select"
                       >
-                        <option value="">Месяц</option>
+                        <option value="">{t('Месяц')}</option>
                         {months.map(month => (
                           <option key={month.value} value={month.value}>{month.label}</option>
                         ))}
@@ -183,7 +181,7 @@ const Register: React.FC = () => {
                         onChange={(e) => handleChange('year', e.target.value)}
                         className="form-input date-select"
                       >
-                        <option value="">Год</option>
+                        <option value="">{t('Год')}</option>
                         {years.map(year => (
                           <option key={year} value={year}>{year}</option>
                         ))}
@@ -209,7 +207,7 @@ const Register: React.FC = () => {
                   <div className="step-content">
                     <input
                       type="text"
-                      placeholder="Никнейм"
+                      placeholder={t('Никнейм')}
                       value={formData.nickname}
                       onChange={(e) => handleChange('nickname', e.target.value)}
                       className="form-input single-input"
@@ -221,14 +219,14 @@ const Register: React.FC = () => {
                   <div className="step-content">
                     <input
                       type="password"
-                      placeholder="Пароль"
+                      placeholder={t('Пароль')}
                       value={formData.password}
                       onChange={(e) => handleChange('password', e.target.value)}
                       className="form-input single-input"
                     />
                     <input
                       type="password"
-                      placeholder="Повторите пароль"
+                      placeholder={t('Повторите пароль')}
                       value={formData.confirmPassword}
                       onChange={(e) => handleChange('confirmPassword', e.target.value)}
                       className="form-input single-input"
@@ -246,7 +244,7 @@ const Register: React.FC = () => {
                     onClick={step < 4 ? nextStep : undefined}
                     disabled={submitting}
                   >
-                    {step === 4 ? (submitting ? 'Создаём...' : 'Зарегистрироваться') : 'Далее'}
+                    {step === 4 ? (submitting ? t('Создаём...') : t('Зарегистрироваться')) : t('Далее')}
                   </button>
                 </div>
               </form>
@@ -256,9 +254,9 @@ const Register: React.FC = () => {
 
         {/* Футер теперь вне карточки */}
         <div className="register-footer">
-          <a href="#">Справка</a>
-          <a href="#">Конфиденциальность</a>
-          <a href="#">Условия</a>
+          <a href="#">{t('Справка')}</a>
+          <a href="#">{t('Конфиденциальность')}</a>
+          <a href="#">{t('Условия')}</a>
         </div>
       </div>
     </div>

@@ -12,6 +12,7 @@ import './App.css'
 import { AuthProvider } from './context/AuthContext'
 import { ToastProvider } from './context/ToastContext'
 import { HintProvider } from './context/HintContext'
+import { I18nProvider } from './context/I18nContext'
 import ProtectedRoute from './components/ProtectedRoute'
 import ErrorBoundary from './components/ErrorBoundary'
 import ErrorReporter from './components/ErrorReporter'
@@ -19,13 +20,14 @@ import AppLayout from './components/AppLayout'
 
 const App: React.FC = () => {
   return (
-    <AuthProvider>
-      <ToastProvider>
-        <HintProvider>
-          <ErrorReporter />
-          <BrowserRouter>
-            <ErrorBoundary>
-              <Routes>
+    <I18nProvider>
+      <AuthProvider>
+        <ToastProvider>
+          <HintProvider>
+            <ErrorReporter />
+            <BrowserRouter>
+              <ErrorBoundary>
+                <Routes>
             <Route path="/" element={<Login />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
@@ -88,12 +90,13 @@ const App: React.FC = () => {
               }
             />
             <Route path="*" element={<Navigate to="/home" replace />} />
-              </Routes>
-            </ErrorBoundary>
-          </BrowserRouter>
-        </HintProvider>
-      </ToastProvider>
-    </AuthProvider>
+                </Routes>
+              </ErrorBoundary>
+            </BrowserRouter>
+          </HintProvider>
+        </ToastProvider>
+      </AuthProvider>
+    </I18nProvider>
   )
 }
 

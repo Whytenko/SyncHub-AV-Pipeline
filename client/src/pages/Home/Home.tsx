@@ -6,13 +6,13 @@ import { projectsApi } from '../../api/projects'
 import type { ProjectSummary } from '../../types'
 import { useAuth } from '../../context/AuthContext'
 import { useToast } from '../../context/ToastContext'
-
-import logo from '../assets/logo.svg'
+import { useI18n } from '../../context/I18nContext'
 
 const Home: React.FC = () => {
   const navigate = useNavigate()
   const auth = useAuth()
   const { showToast } = useToast()
+  const { t, language } = useI18n()
   const [projects, setProjects] = useState<ProjectSummary[]>([])
   const [loading, setLoading] = useState(true)
   const [showGreeting, setShowGreeting] = useState(true)
@@ -32,7 +32,7 @@ const Home: React.FC = () => {
         const response = await projectsApi.list()
         if (isMounted) setProjects(response.projects)
       } catch (err) {
-        const message = err instanceof Error ? err.message : 'Не удалось загрузить проекты'
+        const message = err instanceof Error ? err.message : t('Не удалось загрузить проекты')
         showToast(message, 'error')
       } finally {
         if (isMounted) setLoading(false)
@@ -42,7 +42,7 @@ const Home: React.FC = () => {
     return () => {
       isMounted = false
     }
-  }, [showToast])
+  }, [showToast, t])
 
   const recentProjects = useMemo(() => {
     return [...projects]
@@ -66,25 +66,23 @@ const Home: React.FC = () => {
   }, [projects])
 
   const formatDeadline = (deadline?: string) => {
-    if (!deadline) return 'Без срока'
+    if (!deadline) return t('Без срока')
     const date = new Date(deadline)
-    return new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'long' }).format(date)
+    const locale = language === 'en' ? 'en-US' : language === 'zh' ? 'zh-CN' : 'ru-RU'
+    return new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'long' }).format(date)
   }
 
   return (
     <div className="home-page">
       <Header
-        title={showGreeting ? 'Добро пожаловать' : ''}
-        subtitle={showGreeting ? (auth.user?.nickname || 'Пользователь') : undefined}
+        title={showGreeting ? t('Добро пожаловать') : ''}
+        subtitle={showGreeting ? (auth.user?.nickname || t('Пользователь')) : undefined}
         showUserInfo={false}
         showLogoutButton={false}
       />
 
       <main className="home-main">
           <section className="hero">
-            <div className="hero-logo">
-              <img src={logo} alt="SyncHub" />
-            </div>
             <div className="hero-copy">
               <h1>SyncHub</h1>
               <p>AV Production Pipeline</p>
@@ -94,13 +92,15 @@ const Home: React.FC = () => {
           <section className="home-panels">
             <div className="panel recent-panel">
               <div className="panel-header">
-                <h2>Недавние проекты</h2>
-                <button className="ghost-btn" onClick={() => navigate('/dashboard')}>Все проекты →</button>
+                <h2>{t('Недавние проекты')}</h2>
+                <button className="ghost-btn" onClick={() => navigate('/dashboard')}>
+                  {t('Все проекты →')}
+                </button>
               </div>
               <div className="panel-body">
-                {loading && <div className="empty-state">Загружаем проекты...</div>}
+                {loading && <div className="empty-state">{t('Загружаем проекты...')}</div>}
                 {!loading && recentProjects.length === 0 && (
-                  <div className="empty-state">Пока нет проектов. Создайте первый.</div>
+                  <div className="empty-state">{t('Пока нет проектов. Создайте первый.')}</div>
                 )}
                 {recentProjects.map(project => (
                   <button
@@ -110,7 +110,10 @@ const Home: React.FC = () => {
                   >
                     <div className="recent-name">{project.name}</div>
                     <div className="recent-meta">
-                      {project.members.length} участников · {formatDeadline(project.deadline)}
+                      {t('{count} участников · {deadline}', {
+                        count: project.members.length,
+                        deadline: formatDeadline(project.deadline)
+                      })}
                     </div>
                   </button>
                 ))}
@@ -118,23 +121,23 @@ const Home: React.FC = () => {
             </div>
 
             <div className="panel stats-panel">
-              <h2>Сводка</h2>
+              <h2>{t('Сводка')}</h2>
               <div className="stats-grid">
-                <div className="stat-item">
-                  <div className="stat-label">Проектов</div>
-                  <div className="stat-value">{stats.activeProjects}</div>
+                <div className="home-stat-item">
+                  <div className="home-stat-label">{t('Проектов')}</div>
+                  <div className="home-stat-value">{stats.activeProjects}</div>
                 </div>
-                <div className="stat-item">
-                  <div className="stat-label">Команда</div>
-                  <div className="stat-value">{stats.members}</div>
+                <div className="home-stat-item">
+                  <div className="home-stat-label">{t('Команда')}</div>
+                  <div className="home-stat-value">{stats.members}</div>
                 </div>
-                <div className="stat-item">
-                  <div className="stat-label">Комментарии</div>
-                  <div className="stat-value">{stats.comments}</div>
+                <div className="home-stat-item">
+                  <div className="home-stat-label">{t('Комментарии')}</div>
+                  <div className="home-stat-value">{stats.comments}</div>
                 </div>
-                <div className="stat-item">
-                  <div className="stat-label">Дедлайны/нед</div>
-                  <div className="stat-value">{stats.deadlines}</div>
+                <div className="home-stat-item">
+                  <div className="home-stat-label">{t('Дедлайны/нед')}</div>
+                  <div className="home-stat-value">{stats.deadlines}</div>
                 </div>
               </div>
             </div>

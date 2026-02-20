@@ -4,6 +4,7 @@ import './Login.css'
 import logo from '../assets/logo.svg'
 import { useAuth } from '../../context/AuthContext'
 import { useToast } from '../../context/ToastContext'
+import { useI18n } from '../../context/I18nContext'
 
 const Login: React.FC = () => {
   const [nickname, setNickname] = useState('')
@@ -13,6 +14,7 @@ const Login: React.FC = () => {
   const navigate = useNavigate()
   const auth = useAuth()
   const { showToast } = useToast()
+  const { t } = useI18n()
 
   useEffect(() => {
     if (auth.user && !auth.loading) {
@@ -26,10 +28,10 @@ const Login: React.FC = () => {
     setError('')
     try {
       await auth.login(nickname, password)
-      showToast('С возвращением!', 'success')
+      showToast(t('С возвращением!'), 'success')
       navigate('/home')
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Не удалось войти'
+      const message = err instanceof Error ? err.message : t('Не удалось войти')
       setError(message)
     } finally {
       setSubmitting(false)
@@ -48,8 +50,8 @@ const Login: React.FC = () => {
           <div className="login-content">
             {/* Левая часть - заголовки */}
             <div className="login-left">
-              <h1 className="login-title">Вход</h1>
-              <p className="login-subtitle">Введите никнейм и пароль</p>
+              <h1 className="login-title">{t('Вход')}</h1>
+              <p className="login-subtitle">{t('Введите никнейм и пароль')}</p>
             </div>
 
             {/* Правая часть - форма */}
@@ -58,7 +60,7 @@ const Login: React.FC = () => {
                 <div className="login-fields">
                   <input
                     type="text"
-                    placeholder="Никнейм (можно оставить пустым)"
+                    placeholder={t('Никнейм (можно оставить пустым)')}
                     value={nickname}
                     onChange={(e) => setNickname(e.target.value)}
                     autoFocus
@@ -66,21 +68,21 @@ const Login: React.FC = () => {
                   />
                   <input
                     type="password"
-                    placeholder="Пароль (необязательно)"
+                    placeholder={t('Пароль (необязательно)')}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     className="login-input"
                   />
                 </div>
-                <div className="form-helper">Демо-доступ: demo / demo1234</div>
+                <div className="form-helper">{t('Демо-доступ: demo / demo1234')}</div>
                 {error && <div className="form-error">{error}</div>}
 
                 <div className="login-button-group">
                   <button type="button" className="secondary-btn" onClick={() => navigate('/register')}>
-                    Зарегистрироваться
+                    {t('Зарегистрироваться')}
                   </button>
                   <button type="submit" className="primary-btn" disabled={submitting}>
-                    {submitting ? 'Входим...' : 'Войти'}
+                    {submitting ? t('Входим...') : t('Войти')}
                   </button>
                 </div>
               </form>
@@ -90,9 +92,9 @@ const Login: React.FC = () => {
 
         {/* Футер вне карточки */}
         <div className="login-footer">
-          <a href="#">Справка</a>
-          <a href="#">Конфиденциальность</a>
-          <a href="#">Условия</a>
+          <a href="#">{t('Справка')}</a>
+          <a href="#">{t('Конфиденциальность')}</a>
+          <a href="#">{t('Условия')}</a>
         </div>
       </div>
     </div>

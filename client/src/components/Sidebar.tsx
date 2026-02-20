@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import './Sidebar.css'
 import { useAuth } from '../context/AuthContext'
+import { useI18n } from '../context/I18nContext'
 
 import ProjectsIcon from '../pages/assets/icons/projects.svg'
 import OptionsIcon from '../pages/assets/icons/options.svg'
@@ -12,6 +13,7 @@ import logo from '../pages/assets/logo.svg'
 const Sidebar: React.FC = () => {
   const navigate = useNavigate()
   const { logout } = useAuth()
+  const { t } = useI18n()
   const [open, setOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
 
@@ -28,9 +30,9 @@ const Sidebar: React.FC = () => {
   }, [])
 
   const items = [
-    { id: 'projects', title: 'Проекты', path: '/dashboard', icon: ProjectsIcon },
-    { id: 'settings', title: 'Настройки', path: '/settings', icon: OptionsIcon },
-    { id: 'help', title: 'Помощь', path: '/help', icon: HelpIcon }
+    { id: 'projects', title: t('Проекты'), path: '/dashboard', icon: ProjectsIcon },
+    { id: 'settings', title: t('Настройки'), path: '/settings', icon: OptionsIcon },
+    { id: 'help', title: t('Помощь'), path: '/help', icon: HelpIcon }
   ]
 
   return (
@@ -38,10 +40,10 @@ const Sidebar: React.FC = () => {
       <div className="sidebar-brand" onClick={() => navigate('/home')}>
         <img src={logo} alt="SyncHub" />
       </div>
-      <div className="sidebar-title">Навигация</div>
+      <div className="sidebar-title">{t('Навигация')}</div>
       <button className="sidebar-btn sidebar-cta" onClick={() => navigate('/dashboard?create=1')}>
         <span className="sidebar-icon">+</span>
-        <span>Создать</span>
+        <span>{t('Создать')}</span>
       </button>
       {items.map((item) => (
         <button
@@ -65,7 +67,7 @@ const Sidebar: React.FC = () => {
                 navigate('/profile')
               }}
             >
-              Профиль
+              {t('Профиль')}
             </button>
             <button
               className="sidebar-menu-btn"
@@ -74,15 +76,15 @@ const Sidebar: React.FC = () => {
                 logout().finally(() => navigate('/login'))
               }}
             >
-              Выйти
+              {t('Выйти')}
             </button>
           </div>
         )}
         <button className="sidebar-btn sidebar-bottom" onClick={() => setOpen((prev) => !prev)}>
           <span className="sidebar-icon">
-            <img src={ProfileIcon} alt="Профиль" />
+            <img src={ProfileIcon} alt={t('Профиль')} />
           </span>
-          <span>Профиль</span>
+          <span>{t('Профиль')}</span>
         </button>
       </div>
     </aside>

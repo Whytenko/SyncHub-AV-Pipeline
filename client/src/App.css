@@ -56,6 +56,8 @@
   --mobile-nav-icon-filter: invert(1) brightness(1.25);
   --mobile-primary-nav-height: 46px;
   --mobile-primary-nav-content-offset: 84px;
+  --mobile-compact-header-height: 34px;
+  --mobile-compact-header-content-offset: calc(34px + env(safe-area-inset-top) + 12px);
 }
 
 :root[data-theme='light'] {
@@ -258,21 +260,32 @@ input::placeholder {
 
 .toast-container {
   position: fixed;
+  top: calc(env(safe-area-inset-top) + 8px);
   right: 24px;
-  bottom: 24px;
+  bottom: auto;
   display: grid;
-  gap: 10px;
-  z-index: 1100;
+  gap: 8px;
+  width: min(260px, calc(100vw - 48px));
+  z-index: 1200;
+  pointer-events: none;
 }
 
 .toast {
   background: var(--toast-bg);
   border: 1px solid var(--toast-border);
   color: var(--toast-text);
-  padding: 10px 14px;
-  border-radius: 12px;
+  padding: 7px 11px;
+  border-radius: 999px;
   box-shadow: var(--toast-shadow);
-  min-width: 220px;
+  min-width: 0;
+  width: 100%;
+  font-size: 12px;
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
+  backdrop-filter: blur(10px);
 }
 
 .toast-success {
@@ -289,16 +302,17 @@ input::placeholder {
 
 @media (max-width: 992px) {
   .toast-container {
-    top: calc(10px + env(safe-area-inset-top));
-    right: 12px;
-    left: 12px;
+    top: calc(env(safe-area-inset-top) + 4px);
+    right: 10px;
+    left: auto;
     bottom: auto;
     z-index: 1300;
+    width: min(210px, calc(100vw - 20px));
   }
 
   .toast {
-    min-width: 0;
-    width: 100%;
+    padding: 6px 10px;
+    font-size: 11px;
   }
 }
 

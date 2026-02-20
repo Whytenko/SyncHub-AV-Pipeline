@@ -2,20 +2,20 @@ import React, { useEffect, useState } from 'react';
 import Header from '../Header/Header';
 import './Settings.css';
 import { useToast } from '../../context/ToastContext';
+import { useI18n, type AppLanguage } from '../../context/I18nContext';
 
 interface Preferences {
   notifications: boolean;
   autosave: boolean;
-  compactMode: boolean;
 }
 
 const defaultPrefs: Preferences = {
   notifications: true,
-  autosave: true,
-  compactMode: false
+  autosave: true
 };
 
 const Settings: React.FC = () => {
+  const { t, language, setLanguage } = useI18n();
   const { showToast } = useToast();
   const [prefs, setPrefs] = useState<Preferences>(defaultPrefs);
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
@@ -24,7 +24,11 @@ const Settings: React.FC = () => {
     const saved = localStorage.getItem('synchub_prefs');
     if (saved) {
       try {
-        setPrefs({ ...defaultPrefs, ...JSON.parse(saved) });
+        const parsed = JSON.parse(saved) as Partial<Preferences>;
+        setPrefs({
+          notifications: parsed.notifications ?? defaultPrefs.notifications,
+          autosave: parsed.autosave ?? defaultPrefs.autosave
+        });
       } catch {
         setPrefs(defaultPrefs);
       }
@@ -46,7 +50,7 @@ const Settings: React.FC = () => {
   const clearPrefs = () => {
     localStorage.removeItem('synchub_prefs');
     setPrefs(defaultPrefs);
-    showToast('Локальные настройки очищены', 'success');
+    showToast(t('Локальные настройки очищены'), 'success');
   };
 
   const toggleTheme = () => {
@@ -54,15 +58,19 @@ const Settings: React.FC = () => {
     setTheme(next);
     localStorage.setItem('synchub_theme', next);
     document.documentElement.setAttribute('data-theme', next);
-    showToast(`Тема: ${next === 'dark' ? 'тёмная' : 'светлая'}`, 'success');
+    showToast(`${t('Светлая тема')}: ${next === 'dark' ? t('Тёмная') : t('Светлая')}`, 'success');
+  };
+
+  const handleLanguageChange = (nextLanguage: AppLanguage) => {
+    setLanguage(nextLanguage);
   };
 
   return (
     <div className="settings-page">
       <Header
-        title="Настройки"
+        title={t('Настройки')}
         showBackButton={true}
-        backButtonText="Назад"
+        backButtonText={t('Назад')}
         backButtonPath="/home"
         showHomeButton={true}
         showUserInfo={false}
@@ -70,60 +78,96 @@ const Settings: React.FC = () => {
       />
 
       <main className="settings-main">
-        <div className="settings-card">
-          <h2>Персональные предпочтения</h2>
-          <div className="settings-list">
-            <label className="settings-item">
-              <span>Светлая тема</span>
-              <input
-                type="checkbox"
-                checked={theme === 'light'}
-                onChange={toggleTheme}
-              />
-            </label>
-            <label className="settings-item">
-              <span>Уведомления о событиях</span>
-              <input
-                type="checkbox"
-                checked={prefs.notifications}
-                onChange={(e) => updatePrefs({ notifications: e.target.checked })}
-              />
-            </label>
-            <label className="settings-item">
-              <span>Автосохранение изменений</span>
-              <input
-                type="checkbox"
-                checked={prefs.autosave}
-                onChange={(e) => updatePrefs({ autosave: e.target.checked })}
-              />
-            </label>
-            <label className="settings-item">
-              <span>Компактный режим карточек</span>
-              <input
-                type="checkbox"
-                checked={prefs.compactMode}
-                onChange={(e) => updatePrefs({ compactMode: e.target.checked })}
-              />
-            </label>
-          </div>
-        </div>
+        <section className="settings-shell">
+          <div className="settings-section">
+            <div className="settings-section-title">{t('Персональные предпочтения')}</div>
 
-        <div className="settings-card">
-          <h2>Системная информация</h2>
-          <div className="settings-meta">
-            <div>
-              <span className="meta-label">API URL</span>
-              <span className="meta-value">{import.meta.env.VITE_API_URL || 'http://localhost:5000'}</span>
+            <div className="settings-row">
+              <div className="settings-row-main">
+                <div className="settings-row-label">{t('Светлая тема')}</div>
+              </div>
+              <button
+                type="button"
+                className={`settings-switch ${theme === 'light' ? 'active' : ''}`}
+                onClick={toggleTheme}
+                role="switch"
+                aria-checked={theme === 'light'}
+                aria-label={t('Светлая тема')}
+              >
+                <span className="settings-switch-thumb" />
+              </button>
             </div>
-            <div>
-              <span className="meta-label">Версия клиента</span>
-              <span className="meta-value">0.1.0</span>
+
+            <div className="settings-row">
+              <div className="settings-row-main">
+                <div className="settings-row-label">{t('Уведомления о событиях')}</div>
+              </div>
+              <button
+                type="button"
+                className={`settings-switch ${prefs.notifications ? 'active' : ''}`}
+                onClick={() => updatePrefs({ notifications: !prefs.notifications })}
+                role="switch"
+                aria-checked={prefs.notifications}
+                aria-label={t('Уведомления о событиях')}
+              >
+                <span className="settings-switch-thumb" />
+              </button>
+            </div>
+
+            <div className="settings-row">
+              <div className="settings-row-main">
+                <div className="settings-row-label">{t('Автосохранение изменений')}</div>
+              </div>
+              <button
+                type="button"
+                className={`settings-switch ${prefs.autosave ? 'active' : ''}`}
+                onClick={() => updatePrefs({ autosave: !prefs.autosave })}
+                role="switch"
+                aria-checked={prefs.autosave}
+                aria-label={t('Автосохранение изменений')}
+              >
+                <span className="settings-switch-thumb" />
+              </button>
+            </div>
+
+            <div className="settings-row">
+              <div className="settings-row-main">
+                <div className="settings-row-label">{t('Язык интерфейса')}</div>
+              </div>
+              <div className="settings-language-wrap">
+                <select
+                  className="settings-language-select"
+                  value={language}
+                  onChange={(e) => handleLanguageChange(e.target.value as AppLanguage)}
+                >
+                  <option value="ru">{t('Русский')}</option>
+                  <option value="zh">{t('Китайский')}</option>
+                  <option value="en">{t('Английский')}</option>
+                </select>
+              </div>
             </div>
           </div>
-          <button className="secondary-btn" onClick={clearPrefs}>
-            Очистить локальные настройки
-          </button>
-        </div>
+
+          <div className="settings-section">
+            <div className="settings-section-title">{t('Системная информация')}</div>
+            <div className="settings-row settings-info-row">
+              <div className="settings-row-main">
+                <div className="settings-row-label">{t('API URL')}</div>
+                <div className="settings-row-value">{import.meta.env.VITE_API_URL || 'http://localhost:5000'}</div>
+              </div>
+            </div>
+            <div className="settings-row settings-info-row">
+              <div className="settings-row-main">
+                <div className="settings-row-label">{t('Версия клиента')}</div>
+                <div className="settings-row-value">0.1.0</div>
+              </div>
+            </div>
+
+            <button className="secondary-btn settings-clear-btn" onClick={clearPrefs}>
+              {t('Очистить локальные настройки')}
+            </button>
+          </div>
+        </section>
       </main>
     </div>
   );

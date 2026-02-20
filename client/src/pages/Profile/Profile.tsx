@@ -7,19 +7,22 @@ import { useToast } from '../../context/ToastContext'
 import { usersApi } from '../../api/users'
 import { projectsApi } from '../../api/projects'
 import Modal from '../../components/Modal'
+import { useI18n } from '../../context/I18nContext'
 import type { ProjectSummary } from '../../types'
 
 const Profile: React.FC = () => {
   const navigate = useNavigate()
-  const { user, setUser, logout } = useAuth()
+  const { user, setUser } = useAuth()
   const { showToast } = useToast()
+  const { t, language } = useI18n()
   const [profile, setProfile] = useState({
     firstName: '',
     lastName: '',
     email: '',
     role: '',
     avatar: '👤',
-    nickname: ''
+    nickname: '',
+    birthdate: ''
   })
   const [originalProfile, setOriginalProfile] = useState({
     firstName: '',
@@ -27,7 +30,8 @@ const Profile: React.FC = () => {
     email: '',
     role: '',
     avatar: '👤',
-    nickname: ''
+    nickname: '',
+    birthdate: ''
   })
   const [heroEditable, setHeroEditable] = useState(false)
   const [showPasswordModal, setShowPasswordModal] = useState(false)
@@ -48,7 +52,8 @@ const Profile: React.FC = () => {
         email: user.email,
         role: user.role,
         avatar: user.avatar || '👤',
-        nickname: user.nickname
+        nickname: user.nickname,
+        birthdate: user.birthdate || ''
       }
       setProfile(nextProfile)
       setOriginalProfile(nextProfile)
@@ -60,14 +65,14 @@ const Profile: React.FC = () => {
       const response = await projectsApi.list()
       setProjects(response.projects)
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Не удалось загрузить проекты'
+      const message = err instanceof Error ? err.message : t('Не удалось загрузить проекты')
       showToast(message, 'error')
     }
   }
 
   useEffect(() => {
     loadProjects()
-  }, [showToast])
+  }, [showToast, t])
 
   const handleSaveProfile = async () => {
     try {
@@ -76,7 +81,8 @@ const Profile: React.FC = () => {
         lastName: profile.lastName,
         email: profile.email,
         role: profile.role,
-        avatar: profile.avatar
+        avatar: profile.avatar,
+        birthdate: profile.birthdate
       })
       setUser(response.user)
       setOriginalProfile({
@@ -85,11 +91,12 @@ const Profile: React.FC = () => {
         email: response.user.email,
         role: response.user.role,
         avatar: response.user.avatar || '👤',
-        nickname: response.user.nickname
+        nickname: response.user.nickname,
+        birthdate: response.user.birthdate || ''
       })
-      showToast('Профиль обновлен', 'success')
+      showToast(t('Профиль обновлен'), 'success')
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Не удалось обновить профиль'
+      const message = err instanceof Error ? err.message : t('Не удалось обновить профиль')
       showToast(message, 'error')
     }
   }
@@ -97,16 +104,16 @@ const Profile: React.FC = () => {
   const handleChangePassword = async () => {
     setPasswordError('')
     if (!passwordForm.currentPassword || !passwordForm.newPassword) {
-      setPasswordError('Заполните оба поля')
+      setPasswordError(t('Заполните оба поля'))
       return
     }
     try {
       await usersApi.changePassword(passwordForm)
-      showToast('Пароль обновлен', 'success')
+      showToast(t('Пароль обновлен'), 'success')
       setPasswordForm({ currentPassword: '', newPassword: '' })
       setShowPasswordModal(false)
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Не удалось обновить пароль'
+      const message = err instanceof Error ? err.message : t('Не удалось обновить пароль')
       setPasswordError(message)
     }
   }
@@ -115,16 +122,19 @@ const Profile: React.FC = () => {
     try {
       const response = await usersApi.updateMe({ avatar: profile.avatar })
       setUser(response.user)
-      showToast('Аватар обновлен', 'success')
+      showToast(t('Аватар обновлен'), 'success')
       setShowAvatarModal(false)
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Не удалось обновить аватар'
+      const message = err instanceof Error ? err.message : t('Не удалось обновить аватар')
       showToast(message, 'error')
     }
   }
 
   const joinDate = user?.createdAt
-    ? new Intl.DateTimeFormat('ru-RU', { dateStyle: 'long' }).format(new Date(user.createdAt))
+    ? new Intl.DateTimeFormat(
+        language === 'en' ? 'en-US' : language === 'zh' ? 'zh-CN' : 'ru-RU',
+        { dateStyle: 'long' }
+      ).format(new Date(user.createdAt))
     : '—'
 
   const activeProjects = projects.slice(0, 3)
@@ -134,13 +144,54 @@ const Profile: React.FC = () => {
     profile.lastName !== originalProfile.lastName ||
     profile.email !== originalProfile.email ||
     profile.role !== originalProfile.role ||
-    profile.avatar !== originalProfile.avatar
+    profile.avatar !== originalProfile.avatar ||
+    profile.birthdate !== originalProfile.birthdate
 
-  const displayName = `${profile.firstName} ${profile.lastName}`.trim() || profile.nickname || 'Пользователь'
+  const displayName =
+    `${profile.firstName} ${profile.lastName}`.trim() || profile.nickname || t('Пользователь')
+  const username = profile.nickname ? `@${profile.nickname}` : '@user'
+  const isAvatarImage =
+    profile.avatar.startsWith('http://') ||
+    profile.avatar.startsWith('https://') ||
+    profile.avatar.startsWith('data:image')
+
+  const formatBirthdate = (value: string) => {
+    if (!value) return t('Не указано')
+    const date = new Date(value)
+    if (Number.isNaN(date.getTime())) return t('Не указано')
+
+    const locale = language === 'en' ? 'en-US' : language === 'zh' ? 'zh-CN' : 'ru-RU'
+    const formatted = new Intl.DateTimeFormat(locale, {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric'
+    }).format(date)
+
+    const today = new Date()
+    let age = today.getFullYear() - date.getFullYear()
+    const monthDiff = today.getMonth() - date.getMonth()
+    const dayDiff = today.getDate() - date.getDate()
+    if (monthDiff < 0 || (monthDiff === 0 && dayDiff < 0)) age -= 1
+
+    return age > 0 ? t('{date} ({age} лет)', { date: formatted, age }) : formatted
+  }
+
+  const copyValue = async (value: string, label: string) => {
+    if (!value.trim()) {
+      showToast(t('Поле «{label}» пустое', { label }), 'info')
+      return
+    }
+    try {
+      await navigator.clipboard.writeText(value)
+      showToast(t('«{label}» скопировано', { label }), 'success')
+    } catch {
+      showToast(t('Не удалось скопировать'), 'error')
+    }
+  }
 
   const handleCreateProject = async () => {
     if (!createData.name.trim()) {
-      showToast('Введите название проекта', 'error')
+      showToast(t('Введите название проекта'), 'error')
       return
     }
     setCreating(true)
@@ -150,12 +201,12 @@ const Profile: React.FC = () => {
         description: createData.description.trim(),
         deadline: createData.deadline
       })
-      showToast('Проект создан', 'success')
+      showToast(t('Проект создан'), 'success')
       setCreateData({ name: '', description: '', deadline: '' })
       setShowCreateModal(false)
       await loadProjects()
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Не удалось создать проект'
+      const message = err instanceof Error ? err.message : t('Не удалось создать проект')
       showToast(message, 'error')
     } finally {
       setCreating(false)
@@ -165,10 +216,8 @@ const Profile: React.FC = () => {
   return (
     <div className="profile-page">
       <Header
-        title="Профиль"
-        showBackButton={true}
-        backButtonText="К проектам"
-        backButtonPath="/dashboard"
+        title={t('Профиль')}
+        showBackButton={false}
         showHomeButton={true}
         showUserInfo={false}
         showLogoutButton={false}
@@ -176,131 +225,213 @@ const Profile: React.FC = () => {
 
       <main className="profile-main">
           <section className="profile-content">
-            <div className="profile-section profile-hero">
-              <div
-                className={`profile-photo ${heroEditable ? 'editable' : ''}`}
-                onClick={() => heroEditable && setShowAvatarModal(true)}
-              >
-                {profile.avatar}
-              </div>
-              <div className="profile-hero-info">
-                {heroEditable ? (
-                  <div className="profile-hero-inputs">
-                    <input
-                      className="profile-input"
-                      placeholder="Имя"
-                      value={profile.firstName}
-                      onChange={(e) => setProfile({ ...profile, firstName: e.target.value })}
-                    />
-                    <input
-                      className="profile-input"
-                      placeholder="Фамилия"
-                      value={profile.lastName}
-                      onChange={(e) => setProfile({ ...profile, lastName: e.target.value })}
-                    />
-                  </div>
-                ) : (
-                  <div className="profile-name">{displayName}</div>
-                )}
-                <div className="profile-role">{profile.role || 'Участник'}</div>
-              </div>
-              <div className="profile-hero-actions">
-                <button
-                  className="secondary-btn"
-                  onClick={() => setHeroEditable((prev) => !prev)}
-                >
-                  {heroEditable ? 'Готово' : 'Изменить'}
-                </button>
-              </div>
-            </div>
-
-            <div className="profile-section">
-              <div className="section-title">Профиль</div>
-              <div className="profile-grid">
-                <div className="profile-field">
-                  <span className="profile-label">Имя</span>
-                  <input
-                    className="profile-input"
-                    value={profile.firstName}
-                    onChange={(e) => setProfile({ ...profile, firstName: e.target.value })}
-                  />
-                </div>
-                <div className="profile-field">
-                  <span className="profile-label">Фамилия</span>
-                  <input
-                    className="profile-input"
-                    value={profile.lastName}
-                    onChange={(e) => setProfile({ ...profile, lastName: e.target.value })}
-                  />
-                </div>
-                <div className="profile-field">
-                  <span className="profile-label">Email</span>
-                  <input
-                    className="profile-input"
-                    value={profile.email}
-                    onChange={(e) => setProfile({ ...profile, email: e.target.value })}
-                  />
-                </div>
-                <div className="profile-field">
-                  <span className="profile-label">В системе с</span>
-                  <div className="profile-value">{joinDate}</div>
-                </div>
-                <div className="profile-field">
-                  <span className="profile-label">Роль</span>
-                  <select
-                    className="profile-input"
-                    value={profile.role}
-                    onChange={(e) => setProfile({ ...profile, role: e.target.value })}
+            <section className="profile-shell">
+              <div className="profile-cover">
+                <div className="profile-cover-topbar">
+                  <button
+                    className="profile-cover-edit-btn"
+                    onClick={() => setHeroEditable((prev) => !prev)}
                   >
-                    {roles.map((role) => (
-                      <option key={role} value={role}>
-                        {role}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-              {isDirty && (
-                <div className="profile-save">
-                  <button className="primary-btn" onClick={handleSaveProfile}>
-                    Сохранить
+                    {heroEditable ? t('Готово') : t('Изм.')}
                   </button>
                 </div>
-              )}
-            </div>
+
+                <div
+                  className={`profile-cover-avatar ${heroEditable ? 'editable' : ''}`}
+                  onClick={() => heroEditable && setShowAvatarModal(true)}
+                >
+                  {isAvatarImage ? (
+                    <img src={profile.avatar} alt={displayName} />
+                  ) : (
+                    <span>{profile.avatar}</span>
+                  )}
+                </div>
+                <div className="profile-cover-name">{displayName}</div>
+                <div className="profile-cover-status">{t('в сети')}</div>
+                <div className="profile-cover-track">{t('SyncHub • AV Pipeline')}</div>
+              </div>
+
+              <div className="profile-info-card">
+                <div className="profile-info-row">
+                  <div className="profile-info-main">
+                    <div className="profile-info-label">{t('Имя пользователя')}</div>
+                    <div className="profile-info-value profile-info-value-accent">{username}</div>
+                  </div>
+                  <button
+                    className="profile-copy-btn"
+                    onClick={() => copyValue(username, t('Имя пользователя'))}
+                    title={t('Скопировать имя пользователя')}
+                  >
+                    ⧉
+                  </button>
+                </div>
+
+                <div className="profile-info-row">
+                  <div className="profile-info-main">
+                    <div className="profile-info-label">{t('Имя')}</div>
+                    {heroEditable ? (
+                      <input
+                        className="profile-inline-input"
+                        value={profile.firstName}
+                        onChange={(e) => setProfile({ ...profile, firstName: e.target.value })}
+                      />
+                    ) : (
+                      <div className="profile-info-value">{profile.firstName || t('Не указано')}</div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="profile-info-row">
+                  <div className="profile-info-main">
+                    <div className="profile-info-label">{t('Фамилия')}</div>
+                    {heroEditable ? (
+                      <input
+                        className="profile-inline-input"
+                        value={profile.lastName}
+                        onChange={(e) => setProfile({ ...profile, lastName: e.target.value })}
+                      />
+                    ) : (
+                      <div className="profile-info-value">{profile.lastName || t('Не указано')}</div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="profile-info-row">
+                  <div className="profile-info-main">
+                    <div className="profile-info-label">{t('О себе')}</div>
+                    <div className="profile-info-value profile-info-value-accent">
+                      {profile.role ? t(profile.role) : t('Участник')}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="profile-info-row">
+                  <div className="profile-info-main">
+                    <div className="profile-info-label">{t('Email')}</div>
+                    {heroEditable ? (
+                      <input
+                        className="profile-inline-input"
+                        value={profile.email}
+                        onChange={(e) => setProfile({ ...profile, email: e.target.value })}
+                      />
+                    ) : (
+                      <div className="profile-info-value">{profile.email || t('Не указан')}</div>
+                    )}
+                  </div>
+                  <button
+                    className="profile-copy-btn"
+                    onClick={() => copyValue(profile.email, t('Email'))}
+                    title={t('Скопировать email')}
+                  >
+                    ⧉
+                  </button>
+                </div>
+
+                <div className="profile-info-row">
+                  <div className="profile-info-main">
+                    <div className="profile-info-label">{t('Роль в команде')}</div>
+                    {heroEditable ? (
+                      <select
+                        className="profile-inline-input profile-inline-select"
+                        value={profile.role}
+                        onChange={(e) => setProfile({ ...profile, role: e.target.value })}
+                      >
+                        {roles.map((role) => (
+                          <option key={role} value={role}>
+                            {t(role)}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <div className="profile-info-value">{profile.role ? t(profile.role) : t('Участник')}</div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="profile-info-row">
+                  <div className="profile-info-main">
+                    <div className="profile-info-label">{t('День рождения')}</div>
+                    {heroEditable ? (
+                      <input
+                        className="profile-inline-input"
+                        type="date"
+                        value={profile.birthdate}
+                        onChange={(e) => setProfile({ ...profile, birthdate: e.target.value })}
+                      />
+                    ) : (
+                      <div className="profile-info-value">{formatBirthdate(profile.birthdate)}</div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="profile-info-row">
+                  <div className="profile-info-main">
+                    <div className="profile-info-label">{t('В системе с')}</div>
+                    <div className="profile-info-value">{joinDate}</div>
+                  </div>
+                </div>
+
+                {heroEditable ? (
+                  <div className="profile-card-actions">
+                    <button
+                      className="secondary-btn"
+                      onClick={() => {
+                        setProfile(originalProfile)
+                        setHeroEditable(false)
+                      }}
+                    >
+                      {t('Отмена')}
+                    </button>
+                    <button
+                      className="primary-btn"
+                      disabled={!isDirty}
+                      onClick={async () => {
+                        await handleSaveProfile()
+                        setHeroEditable(false)
+                      }}
+                    >
+                      {t('Сохранить')}
+                    </button>
+                  </div>
+                ) : null}
+              </div>
+            </section>
 
             <div className="profile-section">
-              <div className="section-title">Конфиденциальность</div>
+              <div className="section-title">{t('Конфиденциальность')}</div>
               <div className="privacy-row">
-                <div className="profile-value">Пароль: ••••••••</div>
+                <div className="profile-info-main">
+                  <div className="profile-info-label">{t('Пароль')}</div>
+                  <div className="profile-info-value">••••••••</div>
+                </div>
                 <button className="secondary-btn" onClick={() => setShowPasswordModal(true)}>
-                  Изменить пароль
+                  {t('Изменить пароль')}
                 </button>
               </div>
             </div>
 
             <div className="profile-section">
-              <div className="section-title">Активные проекты</div>
-              <div className="section-actions">
+              <div className="section-header">
+                <div className="section-title">{t('Активные проекты')}</div>
                 <button className="secondary-btn" onClick={() => setShowCreateModal(true)}>
-                  + Новый
+                  {t('+ Новый')}
                 </button>
               </div>
               <div className="projects-list">
                 {activeProjects.length === 0 && (
-                  <div className="empty-state">Пока нет активных проектов.</div>
+                  <div className="empty-state">{t('Пока нет активных проектов.')}</div>
                 )}
                 {activeProjects.map(project => (
                   <div key={project.id} className="project-row">
-                    <div>
+                    <div className="project-main">
                       <div className="project-name">{project.name}</div>
-                      <div className="project-meta">{project.members.length} участников</div>
+                      <div className="project-meta">{t('{count} участников', { count: project.members.length })}</div>
                     </div>
                     <button
                       className="secondary-btn"
                       onClick={() => navigate(`/project/${project.id}`)}
                     >
-                      Открыть
+                      {t('Открыть')}
                     </button>
                   </div>
                 ))}
@@ -310,7 +441,7 @@ const Profile: React.FC = () => {
       </main>
 
       <Modal
-        title="Смена пароля"
+        title={t('Смена пароля')}
         isOpen={showPasswordModal}
         onClose={() => {
           setShowPasswordModal(false)
@@ -319,10 +450,10 @@ const Profile: React.FC = () => {
         actions={
           <>
             <button className="secondary-btn" onClick={() => setShowPasswordModal(false)}>
-              Отмена
+              {t('Отмена')}
             </button>
             <button className="primary-btn" onClick={handleChangePassword}>
-              Сохранить
+              {t('Сохранить')}
             </button>
           </>
         }
@@ -330,14 +461,14 @@ const Profile: React.FC = () => {
         <input
           className="form-input"
           type="password"
-          placeholder="Текущий пароль"
+          placeholder={t('Текущий пароль')}
           value={passwordForm.currentPassword}
           onChange={(e) => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })}
         />
         <input
           className="form-input"
           type="password"
-          placeholder="Новый пароль"
+          placeholder={t('Новый пароль')}
           value={passwordForm.newPassword}
           onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
         />
@@ -345,19 +476,19 @@ const Profile: React.FC = () => {
       </Modal>
 
       <Modal
-        title="Выберите аватар"
+        title={t('Выберите аватар')}
         isOpen={showAvatarModal}
         onClose={() => setShowAvatarModal(false)}
         actions={
           <>
             <button className="secondary-btn" onClick={() => setShowAvatarModal(false)}>
-              Отмена
+              {t('Отмена')}
             </button>
             <button
               className="primary-btn"
               onClick={handleSaveAvatar}
             >
-              Готово
+              {t('Готово')}
             </button>
           </>
         }
@@ -376,34 +507,34 @@ const Profile: React.FC = () => {
       </Modal>
 
       <Modal
-        title="Новый проект"
+        title={t('Новый проект')}
         isOpen={showCreateModal}
         onClose={() => setShowCreateModal(false)}
         actions={
           <>
             <button className="secondary-btn" onClick={() => setShowCreateModal(false)}>
-              Отмена
+              {t('Отмена')}
             </button>
             <button className="primary-btn" onClick={handleCreateProject} disabled={creating}>
-              {creating ? 'Создаем...' : 'Создать'}
+              {creating ? t('Создаем...') : t('Создать')}
             </button>
           </>
         }
       >
         <input
           className="form-input"
-          placeholder="Название проекта"
+          placeholder={t('Название проекта')}
           value={createData.name}
           onChange={(e) => setCreateData({ ...createData, name: e.target.value })}
         />
         <textarea
           className="form-input"
-          placeholder="Описание (необязательно)"
+          placeholder={t('Описание (необязательно)')}
           rows={3}
           value={createData.description}
           onChange={(e) => setCreateData({ ...createData, description: e.target.value })}
         />
-        <div className="form-label">Дедлайн</div>
+        <div className="form-label">{t('Дедлайн')}</div>
         <input
           className="form-input"
           type="date"

@@ -312,6 +312,10 @@
   display: none;
 }
 
+.mobile-compact-header {
+  display: none;
+}
+
 .mobile-bottom-nav {
   display: grid;
   position: fixed;
@@ -369,6 +373,49 @@
     z-index: 999;
     --mobile-toggle-row-height: 46px;
     --mobile-toggle-offset: calc(var(--mobile-toggle-row-height) + env(safe-area-inset-bottom));
+  }
+
+  .mobile-compact-header {
+    display: block;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1001;
+    border-bottom: 1px solid var(--mobile-nav-border);
+    background: var(--mobile-nav-bg);
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
+    padding-top: env(safe-area-inset-top);
+    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.24);
+  }
+
+  .mobile-compact-header-row {
+    height: var(--mobile-compact-header-height, 34px);
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 0 12px;
+    gap: 10px;
+  }
+
+  .mobile-compact-logo-btn {
+    border: 1px solid transparent;
+    background: transparent;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 38px;
+    height: 100%;
+    border-radius: 10px;
+    padding: 4px 8px;
+  }
+
+  .mobile-compact-logo {
+    height: calc(var(--mobile-compact-header-height, 34px) - 12px);
+    width: auto;
+    display: block;
+    filter: var(--icon-filter);
   }
 
   .mobile-nav-toggle {
@@ -477,6 +524,13 @@
   .help-main,
   .project-page {
     padding-bottom: calc(var(--mobile-primary-nav-content-offset, 84px) + env(safe-area-inset-bottom));
+  }
+
+  .home-main,
+  .dashboard-main,
+  .profile-main,
+  .settings-main {
+    padding-top: var(--mobile-compact-header-content-offset, 56px);
   }
   
   .header-btn,

@@ -4,6 +4,7 @@ import './Header.css';
 import logo from '../assets/logo.svg';
 import { useAuth } from '../../context/AuthContext';
 import { useHint } from '../../context/HintContext';
+import { useI18n } from '../../context/I18nContext';
 
 // Импорт иконок
 import HomeIcon from '../assets/icons/home.svg';
@@ -61,7 +62,8 @@ const Header: React.FC<HeaderProps> = ({
   const location = useLocation();
   const auth = useAuth();
   const { hint } = useHint();
-  const displayName = username || auth.user?.nickname || 'Пользователь';
+  const { t } = useI18n();
+  const displayName = username || auth.user?.nickname || t('Пользователь');
   const [isMobileLayout, setIsMobileLayout] = useState(() => {
     if (typeof window === 'undefined') return false;
     return window.matchMedia('(max-width: 992px)').matches;
@@ -77,6 +79,11 @@ const Header: React.FC<HeaderProps> = ({
     (location.pathname === '/dashboard' && !location.search.includes('create=1')) ||
     location.pathname.startsWith('/project');
   const isProfileActive = location.pathname === '/profile';
+  const shouldShowCompactMobileHeader =
+    location.pathname === '/home' ||
+    location.pathname === '/dashboard' ||
+    location.pathname === '/settings' ||
+    location.pathname === '/profile';
 
   useEffect(() => {
     const mediaQuery = window.matchMedia('(max-width: 992px)');
@@ -96,6 +103,8 @@ const Header: React.FC<HeaderProps> = ({
     if (!isMobileLayout) {
       document.documentElement.style.removeProperty('--mobile-primary-nav-height');
       document.documentElement.style.removeProperty('--mobile-primary-nav-content-offset');
+      document.documentElement.style.removeProperty('--mobile-compact-header-height');
+      document.documentElement.style.removeProperty('--mobile-compact-header-content-offset');
       return;
     }
 
@@ -105,14 +114,20 @@ const Header: React.FC<HeaderProps> = ({
     const contentOffset = isCollapsibleMobileNav
       ? (isMobileNavOpen ? '154px' : '84px')
       : '112px';
+    const compactHeaderHeight = `calc(${primaryNavHeight} / 3)`;
+    const compactHeaderContentOffset = `calc(${compactHeaderHeight} + env(safe-area-inset-top) + 12px)`;
     document.documentElement.style.setProperty('--mobile-primary-nav-height', primaryNavHeight);
     document.documentElement.style.setProperty('--mobile-primary-nav-content-offset', contentOffset);
+    document.documentElement.style.setProperty('--mobile-compact-header-height', compactHeaderHeight);
+    document.documentElement.style.setProperty('--mobile-compact-header-content-offset', compactHeaderContentOffset);
   }, [isCollapsibleMobileNav, isMobileLayout, isMobileNavOpen]);
 
   useEffect(() => {
     return () => {
       document.documentElement.style.removeProperty('--mobile-primary-nav-height');
       document.documentElement.style.removeProperty('--mobile-primary-nav-content-offset');
+      document.documentElement.style.removeProperty('--mobile-compact-header-height');
+      document.documentElement.style.removeProperty('--mobile-compact-header-content-offset');
     };
   }, []);
 
@@ -126,6 +141,8 @@ const Header: React.FC<HeaderProps> = ({
     navigate('/home');
   };
 
+  const translatedBackText = t(backButtonText);
+
   const handleLogoutClick = () => {
     if (onLogoutClick) {
       onLogoutClick();
@@ -136,70 +153,87 @@ const Header: React.FC<HeaderProps> = ({
 
   if (isMobileLayout) {
     return (
-      <div
-        className={`mobile-nav-shell ${
-          isCollapsibleMobileNav ? (isMobileNavOpen ? 'expanded' : 'collapsed') : 'static'
-        }`}
-      >
-        {isCollapsibleMobileNav && (
-          <button
-            className="mobile-nav-toggle"
-            onClick={() => setMobileNavExpanded((prev) => !prev)}
-            aria-expanded={isMobileNavOpen}
-            aria-label={isMobileNavOpen ? 'Свернуть нижнюю панель' : 'Развернуть нижнюю панель'}
-            title={isMobileNavOpen ? 'Свернуть' : 'Развернуть'}
-          >
-            {isMobileNavOpen ? '↓' : '↑'}
-          </button>
+      <>
+        {shouldShowCompactMobileHeader && (
+          <header className="mobile-compact-header" aria-label={t('Главная')}>
+            <div className="mobile-compact-header-row">
+              <button
+                className="mobile-compact-logo-btn"
+                onClick={() => navigate('/home')}
+                title={t('Домой')}
+                aria-label={t('Главная')}
+              >
+                <img src={logo} alt="SyncHub" className="mobile-compact-logo" />
+              </button>
+            </div>
+          </header>
         )}
-        <nav className="mobile-bottom-nav" aria-label="Мобильная навигация">
-          <button
-            className={`mobile-nav-btn ${isSettingsActive ? 'active' : ''}`}
-            onClick={onSettingsClick || (() => navigate('/settings'))}
-            title="Настройки"
-            style={navAccentStyle('#34d399')}
-          >
-            <img src={SettingsIcon} alt="Настройки" />
-            <span>Настройки</span>
-          </button>
-          <button
-            className={`mobile-nav-btn ${isProjectsActive ? 'active' : ''}`}
-            onClick={() => navigate('/dashboard')}
-            title="Проекты"
-            style={navAccentStyle('#3b82f6')}
-          >
-            <img src={ProjectsIcon} alt="Проекты" />
-            <span>Проекты</span>
-          </button>
-          <button
-            className={`mobile-nav-btn ${isHomeActive ? 'active' : ''}`}
-            onClick={() => navigate('/home')}
-            title="Домой"
-            style={navAccentStyle('#f59e0b')}
-          >
-            <img src={HomeIcon} alt="Домой" />
-            <span>Домой</span>
-          </button>
-          <button
-            className={`mobile-nav-btn ${isCreateActive ? 'active' : ''}`}
-            onClick={() => navigate('/dashboard?create=1')}
-            title="Создать"
-            style={navAccentStyle('#ff391a')}
-          >
-            <img src={NewProjectIcon} alt="Создать" />
-            <span>Создать</span>
-          </button>
-          <button
-            className={`mobile-nav-btn ${isProfileActive ? 'active' : ''}`}
-            onClick={() => navigate('/profile')}
-            title="Профиль"
-            style={navAccentStyle('#22d3ee')}
-          >
-            <img src={ProfileIcon} alt="Профиль" />
-            <span>Профиль</span>
-          </button>
-        </nav>
-      </div>
+
+        <div
+          className={`mobile-nav-shell ${
+            isCollapsibleMobileNav ? (isMobileNavOpen ? 'expanded' : 'collapsed') : 'static'
+          }`}
+        >
+          {isCollapsibleMobileNav && (
+            <button
+              className="mobile-nav-toggle"
+              onClick={() => setMobileNavExpanded((prev) => !prev)}
+              aria-expanded={isMobileNavOpen}
+              aria-label={isMobileNavOpen ? t('Свернуть нижнюю панель') : t('Развернуть нижнюю панель')}
+              title={isMobileNavOpen ? t('Свернуть нижнюю панель') : t('Развернуть нижнюю панель')}
+            >
+              {isMobileNavOpen ? '↓' : '↑'}
+            </button>
+          )}
+          <nav className="mobile-bottom-nav" aria-label={t('Навигация')}>
+            <button
+              className={`mobile-nav-btn ${isSettingsActive ? 'active' : ''}`}
+              onClick={onSettingsClick || (() => navigate('/settings'))}
+              title={t('Настройки')}
+              style={navAccentStyle('#34d399')}
+            >
+              <img src={SettingsIcon} alt={t('Настройки')} />
+              <span>{t('Настройки')}</span>
+            </button>
+            <button
+              className={`mobile-nav-btn ${isProjectsActive ? 'active' : ''}`}
+              onClick={() => navigate('/dashboard')}
+              title={t('Проекты')}
+              style={navAccentStyle('#3b82f6')}
+            >
+              <img src={ProjectsIcon} alt={t('Проекты')} />
+              <span>{t('Проекты')}</span>
+            </button>
+            <button
+              className={`mobile-nav-btn ${isHomeActive ? 'active' : ''}`}
+              onClick={() => navigate('/home')}
+              title={t('Главная')}
+              style={navAccentStyle('#f59e0b')}
+            >
+              <img src={HomeIcon} alt={t('Главная')} />
+              <span>{t('Главная')}</span>
+            </button>
+            <button
+              className={`mobile-nav-btn ${isCreateActive ? 'active' : ''}`}
+              onClick={() => navigate('/dashboard?create=1')}
+              title={t('Создать')}
+              style={navAccentStyle('#ff391a')}
+            >
+              <img src={NewProjectIcon} alt={t('Создать')} />
+              <span>{t('Создать')}</span>
+            </button>
+            <button
+              className={`mobile-nav-btn ${isProfileActive ? 'active' : ''}`}
+              onClick={() => navigate('/profile')}
+              title={t('Профиль')}
+              style={navAccentStyle('#22d3ee')}
+            >
+              <img src={ProfileIcon} alt={t('Профиль')} />
+              <span>{t('Профиль')}</span>
+            </button>
+          </nav>
+        </div>
+      </>
     );
   }
 
@@ -213,9 +247,9 @@ const Header: React.FC<HeaderProps> = ({
         )}
 
         {showBackButton && (
-          <button className="header-btn back-btn" onClick={handleBackClick} title={backButtonText}>
+          <button className="header-btn back-btn" onClick={handleBackClick} title={translatedBackText}>
             {backButtonIcon ? (
-              <img src={backButtonIcon} alt={backButtonText} className="back-icon" />
+              <img src={backButtonIcon} alt={translatedBackText} className="back-icon" />
             ) : (
               <span className="back-arrow">←</span>
             )}
@@ -223,22 +257,22 @@ const Header: React.FC<HeaderProps> = ({
         )}
 
         {showHomeButton && (
-          <button className="header-btn home-btn" onClick={handleHomeClick} title="Главная">
-            <img src={HomeIcon} alt="Главная" className="home-icon" />
+          <button className="header-btn home-btn" onClick={handleHomeClick} title={t('Главная')}>
+            <img src={HomeIcon} alt={t('Главная')} className="home-icon" />
           </button>
         )}
       </div>
 
       <div className="header-center">
-        {title && <h1 className="header-title">{title}</h1>}
-        {subtitle && <div className="header-subtitle">{subtitle}</div>}
+        {title && <h1 className="header-title">{t(title)}</h1>}
+        {subtitle && <div className="header-subtitle">{t(subtitle)}</div>}
       </div>
 
       <div className="header-right">
-        <div className="header-hint">{hint || 'Подсказка: наведите на элемент'}</div>
+        <div className="header-hint">{hint || t('Подсказка: наведите на элемент')}</div>
         {teamCount > 0 && (
-          <button className="header-btn team-btn" title="Участники команды">
-            <img src={MembersIcon} alt="Участники" className="team-icon" />
+          <button className="header-btn team-btn" title={t('участника')}>
+            <img src={MembersIcon} alt={t('участника')} className="team-icon" />
             <span>{teamCount}</span>
           </button>
         )}
@@ -247,9 +281,9 @@ const Header: React.FC<HeaderProps> = ({
           <button
             className="header-btn settings-btn"
             onClick={onSettingsClick || (() => navigate('/settings'))}
-            title="Настройки"
+            title={t('Настройки')}
           >
-            <img src={SettingsIcon} alt="Настройки" className="settings-icon" />
+            <img src={SettingsIcon} alt={t('Настройки')} className="settings-icon" />
           </button>
         )}
 
@@ -257,10 +291,10 @@ const Header: React.FC<HeaderProps> = ({
           <button
             className="header-btn export-btn"
             onClick={onExportClick}
-            title="Экспорт проекта"
+            title={t('Экспорт')}
           >
-            <img src={ExportIcon} alt="Экспорт" className="export-icon" />
-            <span>Экспорт</span>
+            <img src={ExportIcon} alt={t('Экспорт')} className="export-icon" />
+            <span>{t('Экспорт')}</span>
           </button>
         )}
 
@@ -268,10 +302,10 @@ const Header: React.FC<HeaderProps> = ({
           <button
             className="profile-btn"
             onClick={() => navigate('/profile')}
-            title="Профиль"
+            title={t('Профиль')}
           >
             <span className="user-avatar">
-              <img src={ProfileIcon} alt="Профиль" className="profile-icon" />
+              <img src={ProfileIcon} alt={t('Профиль')} className="profile-icon" />
             </span>
             <span className="user-name">{displayName}</span>
           </button>
@@ -281,10 +315,10 @@ const Header: React.FC<HeaderProps> = ({
           <button
             className="header-btn logout-btn"
             onClick={handleLogoutClick}
-            title="Выйти из системы"
+            title={t('Выйти')}
           >
-            <img src={LogoutIcon} alt="Выйти" className="logout-icon" />
-            <span>Выйти</span>
+            <img src={LogoutIcon} alt={t('Выйти')} className="logout-icon" />
+            <span>{t('Выйти')}</span>
           </button>
         )}
       </div>

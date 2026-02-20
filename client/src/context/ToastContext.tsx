@@ -19,7 +19,8 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const showToast = (message: string, kind: ToastKind = 'info') => {
     const id = `toast_${Date.now()}_${Math.random().toString(16).slice(2)}`;
-    setToasts((prev) => [...prev, { id, message, kind }]);
+    // Keep a single toast in the header area so it does not overlap page content.
+    setToasts([{ id, message, kind }]);
     setTimeout(() => {
       setToasts((prev) => prev.filter((toast) => toast.id !== id));
     }, 3200);
