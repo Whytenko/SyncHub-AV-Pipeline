@@ -28,6 +28,7 @@ export interface ProjectMarker {
   time: number;
   color: string;
   title: string;
+  comment: string;
   user: string;
   icon: string;
   tabId: TabType;
@@ -46,6 +47,7 @@ export interface BodyMarker {
   id: number;
   x: number;
   y: number;
+  time?: number;
   title: string;
   description: string;
   bodyPart: string;
@@ -100,6 +102,7 @@ export interface Project {
   ownerId: string;
   members: string[] | UserSummary[];
   deadline: string;
+  timelineDuration: number;
   createdAt: string;
   updatedAt: string;
   scriptText: string;

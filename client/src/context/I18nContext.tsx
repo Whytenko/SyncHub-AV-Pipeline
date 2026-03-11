@@ -226,7 +226,36 @@ const dictionary: Record<string, { en: string; zh: string }> = {
   'Композитор': { en: 'Composer', zh: '作曲' },
   'Костюмер': { en: 'Costume designer', zh: '服装师' },
   'Визажист': { en: 'Makeup artist', zh: '化妆师' },
-  'Оператор': { en: 'Cinematographer', zh: '摄影师' }
+  'Оператор': { en: 'Cinematographer', zh: '摄影师' },
+  'Подтвердите уменьшение таймлайна': { en: 'Confirm timeline reduction', zh: '确认缩短时间线' },
+  'Текущая длина таймлайна: {duration}': { en: 'Current timeline length: {duration}', zh: '当前时间线长度：{duration}' },
+  'Новая длина таймлайна: {duration}': { en: 'New timeline length: {duration}', zh: '新的时间线长度：{duration}' },
+  'Новая длина меньше существующих маркеров и кадров. Их позиции будут автоматически сдвинуты в пределы новой длины.': {
+    en: 'The new length is shorter than existing markers and shots. Their positions will be clamped automatically.',
+    zh: '新的长度短于现有标记和镜头。它们的位置将自动限制到新的范围内。'
+  },
+  'Применить': { en: 'Apply', zh: '应用' },
+  'Подтвердите удаление человека': { en: 'Confirm person removal', zh: '确认删除人物' },
+  'Будет удален: {name}': { en: 'Will be removed: {name}', zh: '将被删除：{name}' },
+  'Связанные body-маркеры будут удалены: {count}': {
+    en: 'Linked body markers will be removed: {count}',
+    zh: '关联的人体标记将被删除：{count}'
+  },
+  'Просмотр документа': { en: 'Document preview', zh: '文档预览' },
+  'Дата': { en: 'Date', zh: '日期' },
+  'Предпросмотр содержимого документа появится здесь.': {
+    en: 'Document content preview will appear here.',
+    zh: '文档内容预览将在此处显示。'
+  },
+  'Комментарий': { en: 'Comment', zh: '评论' },
+  'Комментарий маркера': { en: 'Marker comment', zh: '标记评论' },
+  'Введите комментарий маркера': { en: 'Enter marker comment', zh: '请输入标记评论' },
+  'Маркер {count}': { en: 'Marker {count}', zh: '标记 {count}' },
+  'Переименовать': { en: 'Rename', zh: '重命名' },
+  'Введите новое имя человека': { en: 'Enter a new person name', zh: '请输入新的人物名称' },
+  'Имя человека не может быть пустым': { en: 'Person name cannot be empty', zh: '人物名称不能为空' },
+  'Человек с таким именем уже есть': { en: 'A person with this name already exists', zh: '同名人物已存在' },
+  'Имя человека обновлено': { en: 'Person name updated', zh: '人物名称已更新' }
 }
 
 const I18nContext = createContext<I18nContextValue | undefined>(undefined)

@@ -39,6 +39,7 @@ const buildLocalProject = (payload: { name: string; description?: string; deadli
     ownerId: 'local',
     members: [],
     deadline: payload.deadline || '',
+    timelineDuration: 205,
     createdAt: now,
     updatedAt: now,
     scriptText: '',

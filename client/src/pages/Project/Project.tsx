@@ -4,10 +4,12 @@ import Header from '../Header/Header';
 import './Project.css';
 import { projectsApi } from '../../api/projects';
 import { useToast } from '../../context/ToastContext';
+import { useI18n } from '../../context/I18nContext';
 import Modal from '../../components/Modal';
 import type {
   BodyMarker,
   BodySilhouette,
+  DocumentFile,
   Location,
   MediaFile,
   Project,
@@ -81,6 +83,16 @@ const formatTime = (seconds: number) => {
   return `${mins}:${secs.toString().padStart(2, '0')}`;
 };
 
+const DEFAULT_TIMELINE_DURATION = 205;
+
+const normalizeTimelineDuration = (value: unknown) => {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return DEFAULT_TIMELINE_DURATION;
+  }
+  return Math.max(1, Math.floor(parsed));
+};
+
 const parseTimeInput = (value: string) => {
   if (!value) return NaN;
   if (value.includes(':')) {
@@ -124,13 +136,22 @@ const getMarkerPersonId = (marker: BodyMarker) => {
   return Number.isFinite(id) && id > 0 ? id : 1;
 };
 
+const getBodyMarkerTime = (marker: BodyMarker) => {
+  const time = Number((marker as any).time);
+  return Number.isFinite(time) && time >= 0 ? Math.floor(time) : 0;
+};
+
+type TimelineMarkerItem = ProjectMarker & { timelineKey: string };
+
 const ProjectPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const { showToast } = useToast();
+  const { t, language } = useI18n();
 
   const [project, setProject] = useState<Project | null>(null);
   const [loading, setLoading] = useState(true);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [isTimelineDragging, setIsTimelineDragging] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [activeTab, setActiveTab] = useState<TabType>('edit');
   const [showAllMarkers, setShowAllMarkers] = useState(true);
@@ -138,9 +159,16 @@ const ProjectPage: React.FC = () => {
   const [initialScriptHtml, setInitialScriptHtml] = useState('');
   const [directorNotes, setDirectorNotes] = useState('');
   const editorRef = useRef<HTMLDivElement>(null);
+  const timelineBarRef = useRef<HTMLDivElement>(null);
 
   const [showMarkerModal, setShowMarkerModal] = useState(false);
   const [markerTitle, setMarkerTitle] = useState('');
+  const [markerComment, setMarkerComment] = useState('');
+  const [showTimelineMarkerModal, setShowTimelineMarkerModal] = useState(false);
+  const [selectedTimelineMarker, setSelectedTimelineMarker] = useState<ProjectMarker | null>(null);
+  const [timelineDurationInput, setTimelineDurationInput] = useState('');
+  const [pendingTimelineDuration, setPendingTimelineDuration] = useState<number | null>(null);
+  const [showTimelineDurationConfirm, setShowTimelineDurationConfirm] = useState(false);
   const [showCommentModal, setShowCommentModal] = useState(false);
   const [commentTab, setCommentTab] = useState<TabType>('edit');
   const [commentText, setCommentText] = useState('');
@@ -153,27 +181,50 @@ const ProjectPage: React.FC = () => {
   const [mediaDraft, setMediaDraft] = useState({ name: '', type: 'video', duration: '', size: '' });
   const [showDocModal, setShowDocModal] = useState(false);
   const [docDraft, setDocDraft] = useState({ name: '', size: '', uploadedBy: '' });
+  const [previewDocument, setPreviewDocument] = useState<DocumentFile | null>(null);
+  const [selectedMediaId, setSelectedMediaId] = useState<number | null>(null);
   const [showBodyMarkerModal, setShowBodyMarkerModal] = useState(false);
   const [bodyMarkerDraft, setBodyMarkerDraft] = useState({
     title: '',
     description: '',
     bodyPart: '',
+    time: '0:00',
     x: 50,
     y: 50,
     tabId: 'costumes' as TabType,
     personId: 1
   });
   const [bodyMarkerEditId, setBodyMarkerEditId] = useState<number | null>(null);
+  const [pendingSilhouetteRemoval, setPendingSilhouetteRemoval] = useState<{
+    personId: number;
+    personName: string;
+    relatedMarkersCount: number;
+  } | null>(null);
   const [showProjectSettings, setShowProjectSettings] = useState(false);
   const [projectDraft, setProjectDraft] = useState({ name: '', description: '', deadline: '' });
 
   const normalizeProjectData = (rawProject: Project): Project => {
     const silhouettes = normalizeSilhouettes((rawProject as any).bodySilhouettes);
+    const markersWithComment = Array.isArray(rawProject.markers)
+      ? rawProject.markers.map((marker) => ({
+          ...marker,
+          comment:
+            typeof (marker as any).comment === 'string' && (marker as any).comment.trim().length > 0
+              ? (marker as any).comment.trim()
+              : marker.title
+        }))
+      : [];
     const bodyMarkersWithPerson = Array.isArray(rawProject.bodyMarkers)
-      ? rawProject.bodyMarkers.map((marker) => ({ ...marker, personId: getMarkerPersonId(marker) }))
+      ? rawProject.bodyMarkers.map((marker) => ({
+          ...marker,
+          time: getBodyMarkerTime(marker),
+          personId: getMarkerPersonId(marker)
+        }))
       : [];
     return {
       ...rawProject,
+      timelineDuration: normalizeTimelineDuration((rawProject as any).timelineDuration),
+      markers: markersWithComment,
       bodyMarkers: bodyMarkersWithPerson,
       bodySilhouettes: silhouettes
     };
@@ -191,20 +242,21 @@ const ProjectPage: React.FC = () => {
         setScriptText(normalizedScript);
         setInitialScriptHtml(normalizedScript);
         setDirectorNotes(normalizedProject.directorNotes || '');
+        setTimelineDurationInput(formatTime(normalizedProject.timelineDuration));
         setProjectDraft({
           name: normalizedProject.name || '',
           description: normalizedProject.description || '',
           deadline: normalizedProject.deadline || ''
         });
       } catch (err) {
-        const message = err instanceof Error ? err.message : 'Не удалось загрузить проект';
+        const message = err instanceof Error ? err.message : t('Не удалось загрузить проект');
         showToast(message, 'error');
       } finally {
         setLoading(false);
       }
     };
     loadProject();
-  }, [id, showToast]);
+  }, [id, showToast, t]);
 
   useEffect(() => {
     if (!editorRef.current) return;
@@ -223,6 +275,13 @@ const ProjectPage: React.FC = () => {
     }
   }, [project]);
 
+  useEffect(() => {
+    if (!project) return;
+    const nextDuration = normalizeTimelineDuration(project.timelineDuration);
+    setTimelineDurationInput(formatTime(nextDuration));
+    setCurrentTime((prev) => Math.min(prev, nextDuration));
+  }, [project?.timelineDuration]);
+
   const saveProject = async (patch: Partial<Project>) => {
     if (!project) return;
     try {
@@ -231,7 +290,7 @@ const ProjectPage: React.FC = () => {
       setProject(normalizedProject);
       return normalizedProject;
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Не удалось сохранить изменения';
+      const message = err instanceof Error ? err.message : t('Не удалось сохранить изменения');
       showToast(message, 'error');
     }
   };
@@ -243,10 +302,70 @@ const ProjectPage: React.FC = () => {
   const mediaFiles = project?.mediaFiles || [];
   const documents = project?.documents || [];
   const comments = project?.comments || [];
+  const timelineDuration = normalizeTimelineDuration(project?.timelineDuration);
+  const locale = language === 'en' ? 'en-US' : language === 'zh' ? 'zh-CN' : 'ru-RU';
+  const selectedMedia = mediaFiles.find((file) => file.id === selectedMediaId) || null;
+
+  useEffect(() => {
+    if (mediaFiles.length === 0) {
+      setSelectedMediaId(null);
+      return;
+    }
+    if (!selectedMediaId || !mediaFiles.some((file) => file.id === selectedMediaId)) {
+      setSelectedMediaId(mediaFiles[0].id);
+    }
+  }, [mediaFiles, selectedMediaId]);
+
+  const maxTimelineUsage = useMemo(() => {
+    const markerMax = markers.reduce((max, marker) => Math.max(max, marker.time), 0);
+    const shotsMax = locations.reduce(
+      (max, location) =>
+        Math.max(
+          max,
+          ...location.shots.map((shot) => shot.time)
+        ),
+      0
+    );
+    const bodyMarkersMax = bodyMarkers.reduce((max, marker) => Math.max(max, getBodyMarkerTime(marker)), 0);
+    return Math.max(markerMax, shotsMax, bodyMarkersMax);
+  }, [bodyMarkers, locations, markers]);
+
+  const timelineMarkers = useMemo<TimelineMarkerItem[]>(() => {
+    const projectMarkers: TimelineMarkerItem[] = markers.map((marker) => ({
+      ...marker,
+      timelineKey: `project-${marker.id}`
+    }));
+
+    const silhouetteTimelineMarkers: TimelineMarkerItem[] = bodyMarkers.map((marker) => {
+      const personId = getMarkerPersonId(marker);
+      const personName = bodySilhouettes.find((person) => person.id === personId)?.name || `Человек ${personId}`;
+      return {
+        id: marker.id,
+        time: getBodyMarkerTime(marker),
+        color: marker.color || tabColors[marker.tabId],
+        title: marker.title,
+        comment: marker.description?.trim() || marker.title,
+        user: personName,
+        icon: marker.tabId,
+        tabId: marker.tabId,
+        timelineKey: `silhouette-${marker.tabId}-${marker.id}`
+      };
+    });
+
+    return [...projectMarkers, ...silhouetteTimelineMarkers];
+  }, [bodyMarkers, bodySilhouettes, markers]);
 
   const filteredMarkers = showAllMarkers
-    ? markers
-    : markers.filter((marker) => marker.tabId === activeTab);
+    ? timelineMarkers
+    : timelineMarkers.filter((marker) => marker.tabId === activeTab);
+
+  const timelineLabels = useMemo(() => {
+    const segments = 7;
+    const labels = Array.from({ length: segments + 1 }, (_, index) =>
+      Math.round((index / segments) * timelineDuration)
+    );
+    return Array.from(new Set([0, ...labels, timelineDuration])).sort((a, b) => a - b);
+  }, [timelineDuration]);
 
   const resolveMarkerIcon = (marker: ProjectMarker) => {
     return iconMap[marker.icon] || MarkerIcon;
@@ -261,25 +380,88 @@ const ProjectPage: React.FC = () => {
 
   const handleCreateMarker = async () => {
     if (!project) return;
-    const title = markerTitle.trim() || `Маркер ${markers.length + 1}`;
+    if (!markerComment.trim()) {
+      showToast(t('Введите комментарий маркера'), 'error');
+      return;
+    }
+    const title = markerTitle.trim() || t('Маркер {count}', { count: markers.length + 1 });
     const newMarker: ProjectMarker = {
       id: markers.length + 1,
       time: currentTime,
       color: tabColors[activeTab],
       title,
-      user: 'Вы',
+      comment: markerComment.trim(),
+      user: t('Вы'),
       icon: activeTab,
       tabId: activeTab
     };
     const updatedMarkers = [...markers, newMarker];
     setMarkerTitle('');
+    setMarkerComment('');
     setShowMarkerModal(false);
     await saveProject({ markers: updatedMarkers });
-    showToast('Маркер добавлен', 'success');
+    showToast(t('Маркер добавлен'), 'success');
   };
 
   const handleTimelineClick = (time: number) => {
-    setCurrentTime(time);
+    const safeTime = Math.max(0, Math.min(timelineDuration, Math.floor(time)));
+    setCurrentTime(safeTime);
+  };
+
+  const handleOpenTimelineMarkerDetails = (marker: ProjectMarker) => {
+    setSelectedTimelineMarker(marker);
+    handleTimelineClick(marker.time);
+    setShowTimelineMarkerModal(true);
+  };
+
+  const applyTimelineDuration = async (nextDuration: number, shouldClampData: boolean) => {
+    const patch: Partial<Project> = { timelineDuration: nextDuration };
+    if (shouldClampData) {
+      patch.markers = markers.map((marker) => ({
+        ...marker,
+        time: Math.min(marker.time, nextDuration)
+      }));
+      patch.bodyMarkers = bodyMarkers.map((marker) => ({
+        ...marker,
+        time: Math.min(getBodyMarkerTime(marker), nextDuration)
+      }));
+      patch.locations = locations.map((location) => ({
+        ...location,
+        shots: location.shots.map((shot) => ({
+          ...shot,
+          time: Math.min(shot.time, nextDuration)
+        }))
+      }));
+    }
+    await saveProject(patch);
+    setCurrentTime((prev) => Math.min(prev, nextDuration));
+    setTimelineDurationInput(formatTime(nextDuration));
+    showToast(t('Длительность таймлайна обновлена'), 'success');
+  };
+
+  const handleSaveTimelineDuration = async () => {
+    if (!project) return;
+    const parsed = parseTimeInput(timelineDurationInput.trim());
+    if (!Number.isFinite(parsed) || parsed <= 0) {
+      showToast(t('Введите корректную длительность таймлайна (секунды или мм:сс)'), 'error');
+      return;
+    }
+
+    const nextDuration = normalizeTimelineDuration(parsed);
+    if (nextDuration < maxTimelineUsage) {
+      setPendingTimelineDuration(nextDuration);
+      setShowTimelineDurationConfirm(true);
+      return;
+    }
+
+    await applyTimelineDuration(nextDuration, false);
+  };
+
+  const handleConfirmTimelineShrink = async () => {
+    if (!pendingTimelineDuration) return;
+    await applyTimelineDuration(pendingTimelineDuration, true);
+    setPendingTimelineDuration(null);
+    setShowTimelineDurationConfirm(false);
   };
 
   const handleFormatText = (command: string, value?: string) => {
@@ -311,7 +493,7 @@ const ProjectPage: React.FC = () => {
       editorRef.current.innerHTML = normalizedHtml;
     }
     await saveProject({ scriptText: normalizedHtml });
-    showToast('Сценарий сохранен', 'success');
+    showToast(t('Сценарий сохранен'), 'success');
   };
 
   const handleAddMarkerToText = async () => {
@@ -323,26 +505,26 @@ const ProjectPage: React.FC = () => {
     }
     setScriptText(nextText);
     await saveProject({ scriptText: nextText });
-    showToast('Маркер добавлен в текст', 'success');
+    showToast(t('Маркер добавлен в текст'), 'success');
   };
 
   const handleAddComment = async () => {
     if (!commentText.trim()) {
-      showToast('Введите текст комментария', 'error');
+      showToast(t('Введите текст комментария'), 'error');
       return;
     }
     const newComment: ProjectComment = {
       id: comments.length + 1,
       tabId: commentTab,
-      user: 'Вы',
+      user: t('Вы'),
       text: commentText.trim(),
-      timestamp: new Date().toLocaleString('ru-RU'),
+      timestamp: new Date().toLocaleString(locale),
       resolved: false
     };
     setCommentText('');
     setShowCommentModal(false);
     await saveProject({ comments: [...comments, newComment] });
-    showToast('Комментарий добавлен', 'success');
+    showToast(t('Комментарий добавлен'), 'success');
   };
 
   const openCommentModal = (tabId: TabType) => {
@@ -360,7 +542,7 @@ const ProjectPage: React.FC = () => {
 
   const handleAddLocation = async () => {
     if (!locationDraft.name.trim()) {
-      showToast('Введите название локации', 'error');
+      showToast(t('Введите название локации'), 'error');
       return;
     }
     const newLocation: Location = {
@@ -372,19 +554,20 @@ const ProjectPage: React.FC = () => {
     setLocationDraft({ name: '', description: '' });
     setShowLocationModal(false);
     await saveProject({ locations: [...locations, newLocation] });
-    showToast('Локация добавлена', 'success');
+    showToast(t('Локация добавлена'), 'success');
   };
 
   const handleAddShot = async () => {
     if (!shotLocationId) return;
     if (!shotDraft.title.trim()) {
-      showToast('Введите название кадра', 'error');
+      showToast(t('Введите название кадра'), 'error');
       return;
     }
     const locationIndex = locations.findIndex((location) => location.id === shotLocationId);
     if (locationIndex === -1) return;
     const parsedTime = parseTimeInput(shotDraft.time);
-    const time = Number.isNaN(parsedTime) ? currentTime : parsedTime;
+    const rawTime = Number.isNaN(parsedTime) ? currentTime : parsedTime;
+    const time = Math.max(0, Math.min(timelineDuration, Math.floor(rawTime)));
     const updatedLocations = [...locations];
     const newShot = {
       id: Date.now(),
@@ -400,20 +583,20 @@ const ProjectPage: React.FC = () => {
     setShotDraft({ time: '', title: '', description: '' });
     setShowShotModal(false);
     await saveProject({ locations: updatedLocations });
-    showToast('Кадр добавлен', 'success');
+    showToast(t('Кадр добавлен'), 'success');
   };
 
   const handleSaveNotes = async () => {
     await saveProject({ directorNotes });
-    showToast('Заметки сохранены', 'success');
+    showToast(t('Заметки сохранены'), 'success');
   };
 
   const handleShareNotes = async () => {
     try {
       await navigator.clipboard.writeText(directorNotes || '');
-      showToast('Заметки скопированы в буфер', 'success');
+      showToast(t('Заметки скопированы в буфер'), 'success');
     } catch {
-      showToast('Не удалось скопировать заметки', 'error');
+      showToast(t('Не удалось скопировать заметки'), 'error');
     }
   };
 
@@ -421,27 +604,53 @@ const ProjectPage: React.FC = () => {
     const lastId = bodySilhouettes.reduce((max, person) => Math.max(max, person.id), 0);
     const nextSilhouette: BodySilhouette = {
       id: lastId + 1,
-      name: `Человек ${bodySilhouettes.length + 1}`
+      name: t('Человек {count}', { count: bodySilhouettes.length + 1 })
     };
     const nextSilhouettes = [...bodySilhouettes, nextSilhouette];
     await saveProject({ bodySilhouettes: nextSilhouettes });
-    showToast('Добавлен новый силуэт', 'success');
+    showToast(t('Добавлен новый силуэт'), 'success');
+  };
+
+  const handleRenameSilhouette = async (personId: number) => {
+    const person = bodySilhouettes.find((item) => item.id === personId);
+    if (!person) return;
+    const nextNameRaw = window.prompt(t('Введите новое имя человека'), person.name);
+    if (nextNameRaw === null) return;
+    const nextName = nextNameRaw.trim();
+    if (!nextName) {
+      showToast(t('Имя человека не может быть пустым'), 'error');
+      return;
+    }
+    const duplicate = bodySilhouettes.some(
+      (item) => item.id !== personId && item.name.toLowerCase() === nextName.toLowerCase()
+    );
+    if (duplicate) {
+      showToast(t('Человек с таким именем уже есть'), 'error');
+      return;
+    }
+    if (nextName === person.name) return;
+
+    const nextSilhouettes = bodySilhouettes.map((item) =>
+      item.id === personId ? { ...item, name: nextName } : item
+    );
+    await saveProject({ bodySilhouettes: nextSilhouettes });
+    showToast(t('Имя человека обновлено'), 'success');
   };
 
   const handleRemoveSilhouette = async (personId: number) => {
     if (bodySilhouettes.length <= 1) {
-      showToast('Нельзя удалить последнего человека', 'error');
+      showToast(t('Нельзя удалить последнего человека'), 'error');
       return;
     }
-
     const personName = getSilhouetteLabel(personId);
-    const relatedMarkers = bodyMarkers.filter((marker) => getMarkerPersonId(marker) === personId);
-    const confirmed = window.confirm(
-      `Удалить "${personName}"? Будут удалены привязанные маркеры: ${relatedMarkers.length}.`
-    );
+    const relatedMarkersCount = bodyMarkers.filter((marker) => getMarkerPersonId(marker) === personId).length;
+    setPendingSilhouetteRemoval({ personId, personName, relatedMarkersCount });
+  };
 
-    if (!confirmed) return;
+  const handleConfirmSilhouetteRemoval = async () => {
+    if (!pendingSilhouetteRemoval) return;
 
+    const { personId, personName } = pendingSilhouetteRemoval;
     const nextSilhouettes = bodySilhouettes.filter((person) => person.id !== personId);
     const nextMarkers = bodyMarkers.filter((marker) => getMarkerPersonId(marker) !== personId);
 
@@ -458,21 +667,26 @@ const ProjectPage: React.FC = () => {
       bodySilhouettes: nextSilhouettes,
       bodyMarkers: nextMarkers
     });
-    showToast(`Удален ${personName}`, 'success');
+    showToast(t('Удален {name}', { name: personName }), 'success');
+    setPendingSilhouetteRemoval(null);
   };
 
   const handleAddBodyMarker = async () => {
     if (!bodyMarkerDraft.title.trim()) {
-      showToast('Введите название маркера', 'error');
+      showToast(t('Введите название маркера'), 'error');
       return;
     }
     const personId = Math.max(1, Number(bodyMarkerDraft.personId) || 1);
+    const parsedTime = parseTimeInput(bodyMarkerDraft.time);
+    const rawTime = Number.isNaN(parsedTime) ? currentTime : parsedTime;
+    const markerTime = Math.max(0, Math.min(timelineDuration, Math.floor(rawTime)));
     let updatedMarkers: BodyMarker[] = [];
     if (bodyMarkerEditId) {
       updatedMarkers = bodyMarkers.map((marker) =>
         marker.id === bodyMarkerEditId
           ? {
               ...marker,
+              time: markerTime,
               title: bodyMarkerDraft.title.trim(),
               description: bodyMarkerDraft.description.trim(),
               bodyPart: bodyMarkerDraft.bodyPart || marker.bodyPart,
@@ -487,6 +701,7 @@ const ProjectPage: React.FC = () => {
     } else {
       const newMarker: BodyMarker = {
         id: bodyMarkers.length + 1,
+        time: markerTime,
         x: bodyMarkerDraft.x,
         y: bodyMarkerDraft.y,
         title: bodyMarkerDraft.title.trim(),
@@ -505,6 +720,7 @@ const ProjectPage: React.FC = () => {
       title: '',
       description: '',
       bodyPart: '',
+      time: formatTime(currentTime),
       x: 50,
       y: 50,
       tabId: bodyMarkerDraft.tabId,
@@ -513,22 +729,22 @@ const ProjectPage: React.FC = () => {
     const wasEditing = Boolean(bodyMarkerEditId);
     setBodyMarkerEditId(null);
     await saveProject({ bodyMarkers: updatedMarkers });
-    showToast(wasEditing ? 'Маркер обновлен' : 'Маркер добавлен', 'success');
+    showToast(wasEditing ? t('Маркер обновлен') : t('Маркер добавлен'), 'success');
   };
 
   const handleAddBodyImage = async (markerId: number) => {
-    const url = window.prompt('Вставьте ссылку на изображение');
+    const url = window.prompt(t('Вставьте ссылку на изображение'));
     if (!url) return;
     const updated = bodyMarkers.map((marker) =>
       marker.id === markerId ? { ...marker, images: [...marker.images, url] } : marker
     );
     await saveProject({ bodyMarkers: updated });
-    showToast('Изображение добавлено', 'success');
+    showToast(t('Изображение добавлено'), 'success');
   };
 
   const handleAddMedia = async () => {
     if (!mediaDraft.name.trim()) {
-      showToast('Введите название файла', 'error');
+      showToast(t('Введите название файла'), 'error');
       return;
     }
     const newMedia: MediaFile = {
@@ -541,26 +757,26 @@ const ProjectPage: React.FC = () => {
     setMediaDraft({ name: '', type: 'video', duration: '', size: '' });
     setShowMediaModal(false);
     await saveProject({ mediaFiles: [...mediaFiles, newMedia] });
-    showToast('Медиафайл добавлен', 'success');
+    showToast(t('Медиафайл добавлен'), 'success');
   };
 
   const handleAddDocument = async () => {
     if (!docDraft.name.trim()) {
-      showToast('Введите название документа', 'error');
+      showToast(t('Введите название документа'), 'error');
       return;
     }
     const newDoc = {
       id: documents.length + 1,
       name: docDraft.name.trim(),
       size: docDraft.size || '—',
-      uploadedBy: docDraft.uploadedBy || 'Вы',
-      uploadedAt: new Intl.DateTimeFormat('ru-RU').format(new Date()),
+      uploadedBy: docDraft.uploadedBy || t('Вы'),
+      uploadedAt: new Intl.DateTimeFormat(locale).format(new Date()),
       type: 'script'
     };
     setDocDraft({ name: '', size: '', uploadedBy: '' });
     setShowDocModal(false);
     await saveProject({ documents: [...documents, newDoc] });
-    showToast('Документ добавлен', 'success');
+    showToast(t('Документ добавлен'), 'success');
   };
 
   const handleExport = async () => {
@@ -574,16 +790,20 @@ const ProjectPage: React.FC = () => {
       link.download = `synchub-${project.name}.json`;
       link.click();
       URL.revokeObjectURL(url);
-      showToast('Экспорт готов', 'success');
+      showToast(t('Экспорт готов'), 'success');
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Не удалось экспортировать проект';
+      const message = err instanceof Error ? err.message : t('Не удалось экспортировать проект');
       showToast(message, 'error');
     }
   };
 
+  const handleOpenDocumentPreview = (document: DocumentFile) => {
+    setPreviewDocument(document);
+  };
+
   const handleSaveProjectSettings = async () => {
     if (!projectDraft.name.trim()) {
-      showToast('Название проекта обязательно', 'error');
+      showToast(t('Название проекта обязательно'), 'error');
       return;
     }
     await saveProject({
@@ -592,10 +812,45 @@ const ProjectPage: React.FC = () => {
       deadline: projectDraft.deadline
     });
     setShowProjectSettings(false);
-    showToast('Настройки проекта сохранены', 'success');
+    showToast(t('Настройки проекта сохранены'), 'success');
   };
 
-  const timelineDuration = 205;
+  const getTimelineTimeFromClientX = (clientX: number) => {
+    const timelineElement = timelineBarRef.current;
+    if (!timelineElement) {
+      return currentTime;
+    }
+
+    const rect = timelineElement.getBoundingClientRect();
+    if (rect.width <= 0) {
+      return currentTime;
+    }
+
+    const clampedOffsetX = Math.min(Math.max(clientX - rect.left, 0), rect.width);
+    const percentage = clampedOffsetX / rect.width;
+    return Math.floor(percentage * timelineDuration);
+  };
+
+  const handleTimelineScrubStart = (event: React.PointerEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    setIsTimelineDragging(true);
+    handleTimelineClick(getTimelineTimeFromClientX(event.clientX));
+    event.currentTarget.setPointerCapture(event.pointerId);
+  };
+
+  const handleTimelineScrubMove = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (!isTimelineDragging) return;
+    handleTimelineClick(getTimelineTimeFromClientX(event.clientX));
+  };
+
+  const handleTimelineScrubEnd = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (!isTimelineDragging) return;
+    handleTimelineClick(getTimelineTimeFromClientX(event.clientX));
+    setIsTimelineDragging(false);
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+  };
 
   const commentsByTab = useMemo(() => {
     return comments.reduce<Record<TabType, ProjectComment[]>>(
@@ -612,7 +867,7 @@ const ProjectPage: React.FC = () => {
       <div className="project-page">
         <div className="page-loading">
           <div className="loading-spinner" />
-          Загружаем проект…
+          {t('Загружаем проект…')}
         </div>
       </div>
     );
@@ -621,7 +876,7 @@ const ProjectPage: React.FC = () => {
   if (!project) {
     return (
       <div className="project-page">
-        <div className="empty-state">Проект не найден.</div>
+        <div className="empty-state">{t('Проект не найден.')}</div>
       </div>
     );
   }
@@ -632,7 +887,7 @@ const ProjectPage: React.FC = () => {
         title={project.name}
         subtitle={`ID: ${project.id}`}
         showBackButton={true}
-        backButtonText="К проектам"
+        backButtonText={t('К проектам')}
         backButtonPath="/dashboard"
         backButtonIcon={BackToProjectIcon}
         showHomeButton={true}
@@ -650,12 +905,12 @@ const ProjectPage: React.FC = () => {
           <button className="play-btn" onClick={handlePlayPause}>
             <img
               src={isPlaying ? PauseIcon : PlayIcon}
-              alt={isPlaying ? 'Пауза' : 'Воспроизвести'}
+              alt={isPlaying ? t('Пауза') : t('Воспроизвести')}
               className="play-icon"
             />
           </button>
           <span className="time-display">
-            {formatTime(currentTime)} / 3:25
+            {formatTime(currentTime)} / {formatTime(timelineDuration)}
           </span>
 
           <div className="markers-filter">
@@ -665,44 +920,52 @@ const ProjectPage: React.FC = () => {
                 checked={showAllMarkers}
                 onChange={(e) => setShowAllMarkers(e.target.checked)}
               />
-              <span>Показать все маркеры</span>
+              <span>{t('Показать все маркеры')}</span>
             </label>
           </div>
         </div>
 
         <div className="timeline-container">
-          <div className="timeline-bar">
+          <div className="timeline-bar" ref={timelineBarRef}>
             {filteredMarkers.map((marker) => (
               <div
-                key={marker.id}
+                key={marker.timelineKey}
                 className="timeline-marker"
                 style={{
-                  left: `${(marker.time / timelineDuration) * 100}%`,
+                  left: `${(Math.min(marker.time, timelineDuration) / timelineDuration) * 100}%`,
                   backgroundColor: marker.color
                 }}
-                title={`${marker.title} (${marker.user}) - ${tabNames[marker.tabId]}`}
-                onClick={() => handleTimelineClick(marker.time)}
+                title={`${marker.title} (${marker.user}) - ${tabNames[marker.tabId]}${marker.comment ? ` • ${marker.comment}` : ''}`}
+                onPointerDown={(event) => event.stopPropagation()}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  handleOpenTimelineMarkerDetails(marker);
+                }}
               >
                 <img src={resolveMarkerIcon(marker)} alt={marker.user} className="marker-icon" />
               </div>
             ))}
 
-            <div className="timeline-cursor" style={{ left: `${(currentTime / timelineDuration) * 100}%` }} />
+            <div
+              className={`timeline-cursor ${isTimelineDragging ? 'dragging' : ''}`}
+              style={{ left: `${(currentTime / timelineDuration) * 100}%` }}
+              onPointerDown={handleTimelineScrubStart}
+              onPointerMove={handleTimelineScrubMove}
+              onPointerUp={handleTimelineScrubEnd}
+              onPointerCancel={handleTimelineScrubEnd}
+            />
 
             <div
               className="timeline-click-area"
-              onClick={(e) => {
-                const rect = e.currentTarget.getBoundingClientRect();
-                const clickPosition = e.clientX - rect.left;
-                const percentage = clickPosition / rect.width;
-                const newTime = Math.floor(percentage * timelineDuration);
-                handleTimelineClick(newTime);
-              }}
+              onPointerDown={handleTimelineScrubStart}
+              onPointerMove={handleTimelineScrubMove}
+              onPointerUp={handleTimelineScrubEnd}
+              onPointerCancel={handleTimelineScrubEnd}
             />
           </div>
 
           <div className="timeline-markers-labels">
-            {[0, 30, 60, 90, 120, 150, 180, timelineDuration].map((time) => (
+            {timelineLabels.map((time) => (
               <div key={time} className="timeline-label">
                 {formatTime(time)}
               </div>
@@ -711,17 +974,24 @@ const ProjectPage: React.FC = () => {
         </div>
 
         <div className="timeline-footer">
-          <button className="add-marker-btn" onClick={() => { setMarkerTitle(''); setShowMarkerModal(true); }}>
-            <img src={AddMarkerIcon} alt="Добавить маркер" className="add-marker-icon" />
-            Добавить маркер для {tabNames[activeTab]}
+          <button
+            className="add-marker-btn"
+            onClick={() => {
+              setMarkerTitle('');
+              setMarkerComment('');
+              setShowMarkerModal(true);
+            }}
+          >
+            <img src={AddMarkerIcon} alt={t('Добавить маркер')} className="add-marker-icon" />
+            {t('Добавить маркер для {tab}', { tab: t(tabNames[activeTab]) })}
           </button>
 
           <div className="markers-legend">
-            <div className="legend-title">Легенда:</div>
+            <div className="legend-title">{t('Легенда:')}</div>
             {(Object.keys(tabNames) as TabType[]).map((tabId) => (
               <div key={tabId} className="legend-item">
                 <div className="legend-color" style={{ backgroundColor: tabColors[tabId] }} />
-                <span>{tabNames[tabId]}</span>
+                <span>{t(tabNames[tabId])}</span>
               </div>
             ))}
           </div>
@@ -737,7 +1007,7 @@ const ProjectPage: React.FC = () => {
               onClick={() => setActiveTab(tabId)}
               style={{ borderBottomColor: activeTab === tabId ? tabColors[tabId] : 'transparent' }}
             >
-              {tabNames[tabId]}
+              {t(tabNames[tabId])}
               {tabId === 'director' && <span className="notification-badge">2</span>}
             </button>
           ))}
@@ -748,27 +1018,27 @@ const ProjectPage: React.FC = () => {
             <div className="tab-content script-tab">
               <div className="script-container">
                 <div className="script-editor-section">
-                  <h3>Текстовый редактор сценария</h3>
+                  <h3>{t('Текстовый редактор сценария')}</h3>
                   <div className="text-editor-toolbar">
-                    <button className="toolbar-btn" onClick={() => handleFormatText('bold')} title="Жирный">
+                    <button className="toolbar-btn" onClick={() => handleFormatText('bold')} title={t('Жирный')}>
                       <strong>B</strong>
                     </button>
-                    <button className="toolbar-btn" onClick={() => handleFormatText('italic')} title="Курсив">
+                    <button className="toolbar-btn" onClick={() => handleFormatText('italic')} title={t('Курсив')}>
                       <em>I</em>
                     </button>
-                    <button className="toolbar-btn" onClick={() => handleFormatText('formatBlock', '<h1>')} title="Заголовок 1">
+                    <button className="toolbar-btn" onClick={() => handleFormatText('formatBlock', '<h1>')} title={t('Заголовок 1')}>
                       H1
                     </button>
-                    <button className="toolbar-btn" onClick={() => handleFormatText('formatBlock', '<h2>')} title="Заголовок 2">
+                    <button className="toolbar-btn" onClick={() => handleFormatText('formatBlock', '<h2>')} title={t('Заголовок 2')}>
                       H2
                     </button>
-                    <button className="toolbar-btn" onClick={() => handleFormatText('insertUnorderedList')} title="Маркированный список">
+                    <button className="toolbar-btn" onClick={() => handleFormatText('insertUnorderedList')} title={t('Маркированный список')}>
                       • List
                     </button>
-                    <button className="toolbar-btn" onClick={() => handleFormatText('insertOrderedList')} title="Нумерованный список">
+                    <button className="toolbar-btn" onClick={() => handleFormatText('insertOrderedList')} title={t('Нумерованный список')}>
                       1. List
                     </button>
-                    <button className="toolbar-btn" onClick={() => handleFormatText('underline')} title="Подчеркивание">
+                    <button className="toolbar-btn" onClick={() => handleFormatText('underline')} title={t('Подчеркивание')}>
                       <u>U</u>
                     </button>
                   </div>
@@ -783,18 +1053,18 @@ const ProjectPage: React.FC = () => {
                     onBlur={normalizeEditorContent}
                   />
                   <div className="editor-actions">
-                    <button className="save-btn" onClick={handleSaveScript}>Сохранить</button>
+                    <button className="save-btn" onClick={handleSaveScript}>{t('Сохранить')}</button>
                     <button className="add-marker-text-btn" onClick={handleAddMarkerToText}>
-                      <img src={AddMarkerIcon} alt="Маркер" />
-                      Добавить маркер в текст
+                      <img src={AddMarkerIcon} alt={t('Маркер')} />
+                      {t('Добавить маркер в текст')}
                     </button>
                   </div>
                 </div>
 
                 <div className="script-documents-section">
-                  <h3>Загруженные документы</h3>
+                  <h3>{t('Загруженные документы')}</h3>
                   <div className="documents-list">
-                    {documents.length === 0 && <div className="empty-state">Документов пока нет.</div>}
+                    {documents.length === 0 && <div className="empty-state">{t('Документов пока нет.')}</div>}
                     {documents.map((document) => (
                       <div key={document.id} className="document-item">
                         <div className="document-icon">📄</div>
@@ -806,15 +1076,15 @@ const ProjectPage: React.FC = () => {
                             <span>{document.uploadedAt}</span>
                           </div>
                         </div>
-                        <button className="preview-doc-btn" onClick={() => showToast('Предпросмотр в разработке', 'info')}>
-                          Просмотр
+                        <button className="preview-doc-btn" onClick={() => handleOpenDocumentPreview(document)}>
+                          {t('Просмотр')}
                         </button>
                       </div>
                     ))}
                   </div>
                   <button className="upload-doc-btn" onClick={() => setShowDocModal(true)}>
-                    <img src={UploadIcon} alt="Загрузить" />
-                    Загрузить документ
+                    <img src={UploadIcon} alt={t('Загрузить')} />
+                    {t('Загрузить документ')}
                   </button>
                 </div>
               </div>
@@ -824,14 +1094,29 @@ const ProjectPage: React.FC = () => {
           {activeTab === 'director' && (
             <div className="tab-content director-tab">
               <div className="director-container">
+                <div className="director-timeline-section">
+                  <h3>{t('Параметры таймлайна')}</h3>
+                  <div className="timeline-duration-form">
+                    <input
+                      className="form-input timeline-duration-input"
+                      placeholder={t('Например 240 или 4:00')}
+                      value={timelineDurationInput}
+                      onChange={(e) => setTimelineDurationInput(e.target.value)}
+                    />
+                    <button className="save-notes-btn save-timeline-btn" onClick={handleSaveTimelineDuration}>
+                      {t('Применить длину')}
+                    </button>
+                  </div>
+                </div>
+
                 <div className="locations-section">
-                  <h3>Локации и раскадровки</h3>
+                  <h3>{t('Локации и раскадровки')}</h3>
                   <div className="locations-list">
                     {locations.map((location) => (
                       <div key={location.id} className="location-card">
                         <div className="location-header">
                           <h4>{location.name}</h4>
-                          <span className="shots-count">{location.shots.length} кадров</span>
+                          <span className="shots-count">{t('{count} кадров', { count: location.shots.length })}</span>
                         </div>
                         <div className="location-description">{location.description}</div>
                         <div className="shots-timeline">
@@ -845,7 +1130,7 @@ const ProjectPage: React.FC = () => {
                                   {shot.image ? (
                                     <img src={shot.image} alt={shot.title} />
                                   ) : (
-                                    <div className="placeholder-text">Изображение раскадровки</div>
+                                    <div className="placeholder-text">{t('Изображение отсутствует')}</div>
                                   )}
                                 </div>
                               </div>
@@ -859,29 +1144,29 @@ const ProjectPage: React.FC = () => {
                             setShowShotModal(true);
                           }}
                         >
-                          + Добавить кадр
+                          {t('+ Добавить кадр')}
                         </button>
                       </div>
                     ))}
                   </div>
                   <button className="add-location-btn" onClick={() => setShowLocationModal(true)}>
-                    <img src={AddMarkerIcon} alt="Добавить" />
-                    Добавить локацию
+                    <img src={AddMarkerIcon} alt={t('Добавить')} />
+                    {t('Добавить локацию')}
                   </button>
                 </div>
 
                 <div className="director-notes-section">
-                  <h3>Заметки режиссера</h3>
+                  <h3>{t('Заметки режиссера')}</h3>
                   <textarea
                     className="director-notes-editor"
-                    placeholder="Ваши заметки и идеи по съемке..."
+                    placeholder={t('Ваши заметки и идеи по съемке...')}
                     rows={8}
                     value={directorNotes}
                     onChange={(e) => setDirectorNotes(e.target.value)}
                   />
                   <div className="notes-actions">
-                    <button className="save-notes-btn" onClick={handleSaveNotes}>Сохранить заметки</button>
-                    <button className="share-notes-btn" onClick={handleShareNotes}>Поделиться с командой</button>
+                    <button className="save-notes-btn" onClick={handleSaveNotes}>{t('Сохранить заметки')}</button>
+                    <button className="share-notes-btn" onClick={handleShareNotes}>{t('Поделиться с командой')}</button>
                   </div>
                 </div>
               </div>
@@ -892,7 +1177,7 @@ const ProjectPage: React.FC = () => {
             <div className="tab-content costumes-tab">
               <div className="costumes-container">
                 <div className="markers-list-section">
-                  <h3>Маркеры костюмов</h3>
+                  <h3>{t('Маркеры костюмов')}</h3>
                   <div className="markers-description-list">
                     {bodyMarkers.filter((marker) => marker.tabId === 'costumes').map((marker) => (
                       <div key={marker.id} className="marker-description-card">
@@ -906,6 +1191,7 @@ const ProjectPage: React.FC = () => {
                                 title: marker.title,
                                 description: marker.description,
                                 bodyPart: marker.bodyPart,
+                                time: formatTime(getBodyMarkerTime(marker)),
                                 x: marker.x,
                                 y: marker.y,
                                 tabId: marker.tabId,
@@ -919,14 +1205,17 @@ const ProjectPage: React.FC = () => {
                           </button>
                         </div>
                         <div className="marker-body-part">
-                          Часть тела: {marker.bodyPart} • {getSilhouetteLabel(getMarkerPersonId(marker))}
+                          {t('Часть тела: {part} • {person}', {
+                            part: marker.bodyPart,
+                            person: getSilhouetteLabel(getMarkerPersonId(marker))
+                          })}
                         </div>
                         <div className="marker-description">{marker.description}</div>
                         <div className="marker-images">
                           {marker.images.length === 0 ? (
                             <button className="add-image-btn" onClick={() => handleAddBodyImage(marker.id)}>
-                              <img src={UploadIcon} alt="Загрузить" />
-                              Загрузить изображение
+                              <img src={UploadIcon} alt={t('Загрузить')} />
+                              {t('Загрузить изображение')}
                             </button>
                           ) : (
                             <div className="images-preview">
@@ -946,6 +1235,7 @@ const ProjectPage: React.FC = () => {
                         title: '',
                         description: '',
                         bodyPart: '',
+                        time: formatTime(currentTime),
                         x: 50,
                         y: 50,
                         tabId: 'costumes',
@@ -955,16 +1245,16 @@ const ProjectPage: React.FC = () => {
                       setShowBodyMarkerModal(true);
                     }}
                   >
-                    <img src={AddMarkerIcon} alt="Добавить" />
-                    Добавить описание маркера
+                    <img src={AddMarkerIcon} alt={t('Добавить')} />
+                    {t('Добавить описание маркера')}
                   </button>
                 </div>
 
                 <div className="human-silhouette-section">
                   <div className="silhouette-header">
-                    <h3>Силуэт человека</h3>
+                    <h3>{t('Силуэт человека')}</h3>
                     <button className="add-person-btn" onClick={handleAddSilhouette}>
-                      + Добавить человека
+                      {t('+ Добавить человека')}
                     </button>
                   </div>
                   <div className="silhouette-people-grid">
@@ -972,18 +1262,31 @@ const ProjectPage: React.FC = () => {
                       <div key={`costumes-${person.id}`} className="silhouette-person-card">
                         <div className="silhouette-person-head">
                           <div className="silhouette-person-title">{person.name}</div>
-                          <button
-                            type="button"
-                            className="remove-person-btn"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleRemoveSilhouette(person.id);
-                            }}
-                            disabled={bodySilhouettes.length <= 1}
-                            title="Удалить человека"
-                          >
-                            Удалить
-                          </button>
+                          <div className="silhouette-person-actions">
+                            <button
+                              type="button"
+                              className="rename-person-btn"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleRenameSilhouette(person.id);
+                              }}
+                              title={t('Переименовать')}
+                            >
+                              {t('Изм.')}
+                            </button>
+                            <button
+                              type="button"
+                              className="remove-person-btn"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleRemoveSilhouette(person.id);
+                              }}
+                              disabled={bodySilhouettes.length <= 1}
+                              title={t('Удалить человека')}
+                            >
+                              {t('Удалить')}
+                            </button>
+                          </div>
                         </div>
                         <div className="silhouette-container">
                           <div
@@ -996,6 +1299,7 @@ const ProjectPage: React.FC = () => {
                                 title: '',
                                 description: '',
                                 bodyPart: 'torso',
+                                time: formatTime(currentTime),
                                 x,
                                 y,
                                 tabId: 'costumes',
@@ -1027,14 +1331,14 @@ const ProjectPage: React.FC = () => {
                       </div>
                     ))}
                   </div>
-                  <div className="silhouette-instructions">Кликните на силуэт, чтобы добавить маркер костюма</div>
+                  <div className="silhouette-instructions">{t('Кликните на силуэт, чтобы добавить маркер костюма')}</div>
                 </div>
 
                 <div className="costume-comments-section">
-                  <h3>Комментарии к костюмам</h3>
+                  <h3>{t('Комментарии к костюмам')}</h3>
                 <div className="comments-list">
                   {commentsByTab.costumes.length === 0 && (
-                    <div className="empty-state">Комментариев пока нет.</div>
+                    <div className="empty-state">{t('Комментариев пока нет.')}</div>
                   )}
                   {commentsByTab.costumes.map((comment) => (
                       <div key={comment.id} className="comment-card">
@@ -1047,19 +1351,19 @@ const ProjectPage: React.FC = () => {
                         <div className="comment-text">{comment.text}</div>
                         <div className="comment-footer">
                           <span className="resolved-badge" onClick={() => handleToggleResolved(comment.id)}>
-                            {comment.resolved ? 'Решено' : 'Не решено'}
+                            {comment.resolved ? t('Решено') : t('Не решено')}
                           </span>
                           <button className="reply-btn" onClick={() => openCommentModal('costumes')}>
-                            <img src={ReplyIcon} alt="Ответить" />
-                            Ответить
+                            <img src={ReplyIcon} alt={t('Ответить')} />
+                            {t('Ответить')}
                           </button>
                         </div>
                       </div>
                     ))}
                   </div>
                   <button className="add-comment-btn" onClick={() => openCommentModal('costumes')}>
-                    <img src={AddCommentIcon} alt="Добавить комментарий" />
-                    Добавить комментарий
+                    <img src={AddCommentIcon} alt={t('Добавить комментарий')} />
+                    {t('Добавить комментарий')}
                   </button>
                 </div>
               </div>
@@ -1070,7 +1374,7 @@ const ProjectPage: React.FC = () => {
             <div className="tab-content makeup-tab">
               <div className="makeup-container">
                 <div className="markers-list-section">
-                  <h3>Маркеры визажа</h3>
+                  <h3>{t('Маркеры визажа')}</h3>
                   <div className="markers-description-list">
                     {bodyMarkers.filter((marker) => marker.tabId === 'makeup').map((marker) => (
                       <div key={marker.id} className="marker-description-card">
@@ -1084,6 +1388,7 @@ const ProjectPage: React.FC = () => {
                                 title: marker.title,
                                 description: marker.description,
                                 bodyPart: marker.bodyPart,
+                                time: formatTime(getBodyMarkerTime(marker)),
                                 x: marker.x,
                                 y: marker.y,
                                 tabId: marker.tabId,
@@ -1097,14 +1402,17 @@ const ProjectPage: React.FC = () => {
                           </button>
                         </div>
                         <div className="marker-body-part">
-                          Часть тела: {marker.bodyPart} • {getSilhouetteLabel(getMarkerPersonId(marker))}
+                          {t('Часть тела: {part} • {person}', {
+                            part: marker.bodyPart,
+                            person: getSilhouetteLabel(getMarkerPersonId(marker))
+                          })}
                         </div>
                         <div className="marker-description">{marker.description}</div>
                         <div className="marker-images">
                           {marker.images.length === 0 ? (
                             <button className="add-image-btn" onClick={() => handleAddBodyImage(marker.id)}>
-                              <img src={UploadIcon} alt="Загрузить" />
-                              Загрузить мокап
+                              <img src={UploadIcon} alt={t('Загрузить')} />
+                              {t('Загрузить мокап')}
                             </button>
                           ) : (
                             <div className="images-preview">
@@ -1124,6 +1432,7 @@ const ProjectPage: React.FC = () => {
                         title: '',
                         description: '',
                         bodyPart: 'face',
+                        time: formatTime(currentTime),
                         x: 50,
                         y: 25,
                         tabId: 'makeup',
@@ -1133,16 +1442,16 @@ const ProjectPage: React.FC = () => {
                       setShowBodyMarkerModal(true);
                     }}
                   >
-                    <img src={AddMarkerIcon} alt="Добавить" />
-                    Добавить описание визажа
+                    <img src={AddMarkerIcon} alt={t('Добавить')} />
+                    {t('Добавить описание визажа')}
                   </button>
                 </div>
 
                 <div className="human-silhouette-section">
                   <div className="silhouette-header">
-                    <h3>Силуэт для визажа</h3>
+                    <h3>{t('Силуэт для визажа')}</h3>
                     <button className="add-person-btn" onClick={handleAddSilhouette}>
-                      + Добавить человека
+                      {t('+ Добавить человека')}
                     </button>
                   </div>
                   <div className="silhouette-people-grid">
@@ -1150,18 +1459,31 @@ const ProjectPage: React.FC = () => {
                       <div key={`makeup-${person.id}`} className="silhouette-person-card">
                         <div className="silhouette-person-head">
                           <div className="silhouette-person-title">{person.name}</div>
-                          <button
-                            type="button"
-                            className="remove-person-btn"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleRemoveSilhouette(person.id);
-                            }}
-                            disabled={bodySilhouettes.length <= 1}
-                            title="Удалить человека"
-                          >
-                            Удалить
-                          </button>
+                          <div className="silhouette-person-actions">
+                            <button
+                              type="button"
+                              className="rename-person-btn"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleRenameSilhouette(person.id);
+                              }}
+                              title={t('Переименовать')}
+                            >
+                              {t('Изм.')}
+                            </button>
+                            <button
+                              type="button"
+                              className="remove-person-btn"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleRemoveSilhouette(person.id);
+                              }}
+                              disabled={bodySilhouettes.length <= 1}
+                              title={t('Удалить человека')}
+                            >
+                              {t('Удалить')}
+                            </button>
+                          </div>
                         </div>
                         <div className="silhouette-container">
                           <div
@@ -1174,6 +1496,7 @@ const ProjectPage: React.FC = () => {
                                 title: '',
                                 description: '',
                                 bodyPart: 'face',
+                                time: formatTime(currentTime),
                                 x,
                                 y,
                                 tabId: 'makeup',
@@ -1205,14 +1528,14 @@ const ProjectPage: React.FC = () => {
                       </div>
                     ))}
                   </div>
-                  <div className="silhouette-instructions">Кликните на часть тела для добавления точки визажа</div>
+                  <div className="silhouette-instructions">{t('Кликните на часть тела для добавления точки визажа')}</div>
                 </div>
 
                 <div className="makeup-comments-section">
-                  <h3>Комментарии к визажу</h3>
+                  <h3>{t('Комментарии к визажу')}</h3>
                 <div className="comments-list">
                   {commentsByTab.makeup.length === 0 && (
-                    <div className="empty-state">Комментариев пока нет.</div>
+                    <div className="empty-state">{t('Комментариев пока нет.')}</div>
                   )}
                   {commentsByTab.makeup.map((comment) => (
                       <div key={comment.id} className="comment-card">
@@ -1225,19 +1548,19 @@ const ProjectPage: React.FC = () => {
                         <div className="comment-text">{comment.text}</div>
                         <div className="comment-footer">
                           <span className="resolved-badge" onClick={() => handleToggleResolved(comment.id)}>
-                            {comment.resolved ? 'Решено' : 'Не решено'}
+                            {comment.resolved ? t('Решено') : t('Не решено')}
                           </span>
                           <button className="reply-btn" onClick={() => openCommentModal('makeup')}>
-                            <img src={ReplyIcon} alt="Ответить" />
-                            Ответить
+                            <img src={ReplyIcon} alt={t('Ответить')} />
+                            {t('Ответить')}
                           </button>
                         </div>
                       </div>
                     ))}
                   </div>
                   <button className="add-comment-btn" onClick={() => openCommentModal('makeup')}>
-                    <img src={AddCommentIcon} alt="Добавить комментарий" />
-                    Добавить комментарий
+                    <img src={AddCommentIcon} alt={t('Добавить комментарий')} />
+                    {t('Добавить комментарий')}
                   </button>
                 </div>
               </div>
@@ -1248,10 +1571,15 @@ const ProjectPage: React.FC = () => {
             <div className="tab-content edit-tab">
               <div className="columns-container">
                 <div className="column media-column">
-                  <h3>Медиатека</h3>
+                  <h3>{t('Медиатека')}</h3>
                   <div className="media-list">
                     {mediaFiles.map((file) => (
-                      <div key={file.id} className="media-item">
+                      <button
+                        key={file.id}
+                        type="button"
+                        className={`media-item ${selectedMedia?.id === file.id ? 'active' : ''}`}
+                        onClick={() => setSelectedMediaId(file.id)}
+                      >
                         <div className="media-icon">
                           <img src={file.type === 'audio' ? AudioIcon : VideoIcon} alt={file.type} />
                         </div>
@@ -1259,46 +1587,61 @@ const ProjectPage: React.FC = () => {
                           <div className="media-name">{file.name}</div>
                           <div className="media-duration">{file.duration} • {file.size}</div>
                         </div>
-                      </div>
+                      </button>
                     ))}
-                    {mediaFiles.length === 0 && <div className="empty-state">Медиафайлы отсутствуют.</div>}
+                    {mediaFiles.length === 0 && <div className="empty-state">{t('Медиафайлы отсутствуют.')}</div>}
                   </div>
                   <button className="upload-btn" onClick={() => setShowMediaModal(true)}>
-                    <img src={UploadIcon} alt="Загрузить" className="upload-icon" />
-                    Загрузить медиа
+                    <img src={UploadIcon} alt={t('Загрузить')} className="upload-icon" />
+                    {t('Загрузить медиа')}
                   </button>
                 </div>
 
                 <div className="column preview-column">
                   <div className="video-preview">
-                    <div className="placeholder-video">
-                      <img src={PreviewIcon} alt="Предпросмотр" className="preview-icon" />
-                      <div className="video-placeholder-text">Загрузите видео для предпросмотра</div>
-                    </div>
-                  </div>
-
-                  <div className="waveform-placeholder">
-                    <div className="waveform-title">WAVEFORM АУДИО</div>
-                    <div className="waveform-visualization">
-                      {Array.from({ length: 50 }).map((_, i) => (
-                        <div
-                          key={i}
-                          className="waveform-bar"
-                          style={{
-                            height: `${20 + Math.sin(i * 0.3) * 20}px`,
-                            backgroundColor: i % 10 === 0 ? '#FF391A' : '#50425B'
-                          }}
-                        />
-                      ))}
-                    </div>
+                    {selectedMedia ? (
+                      <div className="media-preview-card">
+                        <div className="media-preview-head">
+                          <img
+                            src={selectedMedia.type === 'audio' ? AudioIcon : VideoIcon}
+                            alt={selectedMedia.type}
+                            className="preview-icon"
+                          />
+                          <div className="media-preview-titles">
+                            <div className="media-preview-name">{selectedMedia.name}</div>
+                            <div className="media-preview-meta">
+                              {t('Тип: {type} • {duration} • {size}', {
+                                type: selectedMedia.type,
+                                duration: selectedMedia.duration,
+                                size: selectedMedia.size
+                              })}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="media-preview-progress">
+                          <div
+                            className="media-preview-progress-bar"
+                            style={{ width: `${Math.min(100, (currentTime / Math.max(timelineDuration, 1)) * 100)}%` }}
+                          />
+                        </div>
+                        <div className="media-preview-time">
+                          {formatTime(currentTime)} / {formatTime(timelineDuration)}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="placeholder-video">
+                        <img src={PreviewIcon} alt={t('Предпросмотр')} className="preview-icon" />
+                        <div className="video-placeholder-text">{t('Выберите медиафайл для предпросмотра')}</div>
+                      </div>
+                    )}
                   </div>
                 </div>
 
                 <div className="column comments-column">
-                  <h3>Комментарии к монтажу</h3>
+                  <h3>{t('Комментарии к монтажу')}</h3>
                 <div className="comments-list">
                   {commentsByTab.edit.length === 0 && (
-                    <div className="empty-state">Комментариев пока нет.</div>
+                    <div className="empty-state">{t('Комментариев пока нет.')}</div>
                   )}
                   {commentsByTab.edit.map((comment) => (
                       <div key={comment.id} className="comment-card">
@@ -1311,19 +1654,19 @@ const ProjectPage: React.FC = () => {
                         <div className="comment-text">{comment.text}</div>
                         <div className="comment-footer">
                           <span className="timestamp" onClick={() => handleToggleResolved(comment.id)}>
-                            {comment.resolved ? 'Решено' : 'Не решено'}
+                            {comment.resolved ? t('Решено') : t('Не решено')}
                           </span>
                           <button className="reply-btn" onClick={() => openCommentModal('edit')}>
-                            <img src={ReplyIcon} alt="Ответить" />
-                            Ответить
+                            <img src={ReplyIcon} alt={t('Ответить')} />
+                            {t('Ответить')}
                           </button>
                         </div>
                       </div>
                     ))}
                   </div>
                   <button className="add-comment-btn" onClick={() => openCommentModal('edit')}>
-                    <img src={AddCommentIcon} alt="Добавить комментарий" className="add-comment-icon" />
-                    Добавить комментарий
+                    <img src={AddCommentIcon} alt={t('Добавить комментарий')} className="add-comment-icon" />
+                    {t('Добавить комментарий')}
                   </button>
                 </div>
               </div>
@@ -1345,37 +1688,184 @@ const ProjectPage: React.FC = () => {
               alt={mobileTabAriaNames[tab.id]}
               className="project-mobile-tab-icon"
             />
-            <span className="project-mobile-tab-label">{tab.label}</span>
+            <span className="project-mobile-tab-label">{t(tab.label)}</span>
           </button>
         ))}
       </nav>
 
       <Modal
-        title="Новый маркер"
+        title={t('Новый маркер')}
         isOpen={showMarkerModal}
-        onClose={() => setShowMarkerModal(false)}
+        onClose={() => {
+          setShowMarkerModal(false);
+          setMarkerTitle('');
+          setMarkerComment('');
+        }}
         actions={
           <>
-            <button className="secondary-btn" onClick={() => setShowMarkerModal(false)}>
-              Отмена
+            <button
+              className="secondary-btn"
+              onClick={() => {
+                setShowMarkerModal(false);
+                setMarkerTitle('');
+                setMarkerComment('');
+              }}
+            >
+              {t('Отмена')}
             </button>
             <button className="primary-btn" onClick={handleCreateMarker}>
-              Добавить
+              {t('Добавить')}
             </button>
           </>
         }
       >
         <input
           className="form-input"
-          placeholder="Название маркера"
+          placeholder={t('Название маркера')}
           value={markerTitle}
           onChange={(e) => setMarkerTitle(e.target.value)}
         />
-        <div className="form-helper">Текущая позиция: {formatTime(currentTime)}</div>
+        <textarea
+          className="form-input"
+          placeholder={t('Комментарий маркера')}
+          value={markerComment}
+          onChange={(e) => setMarkerComment(e.target.value)}
+          rows={4}
+        />
+        <div className="form-helper">{t('Текущая позиция: {time}', { time: formatTime(currentTime) })}</div>
       </Modal>
 
       <Modal
-        title="Новый комментарий"
+        title={t('Данные маркера')}
+        isOpen={showTimelineMarkerModal && Boolean(selectedTimelineMarker)}
+        onClose={() => {
+          setShowTimelineMarkerModal(false);
+          setSelectedTimelineMarker(null);
+        }}
+        actions={
+          <button
+            className="primary-btn"
+            onClick={() => {
+              setShowTimelineMarkerModal(false);
+              setSelectedTimelineMarker(null);
+            }}
+          >
+            {t('Закрыть')}
+          </button>
+        }
+      >
+        {selectedTimelineMarker && (
+          <div className="timeline-marker-details">
+            <div className="timeline-marker-row">
+              <span className="timeline-marker-label">ID</span>
+              <span className="timeline-marker-value">{selectedTimelineMarker.id}</span>
+            </div>
+            <div className="timeline-marker-row">
+              <span className="timeline-marker-label">{t('Название')}</span>
+              <span className="timeline-marker-value">{selectedTimelineMarker.title}</span>
+            </div>
+            <div className="timeline-marker-row multiline">
+              <span className="timeline-marker-label">{t('Комментарий')}</span>
+              <span className="timeline-marker-value">{selectedTimelineMarker.comment || t('Не указано')}</span>
+            </div>
+            <div className="timeline-marker-row">
+              <span className="timeline-marker-label">{t('Время')}</span>
+              <span className="timeline-marker-value">{formatTime(selectedTimelineMarker.time)}</span>
+            </div>
+            <div className="timeline-marker-row">
+              <span className="timeline-marker-label">{t('Раздел')}</span>
+              <span className="timeline-marker-value">{t(tabNames[selectedTimelineMarker.tabId])}</span>
+            </div>
+            <div className="timeline-marker-row">
+              <span className="timeline-marker-label">{t('Автор')}</span>
+              <span className="timeline-marker-value">{selectedTimelineMarker.user}</span>
+            </div>
+            <div className="timeline-marker-row">
+              <span className="timeline-marker-label">{t('Тип иконки')}</span>
+              <span className="timeline-marker-value">{selectedTimelineMarker.icon}</span>
+            </div>
+            <div className="timeline-marker-row">
+              <span className="timeline-marker-label">{t('Цвет')}</span>
+              <span className="timeline-marker-color-value">
+                <span
+                  className="timeline-marker-color-chip"
+                  style={{ backgroundColor: selectedTimelineMarker.color }}
+                />
+                {selectedTimelineMarker.color}
+              </span>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      <Modal
+        title={t('Подтвердите уменьшение таймлайна')}
+        isOpen={showTimelineDurationConfirm && pendingTimelineDuration !== null}
+        onClose={() => {
+          setShowTimelineDurationConfirm(false);
+          setPendingTimelineDuration(null);
+        }}
+        actions={
+          <>
+            <button
+              className="secondary-btn"
+              onClick={() => {
+                setShowTimelineDurationConfirm(false);
+                setPendingTimelineDuration(null);
+              }}
+            >
+              {t('Отмена')}
+            </button>
+            <button className="primary-btn" onClick={handleConfirmTimelineShrink}>
+              {t('Применить')}
+            </button>
+          </>
+        }
+      >
+        {pendingTimelineDuration !== null && (
+          <>
+            <div>{t('Текущая длина таймлайна: {duration}', { duration: formatTime(timelineDuration) })}</div>
+            <div>{t('Новая длина таймлайна: {duration}', { duration: formatTime(pendingTimelineDuration) })}</div>
+            <div className="form-helper">
+              {t(
+                'Новая длина меньше существующих маркеров и кадров. Их позиции будут автоматически сдвинуты в пределы новой длины.'
+              )}
+            </div>
+          </>
+        )}
+      </Modal>
+
+      <Modal
+        title={t('Подтвердите удаление человека')}
+        isOpen={Boolean(pendingSilhouetteRemoval)}
+        onClose={() => setPendingSilhouetteRemoval(null)}
+        actions={
+          <>
+            <button className="secondary-btn" onClick={() => setPendingSilhouetteRemoval(null)}>
+              {t('Отмена')}
+            </button>
+            <button className="primary-btn" onClick={handleConfirmSilhouetteRemoval}>
+              {t('Удалить')}
+            </button>
+          </>
+        }
+      >
+        {pendingSilhouetteRemoval && (
+          <>
+            <div>{t('Будет удален: {name}', { name: pendingSilhouetteRemoval.personName })}</div>
+            {pendingSilhouetteRemoval.relatedMarkersCount > 0 && (
+              <div className="form-helper">
+                {t('Связанные body-маркеры будут удалены: {count}', {
+                  count: pendingSilhouetteRemoval.relatedMarkersCount
+                })}
+              </div>
+            )}
+          </>
+        )}
+      </Modal>
+
+      <Modal
+        title={t('Новый комментарий')}
         isOpen={showCommentModal}
         onClose={() => {
           setShowCommentModal(false);
@@ -1384,17 +1874,17 @@ const ProjectPage: React.FC = () => {
         actions={
           <>
             <button className="secondary-btn" onClick={() => setShowCommentModal(false)}>
-              Отмена
+              {t('Отмена')}
             </button>
             <button className="primary-btn" onClick={handleAddComment}>
-              Добавить
+              {t('Добавить')}
             </button>
           </>
         }
       >
         <textarea
           className="form-input"
-          placeholder="Введите комментарий"
+          placeholder={t('Введите комментарий')}
           value={commentText}
           onChange={(e) => setCommentText(e.target.value)}
           rows={4}
@@ -1402,29 +1892,29 @@ const ProjectPage: React.FC = () => {
       </Modal>
 
       <Modal
-        title="Новая локация"
+        title={t('Новая локация')}
         isOpen={showLocationModal}
         onClose={() => setShowLocationModal(false)}
         actions={
           <>
             <button className="secondary-btn" onClick={() => setShowLocationModal(false)}>
-              Отмена
+              {t('Отмена')}
             </button>
             <button className="primary-btn" onClick={handleAddLocation}>
-              Добавить
+              {t('Добавить')}
             </button>
           </>
         }
       >
         <input
           className="form-input"
-          placeholder="Название локации"
+          placeholder={t('Название локации')}
           value={locationDraft.name}
           onChange={(e) => setLocationDraft({ ...locationDraft, name: e.target.value })}
         />
         <textarea
           className="form-input"
-          placeholder="Описание"
+          placeholder={t('Описание')}
           rows={3}
           value={locationDraft.description}
           onChange={(e) => setLocationDraft({ ...locationDraft, description: e.target.value })}
@@ -1432,35 +1922,35 @@ const ProjectPage: React.FC = () => {
       </Modal>
 
       <Modal
-        title="Новый кадр"
+        title={t('Новый кадр')}
         isOpen={showShotModal}
         onClose={() => setShowShotModal(false)}
         actions={
           <>
             <button className="secondary-btn" onClick={() => setShowShotModal(false)}>
-              Отмена
+              {t('Отмена')}
             </button>
             <button className="primary-btn" onClick={handleAddShot}>
-              Добавить
+              {t('Добавить')}
             </button>
           </>
         }
       >
         <input
           className="form-input"
-          placeholder="Время (сек или мм:сс)"
+          placeholder={t('Время (сек или мм:сс)')}
           value={shotDraft.time}
           onChange={(e) => setShotDraft({ ...shotDraft, time: e.target.value })}
         />
         <input
           className="form-input"
-          placeholder="Название кадра"
+          placeholder={t('Название кадра')}
           value={shotDraft.title}
           onChange={(e) => setShotDraft({ ...shotDraft, title: e.target.value })}
         />
         <textarea
           className="form-input"
-          placeholder="Описание"
+          placeholder={t('Описание')}
           rows={3}
           value={shotDraft.description}
           onChange={(e) => setShotDraft({ ...shotDraft, description: e.target.value })}
@@ -1468,23 +1958,23 @@ const ProjectPage: React.FC = () => {
       </Modal>
 
       <Modal
-        title="Добавить медиа"
+        title={t('Добавить медиа')}
         isOpen={showMediaModal}
         onClose={() => setShowMediaModal(false)}
         actions={
           <>
             <button className="secondary-btn" onClick={() => setShowMediaModal(false)}>
-              Отмена
+              {t('Отмена')}
             </button>
             <button className="primary-btn" onClick={handleAddMedia}>
-              Добавить
+              {t('Добавить')}
             </button>
           </>
         }
       >
         <input
           className="form-input"
-          placeholder="Название файла"
+          placeholder={t('Название файла')}
           value={mediaDraft.name}
           onChange={(e) => setMediaDraft({ ...mediaDraft, name: e.target.value })}
         />
@@ -1493,61 +1983,94 @@ const ProjectPage: React.FC = () => {
           value={mediaDraft.type}
           onChange={(e) => setMediaDraft({ ...mediaDraft, type: e.target.value })}
         >
-          <option value="video">Видео</option>
-          <option value="audio">Аудио</option>
-          <option value="other">Другое</option>
+          <option value="video">{t('Видео')}</option>
+          <option value="audio">{t('Аудио')}</option>
+          <option value="other">{t('Другое')}</option>
         </select>
         <input
           className="form-input"
-          placeholder="Длительность (например 1:45)"
+          placeholder={t('Длительность (например 1:45)')}
           value={mediaDraft.duration}
           onChange={(e) => setMediaDraft({ ...mediaDraft, duration: e.target.value })}
         />
         <input
           className="form-input"
-          placeholder="Размер файла (например 120 MB)"
+          placeholder={t('Размер файла (например 120 MB)')}
           value={mediaDraft.size}
           onChange={(e) => setMediaDraft({ ...mediaDraft, size: e.target.value })}
         />
       </Modal>
 
       <Modal
-        title="Добавить документ"
+        title={t('Добавить документ')}
         isOpen={showDocModal}
         onClose={() => setShowDocModal(false)}
         actions={
           <>
             <button className="secondary-btn" onClick={() => setShowDocModal(false)}>
-              Отмена
+              {t('Отмена')}
             </button>
             <button className="primary-btn" onClick={handleAddDocument}>
-              Добавить
+              {t('Добавить')}
             </button>
           </>
         }
       >
         <input
           className="form-input"
-          placeholder="Название документа"
+          placeholder={t('Название документа')}
           value={docDraft.name}
           onChange={(e) => setDocDraft({ ...docDraft, name: e.target.value })}
         />
         <input
           className="form-input"
-          placeholder="Размер"
+          placeholder={t('Размер')}
           value={docDraft.size}
           onChange={(e) => setDocDraft({ ...docDraft, size: e.target.value })}
         />
         <input
           className="form-input"
-          placeholder="Загрузил"
+          placeholder={t('Загрузил')}
           value={docDraft.uploadedBy}
           onChange={(e) => setDocDraft({ ...docDraft, uploadedBy: e.target.value })}
         />
       </Modal>
 
       <Modal
-        title="Маркер"
+        title={t('Просмотр документа')}
+        isOpen={Boolean(previewDocument)}
+        onClose={() => setPreviewDocument(null)}
+        actions={
+          <button className="primary-btn" onClick={() => setPreviewDocument(null)}>
+            {t('Закрыть')}
+          </button>
+        }
+      >
+        {previewDocument && (
+          <div className="timeline-marker-details">
+            <div className="timeline-marker-row">
+              <span className="timeline-marker-label">{t('Название')}</span>
+              <span className="timeline-marker-value">{previewDocument.name}</span>
+            </div>
+            <div className="timeline-marker-row">
+              <span className="timeline-marker-label">{t('Размер')}</span>
+              <span className="timeline-marker-value">{previewDocument.size}</span>
+            </div>
+            <div className="timeline-marker-row">
+              <span className="timeline-marker-label">{t('Загрузил')}</span>
+              <span className="timeline-marker-value">{previewDocument.uploadedBy}</span>
+            </div>
+            <div className="timeline-marker-row">
+              <span className="timeline-marker-label">{t('Дата')}</span>
+              <span className="timeline-marker-value">{previewDocument.uploadedAt}</span>
+            </div>
+            <div className="form-helper">{t('Предпросмотр содержимого документа появится здесь.')}</div>
+          </div>
+        )}
+      </Modal>
+
+      <Modal
+        title={t('Маркер')}
         isOpen={showBodyMarkerModal}
         onClose={() => {
           setShowBodyMarkerModal(false);
@@ -1556,25 +2079,31 @@ const ProjectPage: React.FC = () => {
         actions={
           <>
             <button className="secondary-btn" onClick={() => setShowBodyMarkerModal(false)}>
-              Отмена
+              {t('Отмена')}
             </button>
             <button className="primary-btn" onClick={handleAddBodyMarker}>
-              Добавить
+              {t('Добавить')}
             </button>
           </>
         }
       >
         <input
           className="form-input"
-          placeholder="Название"
+          placeholder={t('Название')}
           value={bodyMarkerDraft.title}
           onChange={(e) => setBodyMarkerDraft({ ...bodyMarkerDraft, title: e.target.value })}
         />
         <input
           className="form-input"
-          placeholder="Часть тела"
+          placeholder={t('Часть тела')}
           value={bodyMarkerDraft.bodyPart}
           onChange={(e) => setBodyMarkerDraft({ ...bodyMarkerDraft, bodyPart: e.target.value })}
+        />
+        <input
+          className="form-input"
+          placeholder={t('Время (сек или мм:сс)')}
+          value={bodyMarkerDraft.time}
+          onChange={(e) => setBodyMarkerDraft({ ...bodyMarkerDraft, time: e.target.value })}
         />
         <select
           className="form-input"
@@ -1589,7 +2118,7 @@ const ProjectPage: React.FC = () => {
         </select>
         <textarea
           className="form-input"
-          placeholder="Описание"
+          placeholder={t('Описание')}
           rows={3}
           value={bodyMarkerDraft.description}
           onChange={(e) => setBodyMarkerDraft({ ...bodyMarkerDraft, description: e.target.value })}
@@ -1597,29 +2126,29 @@ const ProjectPage: React.FC = () => {
       </Modal>
 
       <Modal
-        title="Настройки проекта"
+        title={t('Настройки проекта')}
         isOpen={showProjectSettings}
         onClose={() => setShowProjectSettings(false)}
         actions={
           <>
             <button className="secondary-btn" onClick={() => setShowProjectSettings(false)}>
-              Отмена
+              {t('Отмена')}
             </button>
             <button className="primary-btn" onClick={handleSaveProjectSettings}>
-              Сохранить
+              {t('Сохранить')}
             </button>
           </>
         }
       >
         <input
           className="form-input"
-          placeholder="Название проекта"
+          placeholder={t('Название проекта')}
           value={projectDraft.name}
           onChange={(e) => setProjectDraft({ ...projectDraft, name: e.target.value })}
         />
         <textarea
           className="form-input"
-          placeholder="Описание"
+          placeholder={t('Описание')}
           rows={3}
           value={projectDraft.description}
           onChange={(e) => setProjectDraft({ ...projectDraft, description: e.target.value })}

@@ -58,23 +58,24 @@ const createSeedData = () => {
     ownerId: demoUserId,
     members: [demoUserId],
     deadline: '2026-11-07',
+    timelineDuration: 205,
     createdAt,
     updatedAt: createdAt,
     scriptText: `СЦЕНА 1\nИНТ. КВАРТИРА - ДЕНЬ\n\nАЛЕКС (30) входит в комнату. Он выглядит уставшим.\n\n[Маркер: Диалог персонажа]\nАЛЕКС\nЯ не думал, что все так сложится...\n\nСОФИЯ (28) сидит на диване, смотрит в окно.\n\nСОФИЯ\nТы всегда так говоришь.`,
     directorNotes: '• Важно передать эмоции персонажа в диалоге\n• Свет должен быть мягким, рассеянным\n• Звук дождя на улице должен быть натуральным',
     markers: [
-      { id: 1, time: 25, color: '#FF391A', title: 'Начало кадра', user: 'Режиссёр', icon: 'director', tabId: 'edit' },
-      { id: 2, time: 85, color: '#08B0D9', title: 'Музыкальный вход', user: 'Композитор', icon: 'script', tabId: 'edit' },
-      { id: 3, time: 150, color: '#08D95F', title: 'Изменение сцены', user: 'Монтажёр', icon: 'makeup', tabId: 'edit' },
-      { id: 4, time: 45, color: '#9C27B0', title: 'Диалог персонажа', user: 'Сценарист', icon: 'script', tabId: 'script' },
-      { id: 5, time: 60, color: '#2196F3', title: 'Смена плана', user: 'Режиссер', icon: 'director', tabId: 'director' },
-      { id: 6, time: 30, color: '#FF9800', title: 'Смена костюма', user: 'Костюмер', icon: 'costumes', tabId: 'costumes' },
-      { id: 7, time: 40, color: '#E91E63', title: 'Макияж лица', user: 'Визажист', icon: 'makeup', tabId: 'makeup' }
+      { id: 1, time: 25, color: '#FF391A', title: 'Начало кадра', comment: 'Добавить мягкий переход в начале сцены', user: 'Режиссёр', icon: 'director', tabId: 'edit' },
+      { id: 2, time: 85, color: '#08B0D9', title: 'Музыкальный вход', comment: 'Ввести основной музыкальный мотив тише на 2 дБ', user: 'Композитор', icon: 'script', tabId: 'edit' },
+      { id: 3, time: 150, color: '#08D95F', title: 'Изменение сцены', comment: 'Сделать склейку по движению для плавного перехода', user: 'Монтажёр', icon: 'makeup', tabId: 'edit' },
+      { id: 4, time: 45, color: '#9C27B0', title: 'Диалог персонажа', comment: 'Усилить драматизм реплики короткой паузой', user: 'Сценарист', icon: 'script', tabId: 'script' },
+      { id: 5, time: 60, color: '#2196F3', title: 'Смена плана', comment: 'Перейти на крупный план лица главного героя', user: 'Режиссер', icon: 'director', tabId: 'director' },
+      { id: 6, time: 30, color: '#FF9800', title: 'Смена костюма', comment: 'Заменить пиджак на более темный для контраста', user: 'Костюмер', icon: 'costumes', tabId: 'costumes' },
+      { id: 7, time: 40, color: '#E91E63', title: 'Макияж лица', comment: 'Добавить немного матирующей пудры в Т-зоне', user: 'Визажист', icon: 'makeup', tabId: 'makeup' }
     ],
     bodyMarkers: [
-      { id: 1, x: 50, y: 20, title: 'Костюм персонажа', description: 'Черный пиджак, белая рубашка', bodyPart: 'torso', images: [], comments: [], color: '#FF9800', tabId: 'costumes' },
-      { id: 2, x: 50, y: 40, title: 'Обувь', description: 'Кожаные туфли', bodyPart: 'feet', images: [], comments: [], color: '#FF9800', tabId: 'costumes' },
-      { id: 3, x: 50, y: 25, title: 'Дневной макияж', description: 'Естественные тона, легкая подводка глаз', bodyPart: 'face', images: [], comments: [], color: '#E91E63', tabId: 'makeup' }
+      { id: 1, time: 30, x: 50, y: 20, title: 'Костюм персонажа', description: 'Черный пиджак, белая рубашка', bodyPart: 'torso', images: [], comments: [], color: '#FF9800', tabId: 'costumes' },
+      { id: 2, time: 36, x: 50, y: 40, title: 'Обувь', description: 'Кожаные туфли', bodyPart: 'feet', images: [], comments: [], color: '#FF9800', tabId: 'costumes' },
+      { id: 3, time: 40, x: 50, y: 25, title: 'Дневной макияж', description: 'Естественные тона, легкая подводка глаз', bodyPart: 'face', images: [], comments: [], color: '#E91E63', tabId: 'makeup' }
     ],
     locations: [
       {

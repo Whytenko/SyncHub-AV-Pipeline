@@ -2,11 +2,13 @@
 
 .login-page {
   min-height: 100vh;
+  height: 100dvh;
   display: flex;
   align-items: center;
   justify-content: center;
   background: linear-gradient(135deg, var(--bg-core-800) 0%, var(--bg-core-700) 100%);
   padding: 20px;
+  overflow: auto;
 }
 
 .login-container {

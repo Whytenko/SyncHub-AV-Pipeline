@@ -112,11 +112,18 @@
   font-family: 'Manrope', 'Segoe UI', sans-serif;
 }
 
+html,
+body,
+#root {
+  height: 100%;
+}
+
 body {
   background: var(--bg-core-800);
   color: var(--text-primary);
   line-height: 1.6;
   min-height: 100vh;
+  overflow: hidden;
 }
 
 a {
@@ -350,4 +357,10 @@ input::placeholder {
 
 button:active {
   transform: translateY(0);
+}
+
+@media (max-width: 992px) {
+  body {
+    overflow: auto;
+  }
 }
