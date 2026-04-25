@@ -17,6 +17,7 @@ import ProtectedRoute from './components/ProtectedRoute'
 import ErrorBoundary from './components/ErrorBoundary'
 import ErrorReporter from './components/ErrorReporter'
 import AppLayout from './components/AppLayout'
+import OfflineBanner from './components/OfflineBanner'
 
 const App: React.FC = () => {
   return (
@@ -25,6 +26,7 @@ const App: React.FC = () => {
         <ToastProvider>
           <HintProvider>
             <ErrorReporter />
+            <OfflineBanner />
             <BrowserRouter>
               <ErrorBoundary>
                 <Routes>

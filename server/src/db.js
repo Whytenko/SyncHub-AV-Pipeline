@@ -152,6 +152,17 @@ const updateDb = (mutator) => {
   return updated;
 };
 
+const cleanExpiredSessions = () => {
+  const now = new Date();
+  updateDb((db) => {
+    const before = db.sessions.length;
+    db.sessions = db.sessions.filter((s) => !s.expiresAt || new Date(s.expiresAt) > now);
+    const removed = before - db.sessions.length;
+    if (removed > 0) console.log(`[DB] Cleaned ${removed} expired session(s)`);
+    return db;
+  });
+};
+
 module.exports = {
   readDb,
   writeDb,
@@ -160,5 +171,6 @@ module.exports = {
   nowISO,
   hashPassword,
   verifyPassword,
-  sanitizeUser
+  sanitizeUser,
+  cleanExpiredSessions
 };

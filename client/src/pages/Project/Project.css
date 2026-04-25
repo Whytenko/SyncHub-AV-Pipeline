@@ -1163,47 +1163,122 @@
 
 .marker-description-card {
   background: var(--bg-core-500);
-  border-radius: 8px;
-  padding: 16px;
-  margin-bottom: 16px;
-  border-left: 4px solid var(--accent-primary);
+  border-radius: 10px;
+  padding: 14px 14px 14px 16px;
+  margin-bottom: 10px;
+  border-left: 3px solid var(--mc, var(--accent-primary));
+  transition: background 0.15s;
+}
+
+.marker-description-card:hover {
+  background: var(--bg-core-400);
 }
 
 .marker-header {
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 12px;
+  gap: 10px;
+  margin-bottom: 8px;
 }
 
-.marker-color {
-  width: 16px;
-  height: 16px;
-  border-radius: 4px;
-  border: 1px solid white;
+.marker-badge {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: #fff;
+  flex-shrink: 0;
 }
 
 .marker-title {
-  font-weight: 500;
+  font-weight: 600;
+  font-size: 13px;
   flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .edit-marker-btn {
   background: transparent;
   border: none;
   cursor: pointer;
-  font-size: 16px;
-  opacity: 0.7;
+  font-size: 14px;
+  opacity: 0.55;
+  padding: 2px 4px;
+  border-radius: 4px;
+  flex-shrink: 0;
 }
 
 .edit-marker-btn:hover {
   opacity: 1;
+  background: rgba(255,255,255,0.06);
+}
+
+.marker-meta-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.marker-part-badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.07);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-muted);
+  white-space: nowrap;
+}
+
+.marker-person-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .marker-body-part {
   font-size: 12px;
   color: var(--text-muted);
   margin-bottom: 8px;
+}
+
+/* Empty state for body markers */
+.body-markers-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 28px 16px;
+  margin-bottom: 12px;
+  border: 1px dashed var(--border-muted);
+  border-radius: 10px;
+  background: rgba(255,255,255,0.02);
+  text-align: center;
+}
+
+.body-markers-empty p {
+  font-size: 13px;
+  color: var(--text-muted);
+  line-height: 1.4;
+  max-width: 200px;
+}
+
+.empty-tab-icon {
+  width: 32px;
+  height: 32px;
+  opacity: 0.3;
+  filter: var(--icon-filter);
 }
 
 .marker-description {
@@ -1389,71 +1464,142 @@
 .silhouette-wrapper {
   position: relative;
   flex: 1;
+  min-height: 360px;
   background: var(--bg-core-500);
   border: 1px solid var(--border-muted);
-  border-radius: 8px;
+  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: crosshair;
   overflow: hidden;
-  margin-bottom: 16px;
+  margin-bottom: 12px;
+  transition: border-color 0.2s;
+}
+
+.silhouette-wrapper:hover {
+  border-color: var(--border-strong);
+}
+
+/* Face silhouette wrapper is shorter — shows head/shoulders only */
+.face-silhouette-wrapper {
+  min-height: 280px;
 }
 
 .human-silhouette-img {
-  width: 200px;
-  height: 400px;
-  opacity: 0.8;
-  transition: opacity 0.3s ease;
+  width: 190px;
+  height: auto;
+  max-height: 380px;
+  opacity: 0.7;
+  transition: opacity 0.25s ease;
+  pointer-events: none;
+  filter: var(--icon-filter);
 }
 
-.silhouette-wrapper:hover .human-silhouette-img {
-  opacity: 1;
+.face-silhouette-img {
+  width: 170px;
+  height: auto;
+  max-height: 280px;
+  opacity: 0.7;
+  transition: opacity 0.25s ease;
+  pointer-events: none;
+  filter: var(--icon-filter);
 }
 
+.silhouette-wrapper:hover .human-silhouette-img,
+.silhouette-wrapper:hover .face-silhouette-img {
+  opacity: 0.95;
+}
+
+/* Body zone guide labels */
+.body-zone-guides {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.body-zone {
+  position: absolute;
+  left: 6px;
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--text-muted);
+  opacity: 0.45;
+  transform: translateY(-50%);
+  white-space: nowrap;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+/* Marker dots on the silhouette */
 .body-marker {
   position: absolute;
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
-  border: 2px solid white;
+  border: 2px solid rgba(255, 255, 255, 0.5);
   display: flex;
   align-items: center;
   justify-content: center;
   transform: translate(-50%, -50%);
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
   z-index: 10;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
 }
 
 .body-marker:hover {
-  transform: translate(-50%, -50%) scale(1.2);
+  transform: translate(-50%, -50%) scale(1.25);
   z-index: 20;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5);
 }
 
 .body-marker:hover .marker-tooltip {
-  display: block;
+  display: flex;
 }
 
 .marker-number {
   color: white;
-  font-weight: bold;
-  font-size: 14px;
+  font-weight: 700;
+  font-size: 12px;
+  line-height: 1;
 }
 
 .marker-tooltip {
   display: none;
+  flex-direction: column;
+  gap: 2px;
   position: absolute;
-  top: -60px;
+  bottom: calc(100% + 8px);
   left: 50%;
   transform: translateX(-50%);
-  background: rgba(0, 0, 0, 0.9);
+  background: rgba(10, 10, 12, 0.95);
   color: white;
-  padding: 8px 12px;
-  border-radius: 6px;
+  padding: 7px 10px;
+  border-radius: 8px;
   font-size: 12px;
   white-space: nowrap;
   z-index: 100;
+  border: 1px solid rgba(255,255,255,0.1);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+  min-width: 120px;
+  max-width: 180px;
+}
+
+.marker-tooltip strong {
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.marker-tooltip > div {
+  font-size: 11px;
+  color: rgba(255,255,255,0.55);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .marker-tooltip::after {
@@ -1462,8 +1608,8 @@
   top: 100%;
   left: 50%;
   transform: translateX(-50%);
-  border: 6px solid transparent;
-  border-top-color: rgba(0, 0, 0, 0.9);
+  border: 5px solid transparent;
+  border-top-color: rgba(10, 10, 12, 0.95);
 }
 
 .silhouette-instructions {
@@ -2046,8 +2192,13 @@
   }
 
   .silhouette-wrapper {
-    min-height: 240px;
-    max-height: 320px;
+    min-height: 260px;
+    max-height: 340px;
+  }
+
+  .face-silhouette-wrapper {
+    min-height: 200px;
+    max-height: 260px;
   }
 
   .silhouette-header {
@@ -2098,19 +2249,33 @@
   }
 
   .human-silhouette-img {
-    width: 128px;
-    height: 250px;
+    width: auto;
+    height: auto;
+    max-width: 130px;
+    max-height: 250px;
+  }
+
+  .face-silhouette-img {
+    width: auto;
+    height: auto;
+    max-width: 140px;
+    max-height: 210px;
+  }
+
+  .body-zone {
+    font-size: 9px;
   }
 
   .body-marker {
-    width: 24px;
-    height: 24px;
+    width: 26px;
+    height: 26px;
   }
 
   .marker-number {
     font-size: 11px;
   }
 
+  /* Tooltips don't work on touch — keep hidden */
   .marker-tooltip {
     display: none !important;
   }

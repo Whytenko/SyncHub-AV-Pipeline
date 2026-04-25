@@ -11,6 +11,25 @@ interface I18nContextValue {
 const STORAGE_KEY = 'synchub_lang'
 
 const dictionary: Record<string, { en: string; zh: string }> = {
+  'Офлайн-режим — изменения сохраняются локально': {
+    en: 'Offline mode — changes saved locally',
+    zh: '离线模式 — 更改已本地保存'
+  },
+  'Голова': { en: 'Head', zh: '头部' },
+  'Плечи': { en: 'Shoulders', zh: '肩膀' },
+  'Торс': { en: 'Torso', zh: '躯干' },
+  'Бёдра': { en: 'Hips', zh: '臀部' },
+  'Ноги': { en: 'Legs', zh: '腿部' },
+  'Стопы': { en: 'Feet', zh: '脚部' },
+  'Кликните на силуэт, чтобы добавить первый маркер': {
+    en: 'Click on the silhouette to add the first marker',
+    zh: '点击轮廓添加第一个标记'
+  },
+  'Кликните на лицо, чтобы добавить первую точку визажа': {
+    en: 'Click on the face to add the first makeup point',
+    zh: '点击面部添加第一个妆容点'
+  },
+  'Редактировать': { en: 'Edit', zh: '编辑' },
   'Настройки': { en: 'Settings', zh: '设置' },
   'Проекты': { en: 'Projects', zh: '项目' },
   'Домой': { en: 'Home', zh: '首页' },

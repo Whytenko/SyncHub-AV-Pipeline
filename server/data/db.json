@@ -20,6 +20,18 @@
       "token": "session_a2da75a9-da51-4ca7-9f88-897ec251167c",
       "userId": "usr_a9407a1c-63fc-4fc9-aa6d-f8ceb2d12717",
       "createdAt": "2026-01-30T08:39:08.603Z"
+    },
+    {
+      "token": "session_c8b2bba3-2545-4590-8b83-78fbe4336f7c",
+      "userId": "usr_a9407a1c-63fc-4fc9-aa6d-f8ceb2d12717",
+      "createdAt": "2026-04-23T21:02:49.944Z",
+      "expiresAt": "2026-05-23T21:02:49.938Z"
+    },
+    {
+      "token": "session_ff1c434a-954e-4535-8832-445fdbafe418",
+      "userId": "usr_a9407a1c-63fc-4fc9-aa6d-f8ceb2d12717",
+      "createdAt": "2026-04-23T21:03:51.165Z",
+      "expiresAt": "2026-05-23T21:03:51.164Z"
     }
   ],
   "projects": [
@@ -272,6 +284,33 @@
           "resolved": false
         }
       ]
+    },
+    {
+      "id": "prj_354c3853-b2a1-4c74-ab25-2c7ae7935dc6",
+      "name": "dd",
+      "description": "dd",
+      "ownerId": "usr_a9407a1c-63fc-4fc9-aa6d-f8ceb2d12717",
+      "members": [
+        "usr_a9407a1c-63fc-4fc9-aa6d-f8ceb2d12717"
+      ],
+      "deadline": "",
+      "timelineDuration": 205,
+      "createdAt": "2026-04-23T21:04:10.184Z",
+      "updatedAt": "2026-04-23T21:04:10.184Z",
+      "scriptText": "",
+      "directorNotes": "",
+      "markers": [],
+      "bodyMarkers": [],
+      "bodySilhouettes": [
+        {
+          "id": 1,
+          "name": "Человек 1"
+        }
+      ],
+      "locations": [],
+      "mediaFiles": [],
+      "documents": [],
+      "comments": []
     }
   ]
 }

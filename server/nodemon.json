@@ -4,6 +4,7 @@
   "delay": "300",
   "signal": "SIGTERM",
   "env": {
-    "NODE_ENV": "development"
+    "NODE_ENV": "development",
+    "PORT": "5001"
   }
 }

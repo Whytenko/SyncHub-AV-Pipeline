@@ -6,6 +6,7 @@ interface AuthContextValue {
   user: User | null;
   token: string | null;
   loading: boolean;
+  isOffline: boolean;
   login: (nickname: string, password: string) => Promise<void>;
   register: (payload: {
     firstName: string;
@@ -22,10 +23,17 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
+const isNetworkError = (err: unknown): boolean => {
+  if (err instanceof TypeError && err.message.toLowerCase().includes('fetch')) return true;
+  if (err instanceof Error && (err.message.includes('NetworkError') || err.message.includes('network'))) return true;
+  return false;
+};
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(localStorage.getItem('synchub_token'));
   const [loading, setLoading] = useState(true);
+  const [isOffline, setIsOffline] = useState(false);
 
   const hydrate = async () => {
     if (!token) {
@@ -38,6 +46,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (cached) {
         try {
           setUser(JSON.parse(cached));
+          setIsOffline(true);
         } catch {
           setUser(null);
         }
@@ -49,10 +58,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const response = await authApi.me();
       setUser(response.user);
-    } catch {
-      localStorage.removeItem('synchub_token');
-      setToken(null);
-      setUser(null);
+      setIsOffline(false);
+    } catch (err) {
+      if (isNetworkError(err)) {
+        // Server unreachable — stay logged in with cached data if available
+        const cached = localStorage.getItem('synchub_user');
+        if (cached) {
+          try {
+            setUser(JSON.parse(cached));
+            setIsOffline(true);
+          } catch {
+            localStorage.removeItem('synchub_token');
+            setToken(null);
+          }
+        } else {
+          localStorage.removeItem('synchub_token');
+          setToken(null);
+        }
+      } else {
+        // Auth error (expired token, etc.) — clear session
+        localStorage.removeItem('synchub_token');
+        localStorage.removeItem('synchub_user');
+        setToken(null);
+        setUser(null);
+      }
     } finally {
       setLoading(false);
     }
@@ -67,27 +96,36 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const response = await authApi.login({ nickname, password });
       localStorage.setItem('synchub_token', response.token);
+      localStorage.setItem('synchub_user', JSON.stringify(response.user));
       setToken(response.token);
       setUser(response.user);
-    } catch {
-      // Fallback: allow local login when API is unreachable
-      const localUser: User = {
-        id: `local_${Date.now()}`,
-        firstName: nickname || 'User',
-        lastName: '',
-        nickname: nickname || 'local',
-        email: '',
-        role: 'Участник',
-        avatar: '👤',
-        gender: '',
-        birthdate: '',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
-      localStorage.setItem('synchub_token', 'local');
-      localStorage.setItem('synchub_user', JSON.stringify(localUser));
-      setToken('local');
-      setUser(localUser);
+      setIsOffline(false);
+    } catch (err) {
+      if (isNetworkError(err)) {
+        // Server unreachable — enter offline mode
+        const localUser: User = {
+          id: `local_${Date.now()}`,
+          firstName: nickname || 'User',
+          lastName: '',
+          nickname: nickname || 'local',
+          email: '',
+          role: 'Участник',
+          avatar: '👤',
+          gender: '',
+          birthdate: '',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        };
+        localStorage.setItem('synchub_token', 'local');
+        localStorage.setItem('synchub_user', JSON.stringify(localUser));
+        setToken('local');
+        setUser(localUser);
+        setIsOffline(true);
+      } else {
+        // API returned an error (wrong password, user not found, etc.)
+        const message = err instanceof Error ? err.message : 'Не удалось войти';
+        throw new Error(message);
+      }
     } finally {
       setLoading(false);
     }
@@ -106,26 +144,35 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const response = await authApi.register(payload);
       localStorage.setItem('synchub_token', response.token);
+      localStorage.setItem('synchub_user', JSON.stringify(response.user));
       setToken(response.token);
       setUser(response.user);
-    } catch {
-      const localUser: User = {
-        id: `local_${Date.now()}`,
-        firstName: payload.firstName || 'User',
-        lastName: payload.lastName || '',
-        nickname: payload.nickname || 'local',
-        email: payload.email || '',
-        role: 'Участник',
-        avatar: '👤',
-        gender: payload.gender || '',
-        birthdate: payload.birthdate || '',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
-      localStorage.setItem('synchub_token', 'local');
-      localStorage.setItem('synchub_user', JSON.stringify(localUser));
-      setToken('local');
-      setUser(localUser);
+      setIsOffline(false);
+    } catch (err) {
+      if (isNetworkError(err)) {
+        // Server unreachable — create local account
+        const localUser: User = {
+          id: `local_${Date.now()}`,
+          firstName: payload.firstName || 'User',
+          lastName: payload.lastName || '',
+          nickname: payload.nickname || 'local',
+          email: payload.email || '',
+          role: 'Участник',
+          avatar: '👤',
+          gender: payload.gender || '',
+          birthdate: payload.birthdate || '',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        };
+        localStorage.setItem('synchub_token', 'local');
+        localStorage.setItem('synchub_user', JSON.stringify(localUser));
+        setToken('local');
+        setUser(localUser);
+        setIsOffline(true);
+      } else {
+        const message = err instanceof Error ? err.message : 'Не удалось зарегистрироваться';
+        throw new Error(message);
+      }
     } finally {
       setLoading(false);
     }
@@ -133,7 +180,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const logout = async () => {
     try {
-      await authApi.logout();
+      if (token && token !== 'local') {
+        await authApi.logout();
+      }
     } catch {
       // ignore errors on logout
     }
@@ -141,11 +190,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.removeItem('synchub_user');
     setToken(null);
     setUser(null);
+    setIsOffline(false);
   };
 
   const value = useMemo(
-    () => ({ user, token, loading, login, register, logout, setUser }),
-    [user, token, loading]
+    () => ({ user, token, loading, isOffline, login, register, logout, setUser }),
+    [user, token, loading, isOffline]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

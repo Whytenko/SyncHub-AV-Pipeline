@@ -111,7 +111,7 @@
 .login-input:focus {
   outline: none;
   border-color: var(--accent-primary);
-  box-shadow: 0 0 0 3px rgba(255, 57, 26, 0.1);
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.08);
 }
 
 .login-input:last-child {

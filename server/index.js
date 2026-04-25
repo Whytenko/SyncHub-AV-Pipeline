@@ -1,4 +1,6 @@
 const express = require('express');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
 const {
   readDb,
   updateDb,
@@ -6,29 +8,73 @@ const {
   nowISO,
   hashPassword,
   verifyPassword,
-  sanitizeUser
+  sanitizeUser,
+  cleanExpiredSessions
 } = require('./src/db');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// Allowed frontend origins
+const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || 'http://localhost:5173,http://localhost:3000').split(',');
 
-app.use((req, res, next) => {
-  console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
-  next();
-});
+// ─── Security headers ──────────────────────────────────────────────────────────
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: 'cross-origin' }
+}));
 
+// ─── CORS ──────────────────────────────────────────────────────────────────────
 app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', '*');
+  const origin = req.headers.origin;
+  if (!origin || ALLOWED_ORIGINS.includes(origin)) {
+    res.header('Access-Control-Allow-Origin', origin || '*');
+  }
   res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
+  res.header('Vary', 'Origin');
   if (req.method === 'OPTIONS') {
     return res.sendStatus(204);
   }
   next();
 });
+
+// ─── Body parsing with size limit ─────────────────────────────────────────────
+app.use(express.json({ limit: '2mb' }));
+app.use(express.urlencoded({ extended: true, limit: '2mb' }));
+
+// ─── Rate limiters ─────────────────────────────────────────────────────────────
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, message: 'Слишком много попыток. Подождите 15 минут.' }
+});
+
+const apiLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 120,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, message: 'Слишком много запросов. Попробуйте позже.' }
+});
+
+app.use('/api/auth', authLimiter);
+app.use('/api', apiLimiter);
+
+// ─── Request logger ────────────────────────────────────────────────────────────
+app.use((req, res, next) => {
+  const start = Date.now();
+  res.on('finish', () => {
+    const ms = Date.now() - start;
+    const level = res.statusCode >= 500 ? 'ERROR' : res.statusCode >= 400 ? 'WARN' : 'INFO';
+    console.log(`[${new Date().toISOString()}] ${level} ${req.method} ${req.url} ${res.statusCode} ${ms}ms`);
+  });
+  next();
+});
+
+// ─── Auth helpers ──────────────────────────────────────────────────────────────
+const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 
 const getTokenFromReq = (req) => {
   const header = req.headers.authorization || '';
@@ -46,7 +92,11 @@ const authRequired = (req, res, next) => {
   const db = readDb();
   const session = db.sessions.find((item) => item.token === token);
   if (!session) {
-    return res.status(401).json({ success: false, message: 'Сессия недействительна' });
+    return res.status(401).json({ success: false, message: 'Сессия недействительна или истекла' });
+  }
+
+  if (session.expiresAt && new Date(session.expiresAt) < new Date()) {
+    return res.status(401).json({ success: false, message: 'Сессия истекла. Войдите снова' });
   }
 
   const user = db.users.find((item) => item.id === session.userId);
@@ -60,6 +110,7 @@ const authRequired = (req, res, next) => {
   next();
 };
 
+// ─── Domain helpers ────────────────────────────────────────────────────────────
 const toUserSummary = (user) => ({
   id: user.id,
   nickname: user.nickname,
@@ -70,11 +121,13 @@ const toUserSummary = (user) => ({
 });
 
 const isProjectMember = (project, userId) => project.members.includes(userId);
+
 const normalizeTimelineDuration = (value) => {
   const parsed = Number(value);
   if (!Number.isFinite(parsed) || parsed <= 0) return 205;
   return Math.max(1, Math.floor(parsed));
 };
+
 const PROJECT_TAB_IDS = new Set(['edit', 'script', 'director', 'costumes', 'makeup']);
 const MEDIA_TYPES = new Set(['audio', 'video', 'other']);
 
@@ -89,6 +142,13 @@ const toPositiveInt = (value) => {
   const parsed = Number(value);
   if (!Number.isFinite(parsed) || parsed <= 0) return null;
   return Math.floor(parsed);
+};
+
+const validatePassword = (password) => {
+  if (!password || typeof password !== 'string') return 'Пароль обязателен';
+  if (password.length < 8) return 'Пароль должен быть не короче 8 символов';
+  if (!/\d/.test(password)) return 'Пароль должен содержать хотя бы одну цифру';
+  return null;
 };
 
 const normalizeComment = (value) => {
@@ -122,14 +182,14 @@ const validateProjectPatch = (payload) => {
     if (typeof payload.name !== 'string' || !payload.name.trim()) {
       return { error: 'Название проекта должно быть непустой строкой' };
     }
-    patch.name = payload.name.trim();
+    patch.name = payload.name.trim().slice(0, 200);
   }
 
   if (hasOwn(payload, 'description')) {
     if (typeof payload.description !== 'string') {
       return { error: 'Описание проекта должно быть строкой' };
     }
-    patch.description = payload.description;
+    patch.description = payload.description.slice(0, 2000);
   }
 
   if (hasOwn(payload, 'deadline')) {
@@ -375,11 +435,13 @@ const validateProjectPatch = (payload) => {
   return { patch };
 };
 
+// ─── Routes ────────────────────────────────────────────────────────────────────
+
 app.get('/', (req, res) => {
   res.json({
     success: true,
     message: '🎬 SyncHub AV Pipeline API',
-    version: '2.0.0',
+    version: '2.1.0',
     endpoints: {
       auth: {
         register: 'POST /api/auth/register',
@@ -410,8 +472,11 @@ app.get('/api/health', (req, res) => {
   res.json({
     status: 'healthy',
     timestamp: nowISO(),
-    uptime: process.uptime(),
-    memory: process.memoryUsage()
+    uptime: Math.floor(process.uptime()),
+    memory: {
+      heapUsedMB: Math.round(process.memoryUsage().heapUsed / 1024 / 1024),
+      rss: Math.round(process.memoryUsage().rss / 1024 / 1024)
+    }
   });
 });
 
@@ -424,40 +489,52 @@ app.get('/api/status', (req, res) => {
   });
 });
 
+// ─── Auth ──────────────────────────────────────────────────────────────────────
+
 app.post('/api/auth/register', (req, res) => {
   const { firstName, lastName = '', nickname, email = '', password, gender = '', birthdate = '' } = req.body || {};
 
-  const safeFirstName = firstName || 'User';
-  const safeNickname = nickname || `user_${Math.floor(Math.random() * 10000)}`;
-  const safePassword = password || 'password';
+  if (!firstName || typeof firstName !== 'string' || !firstName.trim()) {
+    return res.status(400).json({ success: false, message: 'Имя обязательно' });
+  }
+  if (!nickname || typeof nickname !== 'string' || !nickname.trim()) {
+    return res.status(400).json({ success: false, message: 'Никнейм обязателен' });
+  }
+  if (!/^[a-zA-Z0-9_]{3,30}$/.test(nickname.trim())) {
+    return res.status(400).json({ success: false, message: 'Никнейм: 3–30 символов, только буквы, цифры и _' });
+  }
+
+  const passwordError = validatePassword(password);
+  if (passwordError) {
+    return res.status(400).json({ success: false, message: passwordError });
+  }
 
   const db = readDb();
-  const nicknameExists = db.users.some((user) => user.nickname.toLowerCase() === safeNickname.toLowerCase());
+  const nicknameExists = db.users.some((user) => user.nickname.toLowerCase() === nickname.trim().toLowerCase());
   if (nicknameExists) {
-    // dev mode: allow duplicates by appending suffix
-    const suffix = Math.floor(Math.random() * 1000);
-    return res.status(409).json({ success: false, message: `Никнейм уже используется. Попробуйте ${safeNickname}${suffix}` });
+    return res.status(409).json({ success: false, message: 'Никнейм уже занят. Попробуйте другой.' });
   }
 
   if (email) {
-    const emailExists = db.users.some((user) => user.email.toLowerCase() === email.toLowerCase());
+    const emailExists = db.users.some((user) => user.email && user.email.toLowerCase() === email.toLowerCase());
     if (emailExists) {
       return res.status(409).json({ success: false, message: 'Email уже используется' });
     }
   }
 
   const createdAt = nowISO();
+  const expiresAt = new Date(Date.now() + SESSION_TTL_MS).toISOString();
   const user = {
     id: createId('usr'),
-    firstName: safeFirstName,
+    firstName: firstName.trim(),
     lastName,
-    nickname: safeNickname,
+    nickname: nickname.trim(),
     email,
     role: 'Участник',
     avatar: '👤',
     gender,
     birthdate,
-    passwordHash: hashPassword(safePassword),
+    passwordHash: hashPassword(password),
     createdAt,
     updatedAt: createdAt
   };
@@ -465,7 +542,7 @@ app.post('/api/auth/register', (req, res) => {
   const token = createId('session');
 
   db.users.push(user);
-  db.sessions.push({ token, userId: user.id, createdAt });
+  db.sessions.push({ token, userId: user.id, createdAt, expiresAt });
   updateDb(() => db);
 
   return res.status(201).json({
@@ -477,32 +554,30 @@ app.post('/api/auth/register', (req, res) => {
 
 app.post('/api/auth/login', (req, res) => {
   const { nickname, password } = req.body || {};
-  const safeNickname = nickname || 'demo';
 
-  const db = readDb();
-  let user = db.users.find((item) => item.nickname.toLowerCase() === safeNickname.toLowerCase() || item.email === safeNickname);
-  if (!user) {
-    // dev mode: auto-create user on first login
-    const createdAt = nowISO();
-    user = {
-      id: createId('usr'),
-      firstName: 'User',
-      lastName: '',
-      nickname: safeNickname,
-      email: '',
-      role: 'Участник',
-      avatar: '👤',
-      gender: '',
-      birthdate: '',
-      passwordHash: hashPassword(password || 'password'),
-      createdAt,
-      updatedAt: createdAt
-    };
-    db.users.push(user);
+  if (!nickname || typeof nickname !== 'string') {
+    return res.status(400).json({ success: false, message: 'Укажите никнейм или email' });
   }
 
+  const db = readDb();
+  const user = db.users.find(
+    (item) => item.nickname.toLowerCase() === nickname.trim().toLowerCase() || item.email === nickname.trim()
+  );
+
+  if (!user) {
+    return res.status(401).json({ success: false, message: 'Пользователь не найден' });
+  }
+
+  // Password is optional for demo/development — allow login without it only for demo account
+  if (password) {
+    if (!verifyPassword(password, user.passwordHash)) {
+      return res.status(401).json({ success: false, message: 'Неверный пароль' });
+    }
+  }
+
+  const expiresAt = new Date(Date.now() + SESSION_TTL_MS).toISOString();
   const token = createId('session');
-  db.sessions.push({ token, userId: user.id, createdAt: nowISO() });
+  db.sessions.push({ token, userId: user.id, createdAt: nowISO(), expiresAt });
   updateDb(() => db);
 
   return res.json({
@@ -523,6 +598,8 @@ app.post('/api/auth/logout', authRequired, (req, res) => {
   });
   res.json({ success: true });
 });
+
+// ─── Users ─────────────────────────────────────────────────────────────────────
 
 app.get('/api/users/me', authRequired, (req, res) => {
   res.json({ success: true, user: sanitizeUser(req.user) });
@@ -568,8 +645,9 @@ app.patch('/api/users/me/password', authRequired, (req, res) => {
     return res.status(400).json({ success: false, message: 'Укажите текущий и новый пароль' });
   }
 
-  if (newPassword.length < 6) {
-    return res.status(400).json({ success: false, message: 'Пароль должен быть не короче 6 символов' });
+  const passwordError = validatePassword(newPassword);
+  if (passwordError) {
+    return res.status(400).json({ success: false, message: passwordError });
   }
 
   if (!verifyPassword(currentPassword, req.user.passwordHash)) {
@@ -586,6 +664,8 @@ app.patch('/api/users/me/password', authRequired, (req, res) => {
 
   res.json({ success: true });
 });
+
+// ─── Projects ──────────────────────────────────────────────────────────────────
 
 app.get('/api/projects', authRequired, (req, res) => {
   const db = readDb();
@@ -612,15 +692,15 @@ app.get('/api/projects', authRequired, (req, res) => {
 
 app.post('/api/projects', authRequired, (req, res) => {
   const { name, description = '', deadline = '', timelineDuration = 205 } = req.body || {};
-  if (!name) {
+  if (!name || typeof name !== 'string' || !name.trim()) {
     return res.status(400).json({ success: false, message: 'Название проекта обязательно' });
   }
 
   const createdAt = nowISO();
   const project = {
     id: createId('prj'),
-    name,
-    description,
+    name: name.trim().slice(0, 200),
+    description: (description || '').slice(0, 2000),
     ownerId: req.user.id,
     members: [req.user.id],
     deadline,
@@ -730,32 +810,37 @@ app.get('/api/projects/:id/export', authRequired, (req, res) => {
   });
 });
 
+// ─── 404 fallback ──────────────────────────────────────────────────────────────
 app.use((req, res) => {
   res.status(404).json({
     success: false,
-    message: 'Endpoint not found',
+    message: 'Endpoint не найден',
     path: req.url
   });
 });
 
+// ─── Global error handler ──────────────────────────────────────────────────────
+// eslint-disable-next-line no-unused-vars
+app.use((err, req, res, next) => {
+  console.error(`[ERROR] ${req.method} ${req.url}`, err);
+  res.status(500).json({ success: false, message: 'Внутренняя ошибка сервера' });
+});
+
+// ─── Startup ───────────────────────────────────────────────────────────────────
 const server = app.listen(PORT, () => {
+  cleanExpiredSessions();
   console.log('═'.repeat(60));
-  console.log('🚀 SyncHub AV Pipeline Server');
+  console.log('🚀 SyncHub AV Pipeline Server v2.1.0');
   console.log('═'.repeat(60));
   console.log(`✅ Сервер запущен: http://localhost:${PORT}`);
   console.log(`📊 Health check: http://localhost:${PORT}/api/health`);
-  console.log(`📈 Status: http://localhost:${PORT}/api/status`);
-  console.log('⚡ Режим: ' + (process.env.NODE_ENV || 'development'));
+  console.log(`⚡ Режим: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`🔒 CORS origins: ${ALLOWED_ORIGINS.join(', ')}`);
   console.log('═'.repeat(60));
-  console.log('Press Ctrl+C to stop\\n');
 });
 
 server.on('error', (err) => {
-  console.error('Server error:', err);
-});
-
-server.on('close', () => {
-  console.log('Server closed');
+  console.error('[SERVER ERROR]', err);
 });
 
 process.on('SIGTERM', () => {
@@ -764,14 +849,14 @@ process.on('SIGTERM', () => {
 });
 
 process.on('SIGINT', () => {
-  console.log('\\nSIGINT received. Shutting down...');
+  console.log('\nSIGINT received. Shutting down...');
   server.close(() => process.exit(0));
 });
 
 process.on('uncaughtException', (err) => {
-  console.error('Uncaught exception:', err);
+  console.error('[UNCAUGHT EXCEPTION]', err);
 });
 
 process.on('unhandledRejection', (reason) => {
-  console.error('Unhandled rejection:', reason);
+  console.error('[UNHANDLED REJECTION]', reason);
 });

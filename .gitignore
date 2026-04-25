@@ -12,3 +12,6 @@ server/node_modules/
 # Logs
 *.log
 logs/
+
+# macOS Finder icon
+[Ii]con$'\r'

@@ -35,6 +35,7 @@ import ScenarioIcon from '../assets/icons/scenario.svg';
 import ReplyIcon from '../assets/icons/comments.svg';
 import CostumesIcon from '../assets/icons/costumes.svg';
 import HumanSilhouette from '../assets/icons/human.svg';
+import FaceSilhouette from '../assets/icons/face.svg';
 import ActionIcon from '../assets/icons/action.svg';
 
 const tabColors: Record<TabType, string> = {
@@ -1179,13 +1180,26 @@ const ProjectPage: React.FC = () => {
                 <div className="markers-list-section">
                   <h3>{t('Маркеры костюмов')}</h3>
                   <div className="markers-description-list">
+                    {bodyMarkers.filter((marker) => marker.tabId === 'costumes').length === 0 && (
+                      <div className="body-markers-empty">
+                        <img src={CostumesIcon} alt="" className="empty-tab-icon" />
+                        <p>{t('Кликните на силуэт, чтобы добавить первый маркер')}</p>
+                      </div>
+                    )}
                     {bodyMarkers.filter((marker) => marker.tabId === 'costumes').map((marker) => (
-                      <div key={marker.id} className="marker-description-card">
+                      <div
+                        key={marker.id}
+                        className="marker-description-card"
+                        style={{ '--mc': marker.color } as React.CSSProperties}
+                      >
                         <div className="marker-header">
-                          <div className="marker-color" style={{ backgroundColor: marker.color }} />
+                          <div className="marker-badge" style={{ backgroundColor: marker.color }}>
+                            {marker.id}
+                          </div>
                           <div className="marker-title">{marker.title}</div>
                           <button
                             className="edit-marker-btn"
+                            title={t('Редактировать')}
                             onClick={() => {
                               setBodyMarkerDraft({
                                 title: marker.title,
@@ -1204,11 +1218,11 @@ const ProjectPage: React.FC = () => {
                             ✏️
                           </button>
                         </div>
-                        <div className="marker-body-part">
-                          {t('Часть тела: {part} • {person}', {
-                            part: marker.bodyPart,
-                            person: getSilhouetteLabel(getMarkerPersonId(marker))
-                          })}
+                        <div className="marker-meta-row">
+                          <span className="marker-part-badge">{marker.bodyPart || '—'}</span>
+                          <span className="marker-person-label">
+                            {getSilhouetteLabel(getMarkerPersonId(marker))}
+                          </span>
                         </div>
                         <div className="marker-description">{marker.description}</div>
                         <div className="marker-images">
@@ -1309,6 +1323,14 @@ const ProjectPage: React.FC = () => {
                               setShowBodyMarkerModal(true);
                             }}
                           >
+                            <div className="body-zone-guides" aria-hidden="true">
+                              <span className="body-zone" style={{ top: '4%' }}>{t('Голова')}</span>
+                              <span className="body-zone" style={{ top: '22%' }}>{t('Плечи')}</span>
+                              <span className="body-zone" style={{ top: '40%' }}>{t('Торс')}</span>
+                              <span className="body-zone" style={{ top: '60%' }}>{t('Бёдра')}</span>
+                              <span className="body-zone" style={{ top: '78%' }}>{t('Ноги')}</span>
+                              <span className="body-zone" style={{ top: '94%' }}>{t('Стопы')}</span>
+                            </div>
                             <img src={HumanSilhouette} alt={person.name} className="human-silhouette-img" />
                             {bodyMarkers
                               .filter((marker) => marker.tabId === 'costumes' && getMarkerPersonId(marker) === person.id)
@@ -1376,13 +1398,26 @@ const ProjectPage: React.FC = () => {
                 <div className="markers-list-section">
                   <h3>{t('Маркеры визажа')}</h3>
                   <div className="markers-description-list">
+                    {bodyMarkers.filter((marker) => marker.tabId === 'makeup').length === 0 && (
+                      <div className="body-markers-empty">
+                        <img src={MakeupIcon} alt="" className="empty-tab-icon" />
+                        <p>{t('Кликните на лицо, чтобы добавить первую точку визажа')}</p>
+                      </div>
+                    )}
                     {bodyMarkers.filter((marker) => marker.tabId === 'makeup').map((marker) => (
-                      <div key={marker.id} className="marker-description-card">
+                      <div
+                        key={marker.id}
+                        className="marker-description-card"
+                        style={{ '--mc': marker.color } as React.CSSProperties}
+                      >
                         <div className="marker-header">
-                          <div className="marker-color" style={{ backgroundColor: marker.color }} />
+                          <div className="marker-badge" style={{ backgroundColor: marker.color }}>
+                            {marker.id}
+                          </div>
                           <div className="marker-title">{marker.title}</div>
                           <button
                             className="edit-marker-btn"
+                            title={t('Редактировать')}
                             onClick={() => {
                               setBodyMarkerDraft({
                                 title: marker.title,
@@ -1401,11 +1436,11 @@ const ProjectPage: React.FC = () => {
                             ✏️
                           </button>
                         </div>
-                        <div className="marker-body-part">
-                          {t('Часть тела: {part} • {person}', {
-                            part: marker.bodyPart,
-                            person: getSilhouetteLabel(getMarkerPersonId(marker))
-                          })}
+                        <div className="marker-meta-row">
+                          <span className="marker-part-badge">{marker.bodyPart || '—'}</span>
+                          <span className="marker-person-label">
+                            {getSilhouetteLabel(getMarkerPersonId(marker))}
+                          </span>
                         </div>
                         <div className="marker-description">{marker.description}</div>
                         <div className="marker-images">
@@ -1487,7 +1522,7 @@ const ProjectPage: React.FC = () => {
                         </div>
                         <div className="silhouette-container">
                           <div
-                            className="silhouette-wrapper"
+                            className="silhouette-wrapper face-silhouette-wrapper"
                             onClick={(e) => {
                               const rect = e.currentTarget.getBoundingClientRect();
                               const x = ((e.clientX - rect.left) / rect.width) * 100;
@@ -1506,7 +1541,7 @@ const ProjectPage: React.FC = () => {
                               setShowBodyMarkerModal(true);
                             }}
                           >
-                            <img src={HumanSilhouette} alt={person.name} className="human-silhouette-img" />
+                            <img src={FaceSilhouette} alt={person.name} className="face-silhouette-img" />
                             {bodyMarkers
                               .filter((marker) => marker.tabId === 'makeup' && getMarkerPersonId(marker) === person.id)
                               .map((marker) => (
