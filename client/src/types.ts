@@ -95,6 +95,78 @@ export interface DocumentFile {
   type: string;
 }
 
+export interface ScriptFile {
+  name: string;
+  type: string;
+  size: string;
+  dataUrl?: string;
+}
+
+export interface ScriptParams {
+  scriptFile: ScriptFile | null;
+  actorsCount: number;
+  extraActorsCount: number;
+  childActorsCount: number;
+  animalsCount: number;
+  locationsCount: number;
+  exteriorScenesCount: number;
+  interiorScenesCount: number;
+  nightScenesCount: number;
+  shootingDaysCount: number;
+  totalDurationMin: number;
+  propsCount: number;
+  costumeSetsCount: number;
+  makeupLooksCount: number;
+  wigs: boolean;
+  prosthetics: boolean;
+  vfxShotsCount: number;
+  practicalEffectsCount: number;
+  stuntsCount: number;
+  weaponProps: boolean;
+  pyrotechnics: boolean;
+  rainScenes: boolean;
+  snowScenes: boolean;
+  vehiclesCount: number;
+  vehicleChases: boolean;
+  droneShots: boolean;
+  underwaterShots: boolean;
+  aerialShots: boolean;
+  craneShots: boolean;
+  productionFormat: string;
+  aspectRatio: string;
+  handheldStyle: boolean;
+  steadicam: boolean;
+  originalMusicTracks: number;
+  voiceOverPresent: boolean;
+  silentScenes: boolean;
+  musicGenre: string;
+  genre: string;
+  ageRating: string;
+  targetAudience: string;
+  dialogLanguage: string;
+  subtitlesNeeded: boolean;
+  weatherDependentDays: number;
+  hazardousConditions: boolean;
+  internationalShoot: boolean;
+  remoteLocations: boolean;
+  militaryEquipment: boolean;
+  logline: string;
+  budgetTier: string;
+  colorGrading: string;
+}
+
+export interface StoryboardCell {
+  description: string;
+  imageUrl: string;
+  shotType: string;
+}
+
+export interface StoryboardGrid {
+  locationNames: string[];
+  columnCount: number;
+  cells: Record<string, StoryboardCell>;
+}
+
 export interface Project {
   id: string;
   name: string;
@@ -114,6 +186,8 @@ export interface Project {
   mediaFiles: MediaFile[];
   documents: DocumentFile[];
   comments: ProjectComment[];
+  scriptParams?: ScriptParams;
+  storyboardGrid?: StoryboardGrid;
 }
 
 export interface ProjectSummary {

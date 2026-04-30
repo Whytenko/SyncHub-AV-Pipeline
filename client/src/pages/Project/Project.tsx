@@ -15,6 +15,9 @@ import type {
   Project,
   ProjectComment,
   ProjectMarker,
+  ScriptParams,
+  StoryboardCell,
+  StoryboardGrid,
   TabType
 } from '../../types';
 
@@ -119,6 +122,49 @@ const sanitizeScriptHtml = (html: string) =>
     .replace(/direction\s*:\s*rtl\s*;?/gi, 'direction:ltr;')
     .replace(/unicode-bidi\s*:\s*[^;"']+\s*;?/gi, '');
 
+const defaultScriptParams: ScriptParams = {
+  scriptFile: null,
+  actorsCount: 0, extraActorsCount: 0, childActorsCount: 0, animalsCount: 0,
+  locationsCount: 0, exteriorScenesCount: 0, interiorScenesCount: 0,
+  nightScenesCount: 0, shootingDaysCount: 0, totalDurationMin: 90,
+  propsCount: 0, costumeSetsCount: 0, makeupLooksCount: 0,
+  wigs: false, prosthetics: false,
+  vfxShotsCount: 0, practicalEffectsCount: 0, stuntsCount: 0,
+  weaponProps: false, pyrotechnics: false, rainScenes: false, snowScenes: false,
+  vehiclesCount: 0, vehicleChases: false, droneShots: false,
+  underwaterShots: false, aerialShots: false, craneShots: false,
+  productionFormat: '4K', aspectRatio: '16:9', handheldStyle: false, steadicam: false,
+  originalMusicTracks: 0, voiceOverPresent: false, silentScenes: false, musicGenre: '',
+  genre: '', ageRating: '16+', targetAudience: '', dialogLanguage: 'Русский',
+  subtitlesNeeded: false, weatherDependentDays: 0, hazardousConditions: false,
+  internationalShoot: false, remoteLocations: false, militaryEquipment: false,
+  logline: '', budgetTier: 'mid', colorGrading: 'Нейтральная'
+};
+
+const defaultStoryboardGrid: StoryboardGrid = { locationNames: [], columnCount: 4, cells: {} };
+
+const compressImage = (file: File, maxW = 480, maxH = 320): Promise<string> =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = reject;
+    reader.onload = (ev) => {
+      const img = new Image();
+      img.onerror = reject;
+      img.onload = () => {
+        let w = img.width, h = img.height;
+        const ratio = Math.min(maxW / w, maxH / h, 1);
+        w = Math.round(w * ratio);
+        h = Math.round(h * ratio);
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d')!.drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL('image/jpeg', 0.82));
+      };
+      img.src = ev.target!.result as string;
+    };
+    reader.readAsDataURL(file);
+  });
+
 const normalizeSilhouettes = (value: unknown): BodySilhouette[] => {
   if (!Array.isArray(value)) {
     return [{ id: 1, name: 'Человек 1' }];
@@ -161,7 +207,7 @@ const ProjectPage: React.FC = () => {
   const [currentTime, setCurrentTime] = useState(0);
   const [activeTab, setActiveTab] = useState<TabType>('edit');
   const [showAllMarkers, setShowAllMarkers] = useState(true);
-  const [scriptText, setScriptText] = useState('');
+  const [, setScriptText] = useState('');
   const [initialScriptHtml, setInitialScriptHtml] = useState('');
   const [directorNotes, setDirectorNotes] = useState('');
   const editorRef = useRef<HTMLDivElement>(null);
@@ -182,7 +228,7 @@ const ProjectPage: React.FC = () => {
   const [locationDraft, setLocationDraft] = useState({ name: '', description: '' });
   const [showShotModal, setShowShotModal] = useState(false);
   const [shotDraft, setShotDraft] = useState({ time: '', title: '', description: '' });
-  const [shotLocationId, setShotLocationId] = useState<number | null>(null);
+  const [shotLocationId] = useState<number | null>(null);
   const [showMediaModal, setShowMediaModal] = useState(false);
   const [mediaDraft, setMediaDraft] = useState({ name: '', type: 'video', duration: '', size: '' });
   const [showDocModal, setShowDocModal] = useState(false);
@@ -208,6 +254,17 @@ const ProjectPage: React.FC = () => {
   } | null>(null);
   const [showProjectSettings, setShowProjectSettings] = useState(false);
   const [projectDraft, setProjectDraft] = useState({ name: '', description: '', deadline: '' });
+
+  // Script params
+  const scriptFileInputRef = useRef<HTMLInputElement>(null);
+  const [scriptParams, setScriptParamsDraft] = useState<ScriptParams>(defaultScriptParams);
+
+  // Storyboard grid
+  const [storyboardGrid, setStoryboardGridLocal] = useState<StoryboardGrid>(defaultStoryboardGrid);
+  const [cellEditorOpen, setCellEditorOpen] = useState(false);
+  const [cellEditorRow, setCellEditorRow] = useState(0);
+  const [cellEditorCol, setCellEditorCol] = useState(0);
+  const [cellEditorDraft, setCellEditorDraft] = useState<StoryboardCell>({ description: '', imageUrl: '', shotType: '' });
 
   const normalizeProjectData = (rawProject: Project): Project => {
     const silhouettes = normalizeSilhouettes((rawProject as any).bodySilhouettes);
@@ -270,6 +327,16 @@ const ProjectPage: React.FC = () => {
       editorRef.current.innerHTML = initialScriptHtml;
     }
   }, [initialScriptHtml, project?.id]);
+
+  useEffect(() => {
+    if (!project) return;
+    setScriptParamsDraft(project.scriptParams
+      ? { ...defaultScriptParams, ...(project.scriptParams as ScriptParams) }
+      : defaultScriptParams);
+    setStoryboardGridLocal(project.storyboardGrid
+      ? (project.storyboardGrid as StoryboardGrid)
+      : defaultStoryboardGrid);
+  }, [project?.id]);
 
   useEffect(() => {
     if (project) {
@@ -471,48 +538,159 @@ const ProjectPage: React.FC = () => {
     setShowTimelineDurationConfirm(false);
   };
 
-  const handleFormatText = (command: string, value?: string) => {
-    document.execCommand(command, false, value);
-    editorRef.current?.focus();
+
+  // ── Script params ────────────────────────────────────────────────────────────
+
+  const updateScriptParam = async <K extends keyof ScriptParams>(key: K, value: ScriptParams[K]) => {
+    const updated = { ...scriptParams, [key]: value };
+    setScriptParamsDraft(updated);
+
+    // Data binding: actors → bodySilhouettes
+    if (key === 'actorsCount') {
+      const newCount = value as number;
+      let newSilhouettes = [...bodySilhouettes];
+      if (newCount > newSilhouettes.length) {
+        for (let i = newSilhouettes.length + 1; i <= newCount; i++) {
+          newSilhouettes.push({ id: i, name: `${t('Актёр')} ${i}` });
+        }
+      } else {
+        newSilhouettes = newSilhouettes.slice(0, newCount);
+      }
+      await saveProject({ bodySilhouettes: newSilhouettes, scriptParams: updated } as Partial<Project>);
+      if (newCount > 0) showToast(t('{n} актёров — образы обновлены', { n: newCount }), 'success');
+      return;
+    }
+
+    // Data binding: locationsCount → storyboard grid rows
+    if (key === 'locationsCount') {
+      const newCount = value as number;
+      let newNames = [...storyboardGrid.locationNames];
+      if (newCount > newNames.length) {
+        for (let i = newNames.length + 1; i <= newCount; i++) {
+          newNames.push(`${t('Локация')} ${i}`);
+        }
+      } else {
+        newNames = newNames.slice(0, newCount);
+      }
+      const newCells: Record<string, StoryboardCell> = {};
+      Object.entries(storyboardGrid.cells).forEach(([k, v]) => {
+        if (parseInt(k.split('_')[0]) < newCount) newCells[k] = v;
+      });
+      const newGrid = { ...storyboardGrid, locationNames: newNames, cells: newCells };
+      setStoryboardGridLocal(newGrid);
+      await saveProject({ storyboardGrid: newGrid, scriptParams: updated } as Partial<Project>);
+      return;
+    }
+
+    await saveProject({ scriptParams: updated } as Partial<Project>);
   };
 
-  const handleEditorInput = () => {
-    if (!editorRef.current) return;
-    setScriptText(editorRef.current.innerHTML);
+  const handleScriptFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const isImage = file.type.startsWith('image/');
+    const sizeStr = file.size > 1024 * 1024
+      ? `${(file.size / 1024 / 1024).toFixed(1)} MB`
+      : `${(file.size / 1024).toFixed(0)} KB`;
+    let dataUrl: string | undefined;
+    if (isImage) {
+      try { dataUrl = await compressImage(file, 600, 400); } catch { dataUrl = undefined; }
+    }
+    const ext = file.name.split('.').pop()?.toUpperCase() || 'FILE';
+    await updateScriptParam('scriptFile', { name: file.name, type: ext, size: sizeStr, dataUrl });
+    showToast(t('Файл сценария загружен'), 'success');
+    e.target.value = '';
   };
 
-  const normalizeEditorContent = () => {
-    if (!editorRef.current) return;
-    const normalizedHtml = sanitizeScriptHtml(editorRef.current.innerHTML);
-    if (editorRef.current.innerHTML !== normalizedHtml) {
-      editorRef.current.innerHTML = normalizedHtml;
-    }
-    setScriptText(normalizedHtml);
+  const handleRemoveScriptFile = async () => {
+    await updateScriptParam('scriptFile', null);
   };
 
-  const handleSaveScript = async () => {
-    const currentHtml = editorRef.current ? editorRef.current.innerHTML : scriptText;
-    const normalizedHtml = sanitizeScriptHtml(currentHtml);
-    if (normalizedHtml !== scriptText) {
-      setScriptText(normalizedHtml);
-    }
-    if (editorRef.current && editorRef.current.innerHTML !== normalizedHtml) {
-      editorRef.current.innerHTML = normalizedHtml;
-    }
-    await saveProject({ scriptText: normalizedHtml });
-    showToast(t('Сценарий сохранен'), 'success');
+  // ── Storyboard grid ──────────────────────────────────────────────────────────
+
+  const saveStoryboardGrid = async (grid: StoryboardGrid) => {
+    setStoryboardGridLocal(grid);
+    await saveProject({ storyboardGrid: grid } as Partial<Project>);
   };
 
-  const handleAddMarkerToText = async () => {
-    const currentHtml = sanitizeScriptHtml(editorRef.current ? editorRef.current.innerHTML : scriptText);
-    const markerLabel = `[Маркер: ${tabNames[activeTab]} / ${formatTime(currentTime)}]`;
-    const nextText = currentHtml.trim().length > 0 ? `${currentHtml}<br><br>${markerLabel}` : markerLabel;
-    if (editorRef.current) {
-      editorRef.current.innerHTML = nextText;
+  const handleAddStoryboardRow = async () => {
+    const newGrid = {
+      ...storyboardGrid,
+      locationNames: [...storyboardGrid.locationNames, `${t('Локация')} ${storyboardGrid.locationNames.length + 1}`]
+    };
+    await saveStoryboardGrid(newGrid);
+    setScriptParamsDraft(prev => ({ ...prev, locationsCount: newGrid.locationNames.length }));
+    await saveProject({ scriptParams: { ...scriptParams, locationsCount: newGrid.locationNames.length } } as Partial<Project>);
+  };
+
+  const handleRemoveStoryboardRow = async () => {
+    if (storyboardGrid.locationNames.length === 0) return;
+    const newLen = storyboardGrid.locationNames.length - 1;
+    const newNames = storyboardGrid.locationNames.slice(0, newLen);
+    const newCells: Record<string, StoryboardCell> = {};
+    Object.entries(storyboardGrid.cells).forEach(([k, v]) => {
+      if (parseInt(k.split('_')[0]) < newLen) newCells[k] = v;
+    });
+    const newGrid = { ...storyboardGrid, locationNames: newNames, cells: newCells };
+    setStoryboardGridLocal(newGrid);
+    setScriptParamsDraft(prev => ({ ...prev, locationsCount: newLen }));
+    await saveProject({ storyboardGrid: newGrid, scriptParams: { ...scriptParams, locationsCount: newLen } } as Partial<Project>);
+  };
+
+  const handleAddStoryboardColumn = async () => {
+    await saveStoryboardGrid({ ...storyboardGrid, columnCount: storyboardGrid.columnCount + 1 });
+  };
+
+  const handleRemoveStoryboardColumn = async () => {
+    if (storyboardGrid.columnCount <= 1) return;
+    const newCount = storyboardGrid.columnCount - 1;
+    const newCells: Record<string, StoryboardCell> = {};
+    Object.entries(storyboardGrid.cells).forEach(([k, v]) => {
+      if (parseInt(k.split('_')[1]) < newCount) newCells[k] = v;
+    });
+    await saveStoryboardGrid({ ...storyboardGrid, columnCount: newCount, cells: newCells });
+  };
+
+  const renameStoryboardRow = (rowIdx: number, name: string) => {
+    const newNames = [...storyboardGrid.locationNames];
+    newNames[rowIdx] = name;
+    setStoryboardGridLocal({ ...storyboardGrid, locationNames: newNames });
+  };
+
+  const openCellEditor = (rowIdx: number, colIdx: number) => {
+    const key = `${rowIdx}_${colIdx}`;
+    const existing = storyboardGrid.cells[key] ?? { description: '', imageUrl: '', shotType: '' };
+    setCellEditorRow(rowIdx);
+    setCellEditorCol(colIdx);
+    setCellEditorDraft({ ...existing });
+    setCellEditorOpen(true);
+  };
+
+  const handleSaveCell = async () => {
+    const key = `${cellEditorRow}_${cellEditorCol}`;
+    const newCells = { ...storyboardGrid.cells, [key]: { ...cellEditorDraft } };
+    setCellEditorOpen(false);
+    await saveStoryboardGrid({ ...storyboardGrid, cells: newCells });
+  };
+
+  const handleDeleteCell = async () => {
+    const key = `${cellEditorRow}_${cellEditorCol}`;
+    const newCells = { ...storyboardGrid.cells };
+    delete newCells[key];
+    setCellEditorOpen(false);
+    await saveStoryboardGrid({ ...storyboardGrid, cells: newCells });
+  };
+
+  const handleCellImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const dataUrl = await compressImage(file);
+      setCellEditorDraft(prev => ({ ...prev, imageUrl: dataUrl }));
+    } catch {
+      showToast(t('Не удалось загрузить изображение'), 'error');
     }
-    setScriptText(nextText);
-    await saveProject({ scriptText: nextText });
-    showToast(t('Маркер добавлен в текст'), 'success');
+    e.target.value = '';
   };
 
   const handleAddComment = async () => {
@@ -804,10 +982,6 @@ const ProjectPage: React.FC = () => {
     }
   };
 
-  const handleOpenDocumentPreview = (document: DocumentFile) => {
-    setPreviewDocument(document);
-  };
-
   const handleSaveProjectSettings = async () => {
     if (!projectDraft.name.trim()) {
       showToast(t('Название проекта обязательно'), 'error');
@@ -1028,86 +1202,351 @@ const ProjectPage: React.FC = () => {
         <div className="tabs-content">
           {activeTab === 'script' && (
             <div className="tab-content script-tab">
-              <div className="script-container">
-                <div className="script-editor-section">
-                  <h3>{t('Текстовый редактор сценария')}</h3>
-                  <div className="text-editor-toolbar">
-                    <button className="toolbar-btn" onClick={() => handleFormatText('bold')} title={t('Жирный')}>
-                      <strong>B</strong>
-                    </button>
-                    <button className="toolbar-btn" onClick={() => handleFormatText('italic')} title={t('Курсив')}>
-                      <em>I</em>
-                    </button>
-                    <button className="toolbar-btn" onClick={() => handleFormatText('formatBlock', '<h1>')} title={t('Заголовок 1')}>
-                      H1
-                    </button>
-                    <button className="toolbar-btn" onClick={() => handleFormatText('formatBlock', '<h2>')} title={t('Заголовок 2')}>
-                      H2
-                    </button>
-                    <button className="toolbar-btn" onClick={() => handleFormatText('insertUnorderedList')} title={t('Маркированный список')}>
-                      • List
-                    </button>
-                    <button className="toolbar-btn" onClick={() => handleFormatText('insertOrderedList')} title={t('Нумерованный список')}>
-                      1. List
-                    </button>
-                    <button className="toolbar-btn" onClick={() => handleFormatText('underline')} title={t('Подчеркивание')}>
-                      <u>U</u>
-                    </button>
+              <input ref={scriptFileInputRef} type="file" accept=".pdf,.doc,.docx,.png,.jpg,.jpeg" style={{ display: 'none' }} onChange={handleScriptFileUpload} />
+
+              {/* Upload zone */}
+              <div
+                className={`script-upload-zone${scriptParams.scriptFile ? ' has-file' : ''}`}
+                onClick={() => !scriptParams.scriptFile && scriptFileInputRef.current?.click()}
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={async (e) => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f) { const fakeEvent = { target: { files: [f], value: '' } } as unknown as React.ChangeEvent<HTMLInputElement>; await handleScriptFileUpload(fakeEvent); } }}
+              >
+                {scriptParams.scriptFile ? (
+                  <div className="script-file-info">
+                    <div className="script-file-icon">{scriptParams.scriptFile.type === 'PDF' ? '📕' : scriptParams.scriptFile.type === 'PNG' || scriptParams.scriptFile.type === 'JPG' || scriptParams.scriptFile.type === 'JPEG' ? '🖼' : '📄'}</div>
+                    <div className="script-file-details">
+                      <div className="script-file-name">{scriptParams.scriptFile.name}</div>
+                      <div className="script-file-meta">{scriptParams.scriptFile.type} · {scriptParams.scriptFile.size}</div>
+                    </div>
+                    {scriptParams.scriptFile.dataUrl && <img src={scriptParams.scriptFile.dataUrl} className="script-file-thumb" alt="" />}
+                    <div className="script-file-actions">
+                      <button className="script-file-btn" onClick={(e) => { e.stopPropagation(); scriptFileInputRef.current?.click(); }}>{t('Заменить')}</button>
+                      <button className="script-file-btn script-file-btn--danger" onClick={(e) => { e.stopPropagation(); handleRemoveScriptFile(); }}>{t('Удалить')}</button>
+                    </div>
                   </div>
-                  <div
-                    ref={editorRef}
-                    className="text-editor-content"
-                    dir="ltr"
-                    contentEditable
-                    lang="ru"
-                    suppressContentEditableWarning
-                    onInput={handleEditorInput}
-                    onBlur={normalizeEditorContent}
-                  />
-                  <div className="editor-actions">
-                    <button className="save-btn" onClick={handleSaveScript}>{t('Сохранить')}</button>
-                    <button className="add-marker-text-btn" onClick={handleAddMarkerToText}>
-                      <img src={AddMarkerIcon} alt={t('Маркер')} />
-                      {t('Добавить маркер в текст')}
-                    </button>
+                ) : (
+                  <div className="script-upload-prompt">
+                    <div className="script-upload-icon">📄</div>
+                    <div className="script-upload-title">{t('Загрузить файл сценария')}</div>
+                    <div className="script-upload-formats">PDF · Word (.docx) · PNG · JPG</div>
+                    <div className="script-upload-hint">{t('Перетащите файл или нажмите для выбора')}</div>
+                  </div>
+                )}
+              </div>
+
+              {/* Parameters */}
+              <div className="sp-grid">
+
+                <div className="sp-section">
+                  <div className="sp-section-title">🎭 {t('Актёрский состав')}</div>
+                  <div className="sp-fields">
+                    <div className="sp-field sp-field--accent">
+                      <label className="sp-label">{t('Главных актёров')}</label>
+                      <input type="number" min={0} max={500} className="sp-num" value={scriptParams.actorsCount} onChange={(e) => updateScriptParam('actorsCount', Math.max(0, parseInt(e.target.value) || 0))} />
+                      <span className="sp-hint">{t('→ Костюмер и Визажист')}</span>
+                    </div>
+                    <div className="sp-field">
+                      <label className="sp-label">{t('Массовка / экстра')}</label>
+                      <input type="number" min={0} max={10000} className="sp-num" value={scriptParams.extraActorsCount} onChange={(e) => updateScriptParam('extraActorsCount', Math.max(0, parseInt(e.target.value) || 0))} />
+                    </div>
+                    <div className="sp-field">
+                      <label className="sp-label">{t('Дети-актёры')}</label>
+                      <input type="number" min={0} max={200} className="sp-num" value={scriptParams.childActorsCount} onChange={(e) => updateScriptParam('childActorsCount', Math.max(0, parseInt(e.target.value) || 0))} />
+                    </div>
+                    <div className="sp-field">
+                      <label className="sp-label">{t('Животные')}</label>
+                      <input type="number" min={0} max={200} className="sp-num" value={scriptParams.animalsCount} onChange={(e) => updateScriptParam('animalsCount', Math.max(0, parseInt(e.target.value) || 0))} />
+                    </div>
                   </div>
                 </div>
 
-                <div className="script-documents-section">
-                  <h3>{t('Загруженные документы')}</h3>
-                  <div className="documents-list">
-                    {documents.length === 0 && <div className="empty-state">{t('Документов пока нет.')}</div>}
-                    {documents.map((document) => (
-                      <div key={document.id} className="document-item">
-                        <div className="document-icon">📄</div>
-                        <div className="document-info">
-                          <div className="document-name">{document.name}</div>
-                          <div className="document-meta">
-                            <span>{document.size}</span>
-                            <span>{document.uploadedBy}</span>
-                            <span>{document.uploadedAt}</span>
-                          </div>
-                        </div>
-                        <button className="preview-doc-btn" onClick={() => handleOpenDocumentPreview(document)}>
-                          {t('Просмотр')}
-                        </button>
-                      </div>
-                    ))}
+                <div className="sp-section">
+                  <div className="sp-section-title">📍 {t('Масштаб производства')}</div>
+                  <div className="sp-fields">
+                    <div className="sp-field sp-field--accent">
+                      <label className="sp-label">{t('Количество локаций')}</label>
+                      <input type="number" min={0} max={200} className="sp-num" value={scriptParams.locationsCount} onChange={(e) => updateScriptParam('locationsCount', Math.max(0, parseInt(e.target.value) || 0))} />
+                      <span className="sp-hint">{t('→ Раскадровка Режиссёра')}</span>
+                    </div>
+                    <div className="sp-field">
+                      <label className="sp-label">{t('Наружных сцен')}</label>
+                      <input type="number" min={0} max={5000} className="sp-num" value={scriptParams.exteriorScenesCount} onChange={(e) => updateScriptParam('exteriorScenesCount', Math.max(0, parseInt(e.target.value) || 0))} />
+                    </div>
+                    <div className="sp-field">
+                      <label className="sp-label">{t('Внутренних сцен')}</label>
+                      <input type="number" min={0} max={5000} className="sp-num" value={scriptParams.interiorScenesCount} onChange={(e) => updateScriptParam('interiorScenesCount', Math.max(0, parseInt(e.target.value) || 0))} />
+                    </div>
+                    <div className="sp-field">
+                      <label className="sp-label">{t('Ночных сцен')}</label>
+                      <input type="number" min={0} max={5000} className="sp-num" value={scriptParams.nightScenesCount} onChange={(e) => updateScriptParam('nightScenesCount', Math.max(0, parseInt(e.target.value) || 0))} />
+                    </div>
+                    <div className="sp-field">
+                      <label className="sp-label">{t('Дней съёмок')}</label>
+                      <input type="number" min={0} max={1000} className="sp-num" value={scriptParams.shootingDaysCount} onChange={(e) => updateScriptParam('shootingDaysCount', Math.max(0, parseInt(e.target.value) || 0))} />
+                    </div>
+                    <div className="sp-field">
+                      <label className="sp-label">{t('Хронометраж (мин)')}</label>
+                      <input type="number" min={0} max={600} className="sp-num" value={scriptParams.totalDurationMin} onChange={(e) => updateScriptParam('totalDurationMin', Math.max(0, parseInt(e.target.value) || 0))} />
+                    </div>
                   </div>
-                  <button className="upload-doc-btn" onClick={() => setShowDocModal(true)}>
-                    <img src={UploadIcon} alt={t('Загрузить')} />
-                    {t('Загрузить документ')}
-                  </button>
                 </div>
+
+                <div className="sp-section">
+                  <div className="sp-section-title">🎨 {t('Реквизит и образы')}</div>
+                  <div className="sp-fields">
+                    <div className="sp-field">
+                      <label className="sp-label">{t('Единиц реквизита')}</label>
+                      <input type="number" min={0} max={10000} className="sp-num" value={scriptParams.propsCount} onChange={(e) => updateScriptParam('propsCount', Math.max(0, parseInt(e.target.value) || 0))} />
+                    </div>
+                    <div className="sp-field">
+                      <label className="sp-label">{t('Комплектов костюмов')}</label>
+                      <input type="number" min={0} max={2000} className="sp-num" value={scriptParams.costumeSetsCount} onChange={(e) => updateScriptParam('costumeSetsCount', Math.max(0, parseInt(e.target.value) || 0))} />
+                    </div>
+                    <div className="sp-field">
+                      <label className="sp-label">{t('Образов грима')}</label>
+                      <input type="number" min={0} max={2000} className="sp-num" value={scriptParams.makeupLooksCount} onChange={(e) => updateScriptParam('makeupLooksCount', Math.max(0, parseInt(e.target.value) || 0))} />
+                    </div>
+                    <div className="sp-field sp-field--check"><label className="sp-check"><input type="checkbox" checked={scriptParams.wigs} onChange={(e) => updateScriptParam('wigs', e.target.checked)} /><span>{t('Парики / накладные волосы')}</span></label></div>
+                    <div className="sp-field sp-field--check"><label className="sp-check"><input type="checkbox" checked={scriptParams.prosthetics} onChange={(e) => updateScriptParam('prosthetics', e.target.checked)} /><span>{t('Грим-протезы / трансформации')}</span></label></div>
+                  </div>
+                </div>
+
+                <div className="sp-section">
+                  <div className="sp-section-title">💥 {t('Эффекты и трюки')}</div>
+                  <div className="sp-fields">
+                    <div className="sp-field">
+                      <label className="sp-label">{t('VFX-кадров (цифровые эффекты)')}</label>
+                      <input type="number" min={0} max={10000} className="sp-num" value={scriptParams.vfxShotsCount} onChange={(e) => updateScriptParam('vfxShotsCount', Math.max(0, parseInt(e.target.value) || 0))} />
+                    </div>
+                    <div className="sp-field">
+                      <label className="sp-label">{t('Реальных эффектов (пиро/огонь/вода)')}</label>
+                      <input type="number" min={0} max={1000} className="sp-num" value={scriptParams.practicalEffectsCount} onChange={(e) => updateScriptParam('practicalEffectsCount', Math.max(0, parseInt(e.target.value) || 0))} />
+                    </div>
+                    <div className="sp-field">
+                      <label className="sp-label">{t('Трюков (каскадёры)')}</label>
+                      <input type="number" min={0} max={500} className="sp-num" value={scriptParams.stuntsCount} onChange={(e) => updateScriptParam('stuntsCount', Math.max(0, parseInt(e.target.value) || 0))} />
+                    </div>
+                    <div className="sp-field sp-field--check"><label className="sp-check"><input type="checkbox" checked={scriptParams.weaponProps} onChange={(e) => updateScriptParam('weaponProps', e.target.checked)} /><span>{t('Оружие / имитация оружия')}</span></label></div>
+                    <div className="sp-field sp-field--check"><label className="sp-check"><input type="checkbox" checked={scriptParams.pyrotechnics} onChange={(e) => updateScriptParam('pyrotechnics', e.target.checked)} /><span>{t('Пиротехника')}</span></label></div>
+                    <div className="sp-field sp-field--check"><label className="sp-check"><input type="checkbox" checked={scriptParams.rainScenes} onChange={(e) => updateScriptParam('rainScenes', e.target.checked)} /><span>{t('Сцены с дождём')}</span></label></div>
+                    <div className="sp-field sp-field--check"><label className="sp-check"><input type="checkbox" checked={scriptParams.snowScenes} onChange={(e) => updateScriptParam('snowScenes', e.target.checked)} /><span>{t('Сцены со снегом')}</span></label></div>
+                  </div>
+                </div>
+
+                <div className="sp-section">
+                  <div className="sp-section-title">🚗 {t('Транспорт и оборудование')}</div>
+                  <div className="sp-fields">
+                    <div className="sp-field">
+                      <label className="sp-label">{t('Транспортных средств')}</label>
+                      <input type="number" min={0} max={1000} className="sp-num" value={scriptParams.vehiclesCount} onChange={(e) => updateScriptParam('vehiclesCount', Math.max(0, parseInt(e.target.value) || 0))} />
+                    </div>
+                    <div className="sp-field sp-field--check"><label className="sp-check"><input type="checkbox" checked={scriptParams.vehicleChases} onChange={(e) => updateScriptParam('vehicleChases', e.target.checked)} /><span>{t('Автомобильные погони')}</span></label></div>
+                    <div className="sp-field sp-field--check"><label className="sp-check"><input type="checkbox" checked={scriptParams.droneShots} onChange={(e) => updateScriptParam('droneShots', e.target.checked)} /><span>{t('Дрон-съёмка')}</span></label></div>
+                    <div className="sp-field sp-field--check"><label className="sp-check"><input type="checkbox" checked={scriptParams.underwaterShots} onChange={(e) => updateScriptParam('underwaterShots', e.target.checked)} /><span>{t('Подводные съёмки')}</span></label></div>
+                    <div className="sp-field sp-field--check"><label className="sp-check"><input type="checkbox" checked={scriptParams.aerialShots} onChange={(e) => updateScriptParam('aerialShots', e.target.checked)} /><span>{t('Авиасъёмка (вертолёт)')}</span></label></div>
+                    <div className="sp-field sp-field--check"><label className="sp-check"><input type="checkbox" checked={scriptParams.craneShots} onChange={(e) => updateScriptParam('craneShots', e.target.checked)} /><span>{t('Кран / рельсовые тележки')}</span></label></div>
+                  </div>
+                </div>
+
+                <div className="sp-section">
+                  <div className="sp-section-title">📷 {t('Камера и формат')}</div>
+                  <div className="sp-fields">
+                    <div className="sp-field">
+                      <label className="sp-label">{t('Формат съёмки')}</label>
+                      <select className="sp-select" value={scriptParams.productionFormat} onChange={(e) => updateScriptParam('productionFormat', e.target.value)}>
+                        {['4K','6K','8K','HD 1080p','Film 35mm','Film 16mm','Цифровой RAW'].map(v => <option key={v}>{v}</option>)}
+                      </select>
+                    </div>
+                    <div className="sp-field">
+                      <label className="sp-label">{t('Соотношение сторон')}</label>
+                      <select className="sp-select" value={scriptParams.aspectRatio} onChange={(e) => updateScriptParam('aspectRatio', e.target.value)}>
+                        {['16:9','2.35:1','1.85:1','4:3','2.39:1','1:1'].map(v => <option key={v}>{v}</option>)}
+                      </select>
+                    </div>
+                    <div className="sp-field sp-field--check"><label className="sp-check"><input type="checkbox" checked={scriptParams.handheldStyle} onChange={(e) => updateScriptParam('handheldStyle', e.target.checked)} /><span>{t('Ручная камера')}</span></label></div>
+                    <div className="sp-field sp-field--check"><label className="sp-check"><input type="checkbox" checked={scriptParams.steadicam} onChange={(e) => updateScriptParam('steadicam', e.target.checked)} /><span>{t('Стедикам')}</span></label></div>
+                  </div>
+                </div>
+
+                <div className="sp-section">
+                  <div className="sp-section-title">🎵 {t('Звук и музыка')}</div>
+                  <div className="sp-fields">
+                    <div className="sp-field">
+                      <label className="sp-label">{t('Оригинальных треков')}</label>
+                      <input type="number" min={0} max={500} className="sp-num" value={scriptParams.originalMusicTracks} onChange={(e) => updateScriptParam('originalMusicTracks', Math.max(0, parseInt(e.target.value) || 0))} />
+                    </div>
+                    <div className="sp-field">
+                      <label className="sp-label">{t('Жанр музыки')}</label>
+                      <input type="text" className="sp-text" value={scriptParams.musicGenre} placeholder={t('Оркестр, Электроника...')}
+                        onChange={(e) => setScriptParamsDraft(prev => ({ ...prev, musicGenre: e.target.value }))}
+                        onBlur={(e) => updateScriptParam('musicGenre', e.target.value)} />
+                    </div>
+                    <div className="sp-field sp-field--check"><label className="sp-check"><input type="checkbox" checked={scriptParams.voiceOverPresent} onChange={(e) => updateScriptParam('voiceOverPresent', e.target.checked)} /><span>{t('Закадровый голос (VO)')}</span></label></div>
+                    <div className="sp-field sp-field--check"><label className="sp-check"><input type="checkbox" checked={scriptParams.silentScenes} onChange={(e) => updateScriptParam('silentScenes', e.target.checked)} /><span>{t('Сцены без диалогов')}</span></label></div>
+                  </div>
+                </div>
+
+                <div className="sp-section">
+                  <div className="sp-section-title">🎬 {t('Жанр и аудитория')}</div>
+                  <div className="sp-fields">
+                    <div className="sp-field">
+                      <label className="sp-label">{t('Жанр')}</label>
+                      <select className="sp-select" value={scriptParams.genre} onChange={(e) => updateScriptParam('genre', e.target.value)}>
+                        <option value="">{t('Выбрать...')}</option>
+                        {['Драма','Комедия','Триллер','Экшн','Мелодрама','Ужасы','Фантастика','Фэнтези','Документальный','Анимация','Биографический','Музыкальный','Криминал','Вестерн','Исторический'].map(v => <option key={v}>{v}</option>)}
+                      </select>
+                    </div>
+                    <div className="sp-field">
+                      <label className="sp-label">{t('Возрастной рейтинг')}</label>
+                      <select className="sp-select" value={scriptParams.ageRating} onChange={(e) => updateScriptParam('ageRating', e.target.value)}>
+                        {['0+','6+','12+','16+','18+'].map(v => <option key={v}>{v}</option>)}
+                      </select>
+                    </div>
+                    <div className="sp-field">
+                      <label className="sp-label">{t('Целевая аудитория')}</label>
+                      <input type="text" className="sp-text" value={scriptParams.targetAudience} placeholder={t('18–35, семейная...')}
+                        onChange={(e) => setScriptParamsDraft(prev => ({ ...prev, targetAudience: e.target.value }))}
+                        onBlur={(e) => updateScriptParam('targetAudience', e.target.value)} />
+                    </div>
+                    <div className="sp-field">
+                      <label className="sp-label">{t('Язык диалогов')}</label>
+                      <select className="sp-select" value={scriptParams.dialogLanguage} onChange={(e) => updateScriptParam('dialogLanguage', e.target.value)}>
+                        {['Русский','Английский','Китайский','Французский','Немецкий','Испанский','Несколько языков'].map(v => <option key={v}>{v}</option>)}
+                      </select>
+                    </div>
+                    <div className="sp-field sp-field--check"><label className="sp-check"><input type="checkbox" checked={scriptParams.subtitlesNeeded} onChange={(e) => updateScriptParam('subtitlesNeeded', e.target.checked)} /><span>{t('Необходимы субтитры')}</span></label></div>
+                  </div>
+                </div>
+
+                <div className="sp-section">
+                  <div className="sp-section-title">⚠️ {t('Риски и условия')}</div>
+                  <div className="sp-fields">
+                    <div className="sp-field">
+                      <label className="sp-label">{t('Погодозависимых дней')}</label>
+                      <input type="number" min={0} max={365} className="sp-num" value={scriptParams.weatherDependentDays} onChange={(e) => updateScriptParam('weatherDependentDays', Math.max(0, parseInt(e.target.value) || 0))} />
+                    </div>
+                    <div className="sp-field sp-field--check"><label className="sp-check"><input type="checkbox" checked={scriptParams.hazardousConditions} onChange={(e) => updateScriptParam('hazardousConditions', e.target.checked)} /><span>{t('Опасные условия (огонь, высота, вода)')}</span></label></div>
+                    <div className="sp-field sp-field--check"><label className="sp-check"><input type="checkbox" checked={scriptParams.internationalShoot} onChange={(e) => updateScriptParam('internationalShoot', e.target.checked)} /><span>{t('Международные съёмки')}</span></label></div>
+                    <div className="sp-field sp-field--check"><label className="sp-check"><input type="checkbox" checked={scriptParams.remoteLocations} onChange={(e) => updateScriptParam('remoteLocations', e.target.checked)} /><span>{t('Труднодоступные локации')}</span></label></div>
+                    <div className="sp-field sp-field--check"><label className="sp-check"><input type="checkbox" checked={scriptParams.militaryEquipment} onChange={(e) => updateScriptParam('militaryEquipment', e.target.checked)} /><span>{t('Военная техника / спецсредства')}</span></label></div>
+                  </div>
+                </div>
+
+                <div className="sp-section sp-section--wide">
+                  <div className="sp-section-title">📝 {t('Концепция')}</div>
+                  <div className="sp-fields">
+                    <div className="sp-field sp-field--full">
+                      <label className="sp-label">{t('Логлайн (1–2 предложения)')}</label>
+                      <textarea className="sp-textarea" value={scriptParams.logline} placeholder={t('Краткое описание сюжета...')} rows={3}
+                        onChange={(e) => setScriptParamsDraft(prev => ({ ...prev, logline: e.target.value }))}
+                        onBlur={(e) => updateScriptParam('logline', e.target.value)} />
+                    </div>
+                    <div className="sp-field">
+                      <label className="sp-label">{t('Уровень бюджета')}</label>
+                      <select className="sp-select" value={scriptParams.budgetTier} onChange={(e) => updateScriptParam('budgetTier', e.target.value)}>
+                        <option value="micro">{t('Микро (< 1 млн)')}</option>
+                        <option value="low">{t('Малый (1–10 млн)')}</option>
+                        <option value="mid">{t('Средний (10–100 млн)')}</option>
+                        <option value="high">{t('Высокий (> 100 млн)')}</option>
+                        <option value="blockbuster">{t('Блокбастер (500+ млн)')}</option>
+                      </select>
+                    </div>
+                    <div className="sp-field">
+                      <label className="sp-label">{t('Цветовая гамма')}</label>
+                      <select className="sp-select" value={scriptParams.colorGrading} onChange={(e) => updateScriptParam('colorGrading', e.target.value)}>
+                        {['Нейтральная','Тёплая','Холодная','Монохром','Высококонтрастная','Пастельная','Мрачная / тёмная'].map(v => <option key={v}>{v}</option>)}
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
               </div>
             </div>
           )}
 
           {activeTab === 'director' && (
             <div className="tab-content director-tab">
-              <div className="director-container">
-                <div className="director-timeline-section">
-                  <h3>{t('Параметры таймлайна')}</h3>
+
+              {/* STORYBOARD — main work area */}
+              <div className="storyboard-section">
+                <div className="storyboard-toolbar">
+                  <div className="storyboard-toolbar-left">
+                    <h3>{t('Раскадровка')}</h3>
+                    {storyboardGrid.locationNames.length > 0 && (
+                      <span className="storyboard-dims">{storyboardGrid.locationNames.length} × {storyboardGrid.columnCount}</span>
+                    )}
+                  </div>
+                  <div className="storyboard-toolbar-right">
+                    <div className="storyboard-rows-ctrl">
+                      <button className="storyboard-ctrl-btn" onClick={handleAddStoryboardRow}>+ {t('Локация')}</button>
+                      <button className="storyboard-ctrl-btn storyboard-ctrl-btn--minus" onClick={handleRemoveStoryboardRow} disabled={storyboardGrid.locationNames.length === 0}>− {t('Строку')}</button>
+                    </div>
+                    <div className="storyboard-cols-ctrl">
+                      <button className="storyboard-ctrl-btn storyboard-ctrl-btn--minus" onClick={handleRemoveStoryboardColumn} disabled={storyboardGrid.columnCount <= 1}>−</button>
+                      <span className="storyboard-col-count">{storyboardGrid.columnCount} {t('кадров')}</span>
+                      <button className="storyboard-ctrl-btn" onClick={handleAddStoryboardColumn}>+</button>
+                    </div>
+                  </div>
+                </div>
+
+                {storyboardGrid.locationNames.length === 0 ? (
+                  <div className="storyboard-empty">
+                    <div className="storyboard-empty-icon">🎬</div>
+                    <div className="storyboard-empty-title">{t('Раскадровка пуста')}</div>
+                    <div className="storyboard-empty-hint">{t('Добавьте локации кнопкой выше или задайте количество локаций на вкладке Сценарий')}</div>
+                    <button className="add-marker-btn" style={{ marginTop: 16 }} onClick={handleAddStoryboardRow}>
+                      <img src={AddMarkerIcon} alt="" className="add-marker-icon" />
+                      {t('Добавить первую локацию')}
+                    </button>
+                  </div>
+                ) : (
+                  <div className="storyboard-table-wrap">
+                    <table className="storyboard-table">
+                      <thead>
+                        <tr>
+                          <th className="storyboard-th-loc">{t('Локация')}</th>
+                          {Array.from({ length: storyboardGrid.columnCount }, (_, ci) => (
+                            <th key={ci} className="storyboard-th-shot">{t('Кадр')} {ci + 1}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {storyboardGrid.locationNames.map((locName, ri) => (
+                          <tr key={ri}>
+                            <td className="storyboard-row-label">
+                              <input
+                                className="storyboard-loc-input"
+                                value={locName}
+                                placeholder={`${t('Локация')} ${ri + 1}`}
+                                onChange={(e) => renameStoryboardRow(ri, e.target.value)}
+                                onBlur={() => saveStoryboardGrid(storyboardGrid)}
+                              />
+                            </td>
+                            {Array.from({ length: storyboardGrid.columnCount }, (_, ci) => {
+                              const key = `${ri}_${ci}`;
+                              const cell = storyboardGrid.cells[key];
+                              return (
+                                <td key={ci} className={`storyboard-cell${cell?.imageUrl || cell?.description ? ' storyboard-cell--filled' : ''}`} onClick={() => openCellEditor(ri, ci)}>
+                                  {cell?.imageUrl
+                                    ? <img src={cell.imageUrl} alt="" className="storyboard-cell-img" />
+                                    : <div className="storyboard-cell-add">+</div>}
+                                  {cell?.shotType && <div className="storyboard-cell-type">{cell.shotType}</div>}
+                                  {cell?.description && <div className="storyboard-cell-desc">{cell.description}</div>}
+                                </td>
+                              );
+                            })}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+
+              {/* Secondary: timeline + notes */}
+              <div className="director-secondary-row">
+                <div className="director-secondary-card">
+                  <div className="director-secondary-title">{t('Параметры таймлайна')}</div>
                   <div className="timeline-duration-form">
                     <input
                       className="form-input timeline-duration-input"
@@ -1116,69 +1555,23 @@ const ProjectPage: React.FC = () => {
                       onChange={(e) => setTimelineDurationInput(e.target.value)}
                     />
                     <button className="save-notes-btn save-timeline-btn" onClick={handleSaveTimelineDuration}>
-                      {t('Применить длину')}
+                      {t('Применить')}
                     </button>
                   </div>
                 </div>
 
-                <div className="locations-section">
-                  <h3>{t('Локации и раскадровки')}</h3>
-                  <div className="locations-list">
-                    {locations.map((location) => (
-                      <div key={location.id} className="location-card">
-                        <div className="location-header">
-                          <h4>{location.name}</h4>
-                          <span className="shots-count">{t('{count} кадров', { count: location.shots.length })}</span>
-                        </div>
-                        <div className="location-description">{location.description}</div>
-                        <div className="shots-timeline">
-                          {location.shots.map((shot) => (
-                            <div key={shot.id} className="shot-item">
-                              <div className="shot-time">{formatTime(shot.time)}</div>
-                              <div className="shot-content">
-                                <div className="shot-title">{shot.title}</div>
-                                <div className="shot-description">{shot.description}</div>
-                                <div className="shot-image-placeholder">
-                                  {shot.image ? (
-                                    <img src={shot.image} alt={shot.title} />
-                                  ) : (
-                                    <div className="placeholder-text">{t('Изображение отсутствует')}</div>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                        <button
-                          className="add-shot-btn"
-                          onClick={() => {
-                            setShotLocationId(location.id);
-                            setShowShotModal(true);
-                          }}
-                        >
-                          {t('+ Добавить кадр')}
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                  <button className="add-location-btn" onClick={() => setShowLocationModal(true)}>
-                    <img src={AddMarkerIcon} alt={t('Добавить')} />
-                    {t('Добавить локацию')}
-                  </button>
-                </div>
-
-                <div className="director-notes-section">
-                  <h3>{t('Заметки режиссера')}</h3>
+                <div className="director-secondary-card director-secondary-card--notes">
+                  <div className="director-secondary-title">{t('Заметки режиссёра')}</div>
                   <textarea
                     className="director-notes-editor"
                     placeholder={t('Ваши заметки и идеи по съемке...')}
-                    rows={8}
+                    rows={5}
                     value={directorNotes}
                     onChange={(e) => setDirectorNotes(e.target.value)}
                   />
                   <div className="notes-actions">
-                    <button className="save-notes-btn" onClick={handleSaveNotes}>{t('Сохранить заметки')}</button>
-                    <button className="share-notes-btn" onClick={handleShareNotes}>{t('Поделиться с командой')}</button>
+                    <button className="save-notes-btn" onClick={handleSaveNotes}>{t('Сохранить')}</button>
+                    <button className="share-notes-btn" onClick={handleShareNotes}>{t('Поделиться')}</button>
                   </div>
                 </div>
               </div>
@@ -1810,6 +2203,47 @@ const ProjectPage: React.FC = () => {
           </button>
         ))}
       </nav>
+
+      {/* Cell editor modal */}
+      <Modal
+        title={`${t('Кадр')} ${cellEditorCol + 1} — ${storyboardGrid.locationNames[cellEditorRow] || ''}`}
+        isOpen={cellEditorOpen}
+        onClose={() => setCellEditorOpen(false)}
+        actions={
+          <>
+            <button className="secondary-btn" style={{ marginRight: 'auto', color: 'var(--error)' }} onClick={handleDeleteCell}>{t('Очистить')}</button>
+            <button className="secondary-btn" onClick={() => setCellEditorOpen(false)}>{t('Отмена')}</button>
+            <button className="primary-btn" onClick={handleSaveCell}>{t('Сохранить')}</button>
+          </>
+        }
+      >
+        <div className="cell-editor">
+          <div className="cell-editor-img-row">
+            {cellEditorDraft.imageUrl ? (
+              <div className="cell-editor-preview">
+                <img src={cellEditorDraft.imageUrl} alt="" className="cell-editor-img" />
+                <button className="cell-editor-remove-img" onClick={() => setCellEditorDraft(prev => ({ ...prev, imageUrl: '' }))}>{t('Удалить фото')}</button>
+              </div>
+            ) : (
+              <label className="cell-editor-upload-btn">
+                <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handleCellImageUpload} />
+                <span>📷 {t('Добавить фото')}</span>
+              </label>
+            )}
+          </div>
+          <select className="form-input" value={cellEditorDraft.shotType} onChange={(e) => setCellEditorDraft(prev => ({ ...prev, shotType: e.target.value }))}>
+            <option value="">{t('Тип плана...')}</option>
+            {[t('Общий план (ОП)'), t('Средний план (СП)'), t('Крупный план (КП)'), t('Деталь (Д)'), t('Субъективная камера'), t('Панорама'), t('Вид сверху'), t('Вид снизу'), t('Движение вперёд (трекинг)')].map(v => <option key={v}>{v}</option>)}
+          </select>
+          <textarea
+            className="form-input"
+            placeholder={t('Описание кадра: действие, персонажи, атмосфера...')}
+            value={cellEditorDraft.description}
+            onChange={(e) => setCellEditorDraft(prev => ({ ...prev, description: e.target.value }))}
+            rows={4}
+          />
+        </div>
+      </Modal>
 
       <Modal
         title={t('Новый маркер')}

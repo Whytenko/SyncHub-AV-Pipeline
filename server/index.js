@@ -39,8 +39,8 @@ app.use((req, res, next) => {
 });
 
 // ─── Body parsing with size limit ─────────────────────────────────────────────
-app.use(express.json({ limit: '2mb' }));
-app.use(express.urlencoded({ extended: true, limit: '2mb' }));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // ─── Rate limiters ─────────────────────────────────────────────────────────────
 const authLimiter = rateLimit({
@@ -128,7 +128,7 @@ const normalizeTimelineDuration = (value) => {
   return Math.max(1, Math.floor(parsed));
 };
 
-const PROJECT_TAB_IDS = new Set(['edit', 'script', 'director', 'costumes', 'makeup']);
+const PROJECT_TAB_IDS = new Set(['edit', 'script', 'director', 'costumes', 'makeup', 'sound']);
 const MEDIA_TYPES = new Set(['audio', 'video', 'other']);
 
 const isObjectRecord = (value) => value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -432,6 +432,20 @@ const validateProjectPatch = (payload) => {
     patch.comments = normalizedComments;
   }
 
+  if (hasOwn(payload, 'scriptParams')) {
+    if (payload.scriptParams !== null && (typeof payload.scriptParams !== 'object' || Array.isArray(payload.scriptParams))) {
+      return { error: 'Некорректный формат scriptParams' };
+    }
+    patch.scriptParams = payload.scriptParams;
+  }
+
+  if (hasOwn(payload, 'storyboardGrid')) {
+    if (payload.storyboardGrid !== null && (typeof payload.storyboardGrid !== 'object' || Array.isArray(payload.storyboardGrid))) {
+      return { error: 'Некорректный формат storyboardGrid' };
+    }
+    patch.storyboardGrid = payload.storyboardGrid;
+  }
+
   return { patch };
 };
 
@@ -715,7 +729,9 @@ app.post('/api/projects', authRequired, (req, res) => {
     locations: [],
     mediaFiles: [],
     documents: [],
-    comments: []
+    comments: [],
+    scriptParams: null,
+    storyboardGrid: { locationNames: [], columnCount: 4, cells: {} }
   };
 
   updateDb((db) => {
