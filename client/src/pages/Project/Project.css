@@ -247,10 +247,17 @@
 
 .tabs-header {
   display: flex;
-  background: var(--bg-core-600);
+  background: var(--bg-core-700);
   border-bottom: 1px solid var(--border-muted);
-  padding: 0 32px;
+  padding: 10px 32px;
+  gap: 6px;
   overflow-x: auto;
+  scrollbar-width: none;
+  align-items: center;
+}
+
+.tabs-header::-webkit-scrollbar {
+  display: none;
 }
 
 .project-mobile-tabs {
@@ -259,28 +266,43 @@
 
 .tab-btn {
   background: transparent;
-  color: var(--text-primary);
-  border: none;
-  padding: 16px 24px;
-  font-size: 16px;
+  color: var(--text-secondary);
+  border: 1px solid transparent;
+  padding: 8px 16px;
+  font-size: 14px;
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.3s ease;
-  position: relative;
+  transition: background 0.18s ease, border-color 0.18s ease, color 0.18s ease;
   white-space: nowrap;
-  border-bottom: 3px solid transparent;
+  border-radius: 20px;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 7px;
+  flex-shrink: 0;
 }
 
 .tab-btn:hover {
-  background: var(--bg-core-500);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-primary);
+  border-color: var(--border-muted);
 }
 
 .tab-btn.active {
-  color: var(--accent-primary);
-  background: var(--bg-core-500);
+  font-weight: 600;
+}
+
+.tab-btn-icon {
+  width: 16px;
+  height: 16px;
+  filter: var(--icon-filter);
+  opacity: 0.65;
+  flex-shrink: 0;
+  transition: opacity 0.18s ease;
+}
+
+.tab-btn:hover .tab-btn-icon,
+.tab-btn.active .tab-btn-icon {
+  opacity: 1;
 }
 
 .notification-badge {
@@ -2517,4 +2539,124 @@
   object-fit: cover;
   border-radius: 8px;
   border: 1px solid var(--border-muted);
+}
+
+/* ==================== */
+/* ЗВУКОРЕЖИССЁР */
+/* ==================== */
+
+.sound-tab {
+  padding: 0;
+}
+
+.sound-layout {
+  display: grid;
+  grid-template-columns: 1fr 360px;
+  gap: 24px;
+  align-items: start;
+}
+
+.sound-markers-col {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.sound-markers-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.sound-markers-head h3 {
+  font-size: 18px;
+  font-weight: 500;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.sound-hint {
+  font-size: 13px;
+  color: var(--text-muted);
+  line-height: 1.6;
+  margin: 0;
+}
+
+.sound-markers-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.sound-marker-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--border-muted);
+  cursor: pointer;
+  transition: background 0.15s ease;
+  border-radius: 0;
+}
+
+.sound-marker-row:first-child {
+  border-top: 1px solid var(--border-muted);
+}
+
+.sound-marker-row:hover {
+  background: rgba(6, 182, 212, 0.05);
+  padding-left: 8px;
+}
+
+.sound-marker-time {
+  font-family: 'Courier New', monospace;
+  font-size: 14px;
+  font-weight: 600;
+  flex-shrink: 0;
+  min-width: 48px;
+}
+
+.sound-marker-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.sound-marker-title {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sound-marker-desc {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sound-marker-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+@media (max-width: 992px) {
+  .sound-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 600px) {
+  .sound-markers-head {
+    flex-direction: column;
+    align-items: flex-start;
+  }
 }

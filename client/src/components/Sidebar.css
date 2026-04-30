@@ -1,10 +1,10 @@
 .app-sidebar {
-  width: 220px;
+  width: 216px;
   border-right: 1px solid var(--border-muted);
-  padding: 24px 16px;
+  padding: 20px 14px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 4px;
   background: var(--bg-core-900);
   min-height: 100%;
   height: 100%;
@@ -15,28 +15,26 @@
 }
 
 .sidebar-brand {
-  width: 40px;
-  height: 40px;
-  border-radius: 12px;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
   background: transparent;
   cursor: pointer;
+  margin-bottom: 12px;
+  transition: background 0.2s ease;
+}
+
+.sidebar-brand:hover {
+  background: rgba(255, 255, 255, 0.05);
 }
 
 .sidebar-brand img {
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
   filter: var(--icon-filter);
-}
-
-.sidebar-title {
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
-  font-size: 11px;
-  color: var(--text-muted);
-  margin-bottom: 8px;
 }
 
 .sidebar-btn {
@@ -46,16 +44,34 @@
   padding: 8px 10px;
   border-radius: 8px;
   background: transparent;
-  color: var(--text-primary);
+  color: var(--text-secondary);
   border: 1px solid transparent;
-  transition: all 0.2s ease;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
   font-size: 14px;
+  position: relative;
 }
 
 .sidebar-btn:hover {
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-primary);
   border-color: var(--border-muted);
-  background: rgba(255, 255, 255, 0.02);
-  transform: translateX(2px);
+}
+
+.sidebar-btn.active {
+  background: rgba(255, 255, 255, 0.07);
+  color: var(--text-primary);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.sidebar-btn.active::before {
+  content: '';
+  position: absolute;
+  left: -1px;
+  top: 22%;
+  bottom: 22%;
+  width: 2px;
+  background: var(--accent-primary);
+  border-radius: 0 2px 2px 0;
 }
 
 .sidebar-icon {
@@ -64,18 +80,33 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
 }
 
 .sidebar-icon img {
-  width: 18px;
-  height: 18px;
+  width: 16px;
+  height: 16px;
   filter: var(--icon-filter);
+  opacity: 0.6;
+  transition: opacity 0.15s ease;
+}
+
+.sidebar-btn:hover .sidebar-icon img,
+.sidebar-btn.active .sidebar-icon img {
+  opacity: 0.9;
 }
 
 .sidebar-cta {
-  border-color: var(--border-strong);
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(255, 255, 255, 0.06);
+  border-color: var(--border-muted);
+  color: var(--text-primary);
   font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.sidebar-cta:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: var(--border-strong);
 }
 
 .sidebar-cta .sidebar-icon {
@@ -83,50 +114,50 @@
   height: 18px;
   border-radius: 50%;
   border: 1px solid var(--border-strong);
-  display: flex;
-  align-items: center;
-  justify-content: center;
   font-size: 14px;
-}
-
-.sidebar-bottom {
-  margin-top: auto;
 }
 
 .sidebar-profile {
   position: relative;
   margin-top: auto;
+  padding-top: 8px;
+  border-top: 1px solid var(--border-muted);
+}
+
+.sidebar-bottom {
+  width: 100%;
 }
 
 .sidebar-menu {
   position: absolute;
-  bottom: 44px;
+  bottom: calc(100% + 6px);
   left: 0;
   width: 160px;
   background: var(--bg-core-900);
   border: 1px solid var(--border-muted);
   border-radius: 12px;
-  padding: 8px;
+  padding: 6px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
-  z-index: 5;
+  gap: 2px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  z-index: 10;
 }
 
 .sidebar-menu-btn {
   background: transparent;
   border: 1px solid transparent;
-  color: var(--text-primary);
+  color: var(--text-secondary);
   padding: 8px 10px;
-  border-radius: 8px;
+  border-radius: 7px;
   text-align: left;
-  transition: all 0.2s ease;
+  font-size: 14px;
+  transition: background 0.15s ease, color 0.15s ease;
 }
 
 .sidebar-menu-btn:hover {
-  border-color: var(--border-muted);
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-primary);
 }
 
 @media (max-width: 992px) {

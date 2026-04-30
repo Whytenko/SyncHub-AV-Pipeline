@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import './Login.css'
 import logo from '../assets/logo.svg'
 import { useAuth } from '../../context/AuthContext'
@@ -9,6 +9,7 @@ import { useI18n } from '../../context/I18nContext'
 const Login: React.FC = () => {
   const [nickname, setNickname] = useState('')
   const [password, setPassword] = useState('')
+  const [showPass, setShowPass] = useState(false)
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const navigate = useNavigate()
@@ -17,13 +18,13 @@ const Login: React.FC = () => {
   const { t } = useI18n()
 
   useEffect(() => {
-    if (auth.user && !auth.loading) {
-      navigate('/home')
-    }
+    if (auth.user && !auth.loading) navigate('/home')
   }, [auth.user, auth.loading, navigate])
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!nickname.trim()) { setError(t('Введите никнейм')); return }
+    if (!password) { setError(t('Введите пароль')); return }
     setSubmitting(true)
     setError('')
     try {
@@ -42,39 +43,61 @@ const Login: React.FC = () => {
     <div className="login-page">
       <div className="login-container">
         <div className="login-card">
-          {/* Хедер с логотипом */}
           <div className="login-header">
             <img src={logo} alt="SyncHub" className="login-logo" />
           </div>
 
           <div className="login-content">
-            {/* Левая часть - заголовки */}
             <div className="login-left">
               <h1 className="login-title">{t('Вход')}</h1>
               <p className="login-subtitle">{t('Введите никнейм и пароль')}</p>
+
+              <div className="login-demo-box">
+                <div className="login-demo-label">{t('Демо-доступ')}</div>
+                <div className="login-demo-row">
+                  <span className="login-demo-key">{t('Никнейм')}</span>
+                  <code className="login-demo-val">demo</code>
+                </div>
+                <div className="login-demo-row">
+                  <span className="login-demo-key">{t('Пароль')}</span>
+                  <code className="login-demo-val">demo1234</code>
+                </div>
+              </div>
             </div>
 
-            {/* Правая часть - форма */}
             <div className="login-right">
               <form onSubmit={handleLogin} className="login-form">
                 <div className="login-fields">
                   <input
                     type="text"
-                    placeholder={t('Никнейм (можно оставить пустым)')}
+                    placeholder={t('Никнейм')}
                     value={nickname}
                     onChange={(e) => setNickname(e.target.value)}
                     autoFocus
                     className="login-input"
+                    autoComplete="username"
                   />
-                  <input
-                    type="password"
-                    placeholder={t('Пароль (необязательно)')}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="login-input"
-                  />
+                  <div className="login-pass-wrap">
+                    <input
+                      type={showPass ? 'text' : 'password'}
+                      placeholder={t('Пароль')}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="login-input login-input-pass"
+                      autoComplete="current-password"
+                    />
+                    <button
+                      type="button"
+                      className="login-pass-toggle"
+                      onClick={() => setShowPass(v => !v)}
+                      tabIndex={-1}
+                      aria-label={showPass ? t('Скрыть пароль') : t('Показать пароль')}
+                    >
+                      {showPass ? '🙈' : '👁'}
+                    </button>
+                  </div>
                 </div>
-                <div className="form-helper">{t('Демо-доступ: demo / demo1234')}</div>
+
                 {error && <div className="form-error">{error}</div>}
 
                 <div className="login-button-group">
@@ -90,11 +113,10 @@ const Login: React.FC = () => {
           </div>
         </div>
 
-        {/* Футер вне карточки */}
         <div className="login-footer">
+          <Link to="/" className="login-back-link">← {t('На главную')}</Link>
           <a href="#">{t('Справка')}</a>
           <a href="#">{t('Конфиденциальность')}</a>
-          <a href="#">{t('Условия')}</a>
         </div>
       </div>
     </div>

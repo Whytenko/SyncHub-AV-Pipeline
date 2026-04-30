@@ -1,10 +1,46 @@
-import React from 'react';
+import React, { useState } from 'react';
 import Header from '../Header/Header';
 import './Help.css';
 import { useI18n } from '../../context/I18nContext';
 
 const Help: React.FC = () => {
   const { t } = useI18n();
+  const [openFaq, setOpenFaq] = useState<number | null>(null);
+
+  const modules = [
+    { emoji: '🎬', title: t('Режиссёр'), desc: t('Текстовый редактор сценария. Пишите и редактируйте сцены прямо в браузере — текст сохраняется автоматически.') },
+    { emoji: '🎞', title: t('Монтажёр'), desc: t('Визуальный таймлайн с маркерами. Добавляйте временные метки, описывайте монтажные переходы, управляйте ключевыми сценами.') },
+    { emoji: '👗', title: t('Костюмер'), desc: t('Силуэт персонажа с интерактивными маркерами. Добавляйте описания костюмов по зонам тела. Поддерживается несколько персонажей.') },
+    { emoji: '💄', title: t('Визажист'), desc: t('Детализированная иллюстрация лица. Добавляйте маркеры с описаниями грима по зонам: Лоб, Глаза, Нос, Губы, Подбородок.') },
+    { emoji: '🎙', title: t('Звукорежиссёр'), desc: t('Список звуковых треков и временных меток. Координируйте звуковое оформление с таймлайном монтажёра.') },
+  ];
+
+  const faqs = [
+    {
+      q: t('Как создать проект?'),
+      a: t('В разделе «Проекты» нажмите «Создать новый проект». Введите название, описание (необязательно) и дедлайн. Проект сразу доступен для работы.')
+    },
+    {
+      q: t('Как добавить маркер на таймлайн?'),
+      a: t('Откройте проект, перейдите на вкладку «Монтажёр». Нажмите «Добавить маркер», укажите время, название и описание. Маркер появится на шкале времени.')
+    },
+    {
+      q: t('Как работает офлайн-режим?'),
+      a: t('При недоступном сервере приложение автоматически переходит в офлайн-режим. Данные читаются из кеша, внизу появляется жёлтый баннер. При восстановлении соединения режим снимается.')
+    },
+    {
+      q: t('Как изменить аватар?'),
+      a: t('Перейдите в раздел «Профиль», нажмите кнопку «Изм.» рядом с аватаром — откроется выбор эмодзи.')
+    },
+    {
+      q: t('Как поменять язык интерфейса?'),
+      a: t('В разделе «Настройки» выберите нужный язык из списка. Доступны русский, английский и китайский.')
+    },
+    {
+      q: t('Как экспортировать данные проекта?'),
+      a: t('Внутри проекта в шапке есть кнопка «Экспорт» — она скачивает JSON-файл со всеми данными проекта.')
+    },
+  ];
 
   return (
     <div className="help-page">
@@ -19,29 +55,72 @@ const Help: React.FC = () => {
       />
 
       <main className="help-main">
-        <section className="help-card">
-          <h2>{t('Быстрые ответы')}</h2>
-          <div className="help-grid">
-            <div className="help-item">
-              <h3>{t('Как создать проект?')}</h3>
-              <p>{t('Откройте раздел «Проекты» и нажмите «Создать новый проект». Заполните название и дедлайн.')}</p>
+
+        {/* Модули */}
+        <section className="help-section">
+          <div className="help-section-header">
+            <span className="help-section-label">{t('Разделы проекта')}</span>
+          </div>
+          <div className="help-modules-grid">
+            {modules.map((m, i) => (
+              <div className="help-module-card" key={i}>
+                <div className="help-module-emoji">{m.emoji}</div>
+                <div className="help-module-title">{m.title}</div>
+                <div className="help-module-desc">{m.desc}</div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* FAQ */}
+        <section className="help-section">
+          <div className="help-section-header">
+            <span className="help-section-label">{t('Частые вопросы')}</span>
+          </div>
+          <div className="help-faq">
+            {faqs.map((item, i) => (
+              <div
+                key={i}
+                className={`help-faq-item${openFaq === i ? ' open' : ''}`}
+                onClick={() => setOpenFaq(openFaq === i ? null : i)}
+              >
+                <div className="help-faq-q">
+                  <span>{item.q}</span>
+                  <span className="help-faq-icon">{openFaq === i ? '−' : '+'}</span>
+                </div>
+                <div className="help-faq-a">
+                  <p>{item.a}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* Техинфо */}
+        <section className="help-section">
+          <div className="help-section-header">
+            <span className="help-section-label">{t('Техническая информация')}</span>
+          </div>
+          <div className="help-info-grid">
+            <div className="help-info-row">
+              <span className="help-info-key">{t('Сервер')}</span>
+              <code className="help-info-val">http://localhost:5001</code>
             </div>
-            <div className="help-item">
-              <h3>{t('Как добавить маркер?')}</h3>
-              <p>{t('Внутри проекта выберите вкладку и нажмите «Добавить маркер». Он сохранится в таймлайне.')}</p>
+            <div className="help-info-row">
+              <span className="help-info-key">{t('Клиент')}</span>
+              <code className="help-info-val">http://localhost:3000</code>
             </div>
-            <div className="help-item">
-              <h3>{t('Как поделиться заметками?')}</h3>
-              <p>{t('В режиссёрской вкладке нажмите «Поделиться с командой» — текст копируется в буфер.')}</p>
+            <div className="help-info-row">
+              <span className="help-info-key">{t('Демо-аккаунт')}</span>
+              <code className="help-info-val">demo / demo1234</code>
+            </div>
+            <div className="help-info-row">
+              <span className="help-info-key">{t('Версия')}</span>
+              <code className="help-info-val">SyncHub v4</code>
             </div>
           </div>
         </section>
 
-        <section className="help-card">
-          <h2>{t('Контакты')}</h2>
-          <p>{t('Если что-то не работает, проверьте, запущен ли сервер (порт 5000) и клиент (порт 5173).')}</p>
-          <p>{t('Для отчета по диплому можно сделать экспорт проекта через кнопку «Экспорт».')}</p>
-        </section>
       </main>
     </div>
   );

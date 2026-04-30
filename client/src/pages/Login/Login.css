@@ -164,10 +164,90 @@
   transform: translateY(-2px);
 }
 
+/* Demo box */
+.login-demo-box {
+  margin-top: 28px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.login-demo-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: rgba(255, 255, 255, 0.35);
+  margin-bottom: 2px;
+}
+
+.login-demo-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.login-demo-key {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.login-demo-val {
+  font-size: 13px;
+  font-family: 'SFMono-Regular', 'Consolas', monospace;
+  color: rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.06);
+  padding: 2px 8px;
+  border-radius: 6px;
+}
+
+/* Password field with toggle */
+.login-pass-wrap {
+  position: relative;
+}
+
+.login-input-pass {
+  padding-right: 46px !important;
+}
+
+.login-pass-toggle {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+  padding: 2px;
+  opacity: 0.5;
+  transition: opacity 0.2s;
+}
+.login-pass-toggle:hover {
+  opacity: 0.85;
+}
+
+/* Back link */
+.login-back-link {
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 12px;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+.login-back-link:hover {
+  color: rgba(255, 255, 255, 0.7);
+}
+
 /* Футер - вне карточки */
 .login-footer {
   display: flex;
-  justify-content: right;
+  align-items: center;
   gap: 24px;
   width: 100%;
   padding-right: 10px;

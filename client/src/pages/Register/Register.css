@@ -35,7 +35,9 @@
 
 /* Хедер с логотипом */
 .register-header {
-  text-align: left;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
   margin-bottom: 30px;
 }
 
@@ -192,14 +194,122 @@ select.form-input:focus option {
   box-shadow: 0 4px 12px rgba(255, 57, 26, 0.3);
 }
 
+/* Step indicator dots */
+.register-steps-indicator {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.reg-step-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.15);
+  transition: background 0.2s, transform 0.2s;
+}
+.reg-step-dot.active {
+  background: rgba(255, 255, 255, 0.85);
+  transform: scale(1.3);
+}
+.reg-step-dot.done {
+  background: rgba(255, 255, 255, 0.45);
+}
+
+/* Step label */
+.register-step-label {
+  margin-top: 12px;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.3);
+}
+
+/* Password with toggle */
+.reg-pass-wrap {
+  position: relative;
+  margin-bottom: 16px;
+}
+.reg-pass-wrap:last-of-type {
+  margin-bottom: 0;
+}
+
+.reg-pass-input {
+  padding-right: 46px !important;
+  margin-bottom: 0 !important;
+}
+
+.reg-pass-toggle {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+  padding: 2px;
+  opacity: 0.5;
+  transition: opacity 0.2s;
+}
+.reg-pass-toggle:hover {
+  opacity: 0.85;
+}
+
+/* Password strength */
+.reg-strength {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 8px 0 16px;
+}
+
+.reg-strength-bar {
+  display: flex;
+  gap: 4px;
+  flex: 1;
+}
+
+.reg-strength-seg {
+  height: 3px;
+  flex: 1;
+  border-radius: 2px;
+  transition: background 0.3s;
+}
+
+.reg-strength-label {
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  min-width: 56px;
+  text-align: right;
+  transition: color 0.3s;
+}
+
+/* Password mismatch hint */
+.reg-mismatch {
+  font-size: 12px;
+  color: #ef4444;
+  margin-top: 6px;
+}
+
+/* Back link */
+.register-back-link {
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 12px;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+.register-back-link:hover {
+  color: rgba(255, 255, 255, 0.7);
+}
+
 /* Футер - теперь вне карточки */
 .register-footer {
   display: flex;
-  justify-content: right;
+  align-items: center;
   gap: 24px;
   width: 100%;
   padding-right: 10px;
-
 }
 
 .register-footer a {

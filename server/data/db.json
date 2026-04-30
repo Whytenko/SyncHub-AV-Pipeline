@@ -32,6 +32,12 @@
       "userId": "usr_a9407a1c-63fc-4fc9-aa6d-f8ceb2d12717",
       "createdAt": "2026-04-23T21:03:51.165Z",
       "expiresAt": "2026-05-23T21:03:51.164Z"
+    },
+    {
+      "token": "session_df403853-bd6a-4784-9612-2dd7ca8967d3",
+      "userId": "usr_a9407a1c-63fc-4fc9-aa6d-f8ceb2d12717",
+      "createdAt": "2026-04-30T10:19:40.430Z",
+      "expiresAt": "2026-05-30T10:19:40.430Z"
     }
   ],
   "projects": [

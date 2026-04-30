@@ -1,4 +1,4 @@
-export type TabType = 'edit' | 'script' | 'director' | 'costumes' | 'makeup';
+export type TabType = 'edit' | 'script' | 'director' | 'costumes' | 'makeup' | 'sound';
 
 export interface User {
   id: string;

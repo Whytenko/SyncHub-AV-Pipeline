@@ -153,7 +153,7 @@ const Settings: React.FC = () => {
             <div className="settings-row settings-info-row">
               <div className="settings-row-main">
                 <div className="settings-row-label">{t('API URL')}</div>
-                <div className="settings-row-value">{import.meta.env.VITE_API_URL || 'http://localhost:5000'}</div>
+                <div className="settings-row-value">{import.meta.env.VITE_API_URL || 'http://localhost:5001'}</div>
               </div>
             </div>
             <div className="settings-row settings-info-row">

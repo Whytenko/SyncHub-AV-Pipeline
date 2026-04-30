@@ -43,7 +43,8 @@ const tabColors: Record<TabType, string> = {
   director: '#2196F3',
   costumes: '#FF9800',
   makeup: '#E91E63',
-  edit: '#FF391A'
+  edit: '#FF391A',
+  sound: '#06b6d4'
 };
 
 const tabNames: Record<TabType, string> = {
@@ -51,7 +52,8 @@ const tabNames: Record<TabType, string> = {
   director: 'Режиссерская',
   costumes: 'Костюмы',
   makeup: 'Визаж',
-  edit: 'Монтаж'
+  edit: 'Монтаж',
+  sound: 'Звук'
 };
 
 const mobileTabs: Array<{ id: TabType; label: string; icon: string }> = [
@@ -59,7 +61,8 @@ const mobileTabs: Array<{ id: TabType; label: string; icon: string }> = [
   { id: 'director', label: 'Режиссёр', icon: DirectorIcon },
   { id: 'costumes', label: 'Костюмер', icon: CostumesIcon },
   { id: 'makeup', label: 'Визажист', icon: MakeupIcon },
-  { id: 'edit', label: 'Монтажер', icon: ActionIcon }
+  { id: 'edit', label: 'Монтажер', icon: ActionIcon },
+  { id: 'sound', label: 'Звукорежиссёр', icon: AudioIcon }
 ];
 
 const mobileTabAriaNames: Record<TabType, string> = {
@@ -67,7 +70,8 @@ const mobileTabAriaNames: Record<TabType, string> = {
   director: 'Director',
   costumes: 'Costumes',
   makeup: 'Makeup',
-  edit: 'Action'
+  edit: 'Action',
+  sound: 'Sound'
 };
 
 const iconMap: Record<string, string> = {
@@ -75,7 +79,8 @@ const iconMap: Record<string, string> = {
   script: ScenarioIcon,
   makeup: MakeupIcon,
   costumes: CostumesIcon,
-  edit: MarkerIcon
+  edit: MarkerIcon,
+  sound: AudioIcon
 };
 
 const formatTime = (seconds: number) => {
@@ -297,6 +302,7 @@ const ProjectPage: React.FC = () => {
   };
 
   const markers = project?.markers || [];
+  const soundMarkers = markers.filter((m) => m.tabId === 'sound').sort((a, b) => a.time - b.time);
   const bodyMarkers = project?.bodyMarkers || [];
   const bodySilhouettes = normalizeSilhouettes(project?.bodySilhouettes);
   const locations = project?.locations || [];
@@ -859,7 +865,7 @@ const ProjectPage: React.FC = () => {
         acc[comment.tabId] = [...(acc[comment.tabId] || []), comment];
         return acc;
       },
-      { edit: [], script: [], director: [], costumes: [], makeup: [] }
+      { edit: [], script: [], director: [], costumes: [], makeup: [], sound: [] }
     );
   }, [comments]);
 
@@ -1001,13 +1007,18 @@ const ProjectPage: React.FC = () => {
 
       <div className="tabs-section">
         <div className="tabs-header">
-          {(['script', 'director', 'costumes', 'makeup', 'edit'] as TabType[]).map((tabId) => (
+          {(['script', 'director', 'costumes', 'makeup', 'edit', 'sound'] as TabType[]).map((tabId) => (
             <button
               key={tabId}
               className={`tab-btn ${activeTab === tabId ? 'active' : ''}`}
               onClick={() => setActiveTab(tabId)}
-              style={{ borderBottomColor: activeTab === tabId ? tabColors[tabId] : 'transparent' }}
+              style={activeTab === tabId ? {
+                backgroundColor: `${tabColors[tabId]}1a`,
+                borderColor: `${tabColors[tabId]}55`,
+                color: tabColors[tabId]
+              } : {}}
             >
+              <img src={iconMap[tabId]} alt="" className="tab-btn-icon" />
               {t(tabNames[tabId])}
               {tabId === 'director' && <span className="notification-badge">2</span>}
             </button>
@@ -1700,6 +1711,78 @@ const ProjectPage: React.FC = () => {
                     ))}
                   </div>
                   <button className="add-comment-btn" onClick={() => openCommentModal('edit')}>
+                    <img src={AddCommentIcon} alt={t('Добавить комментарий')} className="add-comment-icon" />
+                    {t('Добавить комментарий')}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'sound' && (
+            <div className="tab-content sound-tab">
+              <div className="sound-layout">
+                <div className="sound-markers-col">
+                  <div className="sound-markers-head">
+                    <h3>{t('Звуковые метки')}</h3>
+                    <button className="add-marker-btn" onClick={() => setShowMarkerModal(true)}>
+                      <img src={AddMarkerIcon} alt={t('Добавить')} className="add-marker-icon" />
+                      {t('Добавить метку')}
+                    </button>
+                  </div>
+                  <p className="sound-hint">{t('Переместите курсор таймлайна на нужную позицию, затем нажмите «Добавить метку».')}</p>
+                  {soundMarkers.length === 0 ? (
+                    <div className="empty-state">{t('Звуковых меток пока нет.')}</div>
+                  ) : (
+                    <div className="sound-markers-list">
+                      {soundMarkers.map((marker) => (
+                        <div
+                          key={marker.id}
+                          className="sound-marker-row"
+                          onClick={() => handleOpenTimelineMarkerDetails(marker)}
+                        >
+                          <div className="sound-marker-time" style={{ color: tabColors.sound }}>
+                            {formatTime(marker.time)}
+                          </div>
+                          <div className="sound-marker-info">
+                            <div className="sound-marker-title">{marker.title}</div>
+                            {marker.comment && <div className="sound-marker-desc">{marker.comment}</div>}
+                          </div>
+                          <div className="sound-marker-dot" style={{ background: tabColors.sound }} />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div className="column comments-column">
+                  <h3>{t('Комментарии к звуку')}</h3>
+                  <div className="comments-list">
+                    {commentsByTab.sound.length === 0 && (
+                      <div className="empty-state">{t('Комментариев пока нет.')}</div>
+                    )}
+                    {commentsByTab.sound.map((comment) => (
+                      <div key={comment.id} className="comment-card">
+                        <div className="comment-header">
+                          <div className="user-badge" style={{ backgroundColor: tabColors.sound }}>
+                            {comment.user}
+                          </div>
+                          <div className="comment-time">{comment.timestamp}</div>
+                        </div>
+                        <div className="comment-text">{comment.text}</div>
+                        <div className="comment-footer">
+                          <span className="timestamp" onClick={() => handleToggleResolved(comment.id)}>
+                            {comment.resolved ? t('Решено') : t('Не решено')}
+                          </span>
+                          <button className="reply-btn" onClick={() => openCommentModal('sound')}>
+                            <img src={ReplyIcon} alt={t('Ответить')} />
+                            {t('Ответить')}
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <button className="add-comment-btn" onClick={() => openCommentModal('sound')}>
                     <img src={AddCommentIcon} alt={t('Добавить комментарий')} className="add-comment-icon" />
                     {t('Добавить комментарий')}
                   </button>

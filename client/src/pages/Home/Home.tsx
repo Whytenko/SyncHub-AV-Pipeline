@@ -82,19 +82,12 @@ const Home: React.FC = () => {
       />
 
       <main className="home-main">
-          <section className="hero">
-            <div className="hero-copy">
-              <h1>SyncHub</h1>
-              <p>AV Production Pipeline</p>
-            </div>
-          </section>
-
           <section className="home-panels">
             <div className="panel recent-panel">
               <div className="panel-header">
-                <h2>{t('Недавние проекты')}</h2>
+                <span className="panel-title">{t('Недавние проекты')}</span>
                 <button className="ghost-btn" onClick={() => navigate('/dashboard')}>
-                  {t('Все проекты →')}
+                  {t('Все →')}
                 </button>
               </div>
               <div className="panel-body">
@@ -121,7 +114,9 @@ const Home: React.FC = () => {
             </div>
 
             <div className="panel stats-panel">
-              <h2>{t('Сводка')}</h2>
+              <div className="panel-header">
+                <span className="panel-title">{t('Сводка')}</span>
+              </div>
               <div className="stats-grid">
                 <div className="home-stat-item">
                   <div className="home-stat-label">{t('Проектов')}</div>

@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import './Sidebar.css'
 import { useAuth } from '../context/AuthContext'
 import { useI18n } from '../context/I18nContext'
@@ -12,10 +12,13 @@ import logo from '../pages/assets/logo.svg'
 
 const Sidebar: React.FC = () => {
   const navigate = useNavigate()
+  const location = useLocation()
   const { logout } = useAuth()
   const { t } = useI18n()
   const [open, setOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
+
+  const isActive = (path: string) => location.pathname === path || location.pathname.startsWith(path + '/')
 
   useEffect(() => {
     const handleClick = (event: MouseEvent) => {
@@ -40,7 +43,6 @@ const Sidebar: React.FC = () => {
       <div className="sidebar-brand" onClick={() => navigate('/home')}>
         <img src={logo} alt="SyncHub" />
       </div>
-      <div className="sidebar-title">{t('Навигация')}</div>
       <button className="sidebar-btn sidebar-cta" onClick={() => navigate('/dashboard?create=1')}>
         <span className="sidebar-icon">+</span>
         <span>{t('Создать')}</span>
@@ -48,7 +50,7 @@ const Sidebar: React.FC = () => {
       {items.map((item) => (
         <button
           key={item.id}
-          className="sidebar-btn"
+          className={`sidebar-btn${isActive(item.path) ? ' active' : ''}`}
           onClick={() => navigate(item.path)}
         >
           <span className="sidebar-icon">
