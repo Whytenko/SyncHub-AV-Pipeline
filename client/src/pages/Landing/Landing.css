@@ -387,6 +387,72 @@
   color: rgba(255, 255, 255, 0.5);
 }
 
+/* ── USE CASES GRID ── */
+.land-usecases-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+}
+
+.land-usecase-card {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.02) 100%);
+  border: 1px solid var(--uc-color);
+  border-opacity: 0.3;
+  border-radius: 16px;
+  padding: 28px 24px;
+  transition: transform 0.2s, border-color 0.2s, background 0.2s;
+  position: relative;
+  overflow: hidden;
+}
+.land-usecase-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--uc-color);
+  opacity: 0.8;
+}
+.land-usecase-card:hover {
+  transform: translateY(-4px);
+  border-color: var(--uc-color);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.03) 100%);
+}
+
+.land-usecase-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.land-usecase-title {
+  font-size: 17px;
+  font-weight: 600;
+  color: #fff;
+  margin: 0;
+}
+
+.land-usecase-stat {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--uc-color);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 12px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.land-usecase-desc {
+  font-size: 14px;
+  line-height: 1.65;
+  color: rgba(255, 255, 255, 0.55);
+  margin: 0;
+}
+
 /* ── BENEFITS GRID ── */
 .land-benefits-grid {
   display: grid;
@@ -719,6 +785,9 @@
   .land-benefits-grid {
     grid-template-columns: repeat(2, 1fr);
   }
+  .land-usecases-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 
 @media (max-width: 900px) {
@@ -756,6 +825,10 @@
     grid-template-columns: 1fr;
     gap: 16px;
   }
+  .land-usecases-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
   .land-audience-grid {
     grid-template-columns: 1fr;
     gap: 16px;
@@ -767,6 +840,9 @@
     grid-template-columns: repeat(2, 1fr);
   }
   .land-benefits-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .land-usecases-grid {
     grid-template-columns: repeat(2, 1fr);
   }
   .land-section {
@@ -801,6 +877,9 @@
     grid-template-columns: 1fr;
   }
   .land-benefits-grid {
+    grid-template-columns: 1fr;
+  }
+  .land-usecases-grid {
     grid-template-columns: 1fr;
   }
   .land-nav-inner {

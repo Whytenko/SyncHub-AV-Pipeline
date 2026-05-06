@@ -123,6 +123,27 @@ const AUDIENCES = [
   }
 ]
 
+const USE_CASES = [
+  {
+    title: 'Студенческий фильм «Утро»',
+    desc: 'Группа из 8 человек сняла 15-минутный фильм без хаоса с координацией благодаря SyncHub.',
+    stats: '−4 часа на совещания',
+    color: '#6366f1'
+  },
+  {
+    title: 'Реклама для туристического агентства',
+    desc: 'Команда монтажа и режиссуры синхронизировала правки в реальном времени во время последних дней до дедлайна.',
+    stats: '+50% эффективность',
+    color: '#f59e0b'
+  },
+  {
+    title: 'Корпоративное видео',
+    desc: 'Разделённая команда в 3 городах работала в одном проекте с полной синхронизацией. Офлайн не был помехой.',
+    stats: '0 потерь данных',
+    color: '#ec4899'
+  }
+]
+
 type CmpVal = boolean | 'part'
 const COMPARISON: { feature: string; synchub: CmpVal; cerebro: CmpVal; celtx: CmpVal; studio: CmpVal }[] = [
   { feature: 'Русский интерфейс', synchub: true, cerebro: true, celtx: false, studio: false },
@@ -347,8 +368,31 @@ const Landing: React.FC = () => {
         </div>
       </section>
 
-      {/* BENEFITS */}
+      {/* USE CASES */}
       <section className="land-section">
+        <div className="land-section-inner">
+          <div className="land-section-header anim">
+            <h2 className="land-section-title">Реальные примеры</h2>
+            <p className="land-section-sub">
+              Посмотрите, как SyncHub помог командам работать эффективнее.
+            </p>
+          </div>
+          <div className="land-usecases-grid">
+            {USE_CASES.map((uc, i) => (
+              <div className="land-usecase-card anim" key={i} style={{ '--uc-color': uc.color } as React.CSSProperties}>
+                <div className="land-usecase-header">
+                  <h3 className="land-usecase-title">{uc.title}</h3>
+                  <div className="land-usecase-stat">{uc.stats}</div>
+                </div>
+                <p className="land-usecase-desc">{uc.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* BENEFITS */}
+      <section className="land-section land-section-alt">
         <div className="land-section-inner">
           <div className="land-section-header anim">
             <h2 className="land-section-title">Почему выбирают SyncHub</h2>
