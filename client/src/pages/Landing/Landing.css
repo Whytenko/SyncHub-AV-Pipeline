@@ -332,8 +332,8 @@
 /* ── HOW IT WORKS ── */
 .land-steps {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 40px;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 30px;
   position: relative;
 }
 
@@ -341,8 +341,8 @@
   content: '';
   position: absolute;
   top: 28px;
-  left: calc(16% + 28px);
-  right: calc(16% + 28px);
+  left: calc(12.5% + 28px);
+  right: calc(12.5% + 28px);
   height: 1px;
   background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent);
 }
@@ -385,6 +385,46 @@
   font-size: 14px;
   line-height: 1.65;
   color: rgba(255, 255, 255, 0.5);
+}
+
+/* ── BENEFITS GRID ── */
+.land-benefits-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+}
+
+.land-benefit-card {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  padding: 32px 28px;
+  transition: transform 0.2s, border-color 0.2s, background 0.2s;
+  text-align: center;
+}
+.land-benefit-card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.land-benefit-icon {
+  font-size: 44px;
+  margin-bottom: 16px;
+  display: block;
+}
+
+.land-benefit-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #fff;
+  margin-bottom: 12px;
+}
+
+.land-benefit-desc {
+  font-size: 14px;
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.55);
 }
 
 /* ── AUDIENCE GRID ── */
@@ -676,6 +716,9 @@
   .land-features-grid {
     grid-template-columns: repeat(3, 1fr);
   }
+  .land-benefits-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 
 @media (max-width: 900px) {
@@ -695,7 +738,7 @@
     justify-content: center;
   }
   .land-steps {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, 1fr);
     gap: 32px;
   }
   .land-steps::before {
@@ -709,6 +752,10 @@
   .land-step-num {
     flex-shrink: 0;
   }
+  .land-benefits-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
   .land-audience-grid {
     grid-template-columns: 1fr;
     gap: 16px;
@@ -717,6 +764,9 @@
 
 @media (max-width: 720px) {
   .land-features-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .land-benefits-grid {
     grid-template-columns: repeat(2, 1fr);
   }
   .land-section {
@@ -748,6 +798,9 @@
 
 @media (max-width: 480px) {
   .land-features-grid {
+    grid-template-columns: 1fr;
+  }
+  .land-benefits-grid {
     grid-template-columns: 1fr;
   }
   .land-nav-inner {

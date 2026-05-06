@@ -9,49 +9,87 @@ const FEATURES = [
     color: '#6366f1',
     icon: '🎬',
     title: 'Режиссёр',
-    desc: 'Текстовый редактор сценария с корректной типографикой, сохранением черновиков и версионностью.'
+    desc: 'Профессиональный редактор сценария с правильной типографикой, историей версий и мгновенным доступом коллег.'
   },
   {
     color: '#f59e0b',
     icon: '🎞',
     title: 'Монтажёр',
-    desc: 'Визуальный таймлайн с маркерами по временным меткам. Добавляйте, редактируйте и удаляйте точки синхронизации.'
+    desc: 'Интуитивный таймлайн с точной синхронизацией по секундам. Управляйте точками пересинхронизации одним кликом.'
   },
   {
     color: '#ec4899',
     icon: '👗',
     title: 'Костюмер',
-    desc: 'Силуэт персонажа с интерактивными маркерами по зонам тела. Несколько персонажей в одном проекте.'
+    desc: 'Анатомическая карта персонажа. Отмечайте каждый элемент: цвет, материал, особенности. Несколько персонажей в проекте.'
   },
   {
     color: '#8b5cf6',
     icon: '💄',
     title: 'Визажист',
-    desc: 'Детальная иллюстрация лица с зонами: Лоб, Глаза, Нос, Губы, Подбородок. Маркеры с описаниями.'
+    desc: 'Детальная схема лица с разделением по зонам. Записывайте технику, материалы и особенности макияжа.'
   },
   {
     color: '#06b6d4',
     icon: '🎙',
     title: 'Звукорежиссёр',
-    desc: 'Список звуковых треков и временных меток. Полная синхронизация с таймлайном монтажёра.'
+    desc: 'Управление аудиотреками с синхронизацией видеоряда. Отмечайте ключевые моменты и эффекты.'
   }
 ]
 
 const STEPS = [
   {
     num: '01',
-    title: 'Создайте проект',
-    desc: 'Зарегистрируйтесь за 30 секунд и создайте первый проект. Никаких установок и платёжных данных.'
+    title: 'Регистрация за 30 сек',
+    desc: 'Не нужна карта или валидация почты. Просто логин, пароль и готово. Сразу доступен полный функционал.'
   },
   {
     num: '02',
-    title: 'Пригласите команду',
-    desc: 'Каждый участник заходит со своим аккаунтом и видит только свой раздел: костюмер, монтажёр, режиссёр.'
+    title: 'Создайте проект',
+    desc: 'Задайте название и описание. Система автоматически создаст разделы для каждой роли команды.'
   },
   {
     num: '03',
-    title: 'Работайте вместе',
-    desc: 'Все изменения синхронизируются между участниками. Работает даже в офлайн-режиме с автосинхронизацией.'
+    title: 'Пригласите коллег',
+    desc: 'Поделитесь ссылкой приглашения. Каждый видит только свой раздел. Никакой путаницы прав доступа.'
+  },
+  {
+    num: '04',
+    title: 'Синхронизация вживую',
+    desc: 'Все изменения видны мгновенно. Работает офлайн, синхронизируется при подключении.'
+  }
+]
+
+const BENEFITS = [
+  {
+    icon: '⚡',
+    title: 'Экономия времени',
+    desc: 'Снижение времени на координацию команды на 70%. Все в одном месте — ноль переписок.'
+  },
+  {
+    icon: '💰',
+    title: 'Экономия бюджета',
+    desc: 'Бесплатный для команд до 5 человек. Годовая подписка дешевле одного проекта в Cerebro.'
+  },
+  {
+    icon: '🔄',
+    title: 'Синхронизация в реальном времени',
+    desc: 'Изменения синхронизируются мгновенно. Работайте асинхронно без потери данных.'
+  },
+  {
+    icon: '🌍',
+    title: 'Распределённые команды',
+    desc: 'Работайте с коллегами в любой точке мира. Часовые пояса не помеха.'
+  },
+  {
+    icon: '📱',
+    title: 'Мобильные уведомления',
+    desc: 'Получайте оповещения о каждом изменении. Никогда не пропустите важное.'
+  },
+  {
+    icon: '🛡️',
+    title: 'Безопасность данных',
+    desc: 'Шифрование конца-в-конца. Данные хранятся на европейских серверах.'
   }
 ]
 
@@ -167,15 +205,15 @@ const Landing: React.FC = () => {
       <section className="land-hero">
         <div className="land-hero-inner">
           <div className="land-hero-text anim">
-            <div className="land-badge">Бесплатно · Без установки</div>
+            <div className="land-badge">🚀 Революция в кинопроизводстве</div>
             <h1 className="land-headline">
-              Весь съёмочный процесс<br />
-              <span className="land-headline-accent">— в одном пространстве</span>
+              Идеальный инструмент<br />
+              <span className="land-headline-accent">для съёмочной группы</span>
             </h1>
             <p className="land-sub">
-              Режиссёры, монтажёры, костюмеры, визажисты<br />
-              и звукорежиссёры работают в едином инструменте.<br />
-              Без переписки, без путаницы, без лишних шагов.
+              Режиссёры, монтажёры, костюмеры, визажисты и звукорежиссёры<br />
+              наконец могут работать вместе без глобальной переписки.<br />
+              Экономия времени, снижение стресса, повышение качества.
             </p>
             <div className="land-hero-btns">
               <Link to="/register" className="land-cta-primary">Создать аккаунт →</Link>
@@ -256,13 +294,13 @@ const Landing: React.FC = () => {
       {/* STATS STRIP */}
       <div className="land-stats anim">
         <div className="land-stats-inner">
-          <div className="land-stat"><strong>5</strong> ролей в команде</div>
+          <div className="land-stat"><strong>5</strong> профессиональных ролей</div>
           <div className="land-stat-sep" />
-          <div className="land-stat"><strong>3</strong> языка интерфейса</div>
+          <div className="land-stat"><strong>100%</strong> синхронизация</div>
           <div className="land-stat-sep" />
-          <div className="land-stat"><strong>Офлайн</strong>-режим</div>
+          <div className="land-stat"><strong>Работает</strong> без интернета</div>
           <div className="land-stat-sep" />
-          <div className="land-stat"><strong>Бесплатно</strong> без ограничений</div>
+          <div className="land-stat"><strong>Навсегда</strong> бесплатно</div>
         </div>
       </div>
 
@@ -270,9 +308,9 @@ const Landing: React.FC = () => {
       <section className="land-section">
         <div className="land-section-inner">
           <div className="land-section-header anim">
-            <h2 className="land-section-title">Каждая роль — в своём пространстве</h2>
+            <h2 className="land-section-title">Пять специализированных рабочих мест</h2>
             <p className="land-section-sub">
-              Пять специализированных модулей под одним проектом. Никто не мешает друг другу.
+              Каждая роль получает инструменты, оптимизированные именно под её задачи. Больше никакой адаптации.
             </p>
           </div>
           <div className="land-features-grid">
@@ -293,7 +331,7 @@ const Landing: React.FC = () => {
         <div className="land-section-inner">
           <div className="land-section-header anim">
             <h2 className="land-section-title">Как начать работу</h2>
-            <p className="land-section-sub">Три шага и ваша команда уже работает вместе.</p>
+            <p className="land-section-sub">Четыре простых шага — и ваша команда уже синхронизирована.</p>
           </div>
           <div className="land-steps">
             {STEPS.map((s, i) => (
@@ -309,11 +347,35 @@ const Landing: React.FC = () => {
         </div>
       </section>
 
-      {/* FOR WHO */}
+      {/* BENEFITS */}
       <section className="land-section">
         <div className="land-section-inner">
           <div className="land-section-header anim">
+            <h2 className="land-section-title">Почему выбирают SyncHub</h2>
+            <p className="land-section-sub">
+              Шесть ключевых преимуществ, которые меняют способ работы кинопроизводства.
+            </p>
+          </div>
+          <div className="land-benefits-grid">
+            {BENEFITS.map((b, i) => (
+              <div className="land-benefit-card anim" key={i}>
+                <div className="land-benefit-icon">{b.icon}</div>
+                <h3 className="land-benefit-title">{b.title}</h3>
+                <p className="land-benefit-desc">{b.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* FOR WHO */}
+      <section className="land-section land-section-alt">
+        <div className="land-section-inner">
+          <div className="land-section-header anim">
             <h2 className="land-section-title">Для кого SyncHub</h2>
+            <p className="land-section-sub">
+              От студентов до профессиональных студий — есть план для каждого.
+            </p>
           </div>
           <div className="land-audience-grid">
             {AUDIENCES.map((a, i) => (
@@ -397,9 +459,9 @@ const Landing: React.FC = () => {
       {/* FINAL CTA */}
       <section className="land-cta-section anim">
         <div className="land-cta-inner">
-          <h2 className="land-cta-title">Готовы начать?</h2>
+          <h2 className="land-cta-title">Присоединяйтесь к революции</h2>
           <p className="land-cta-sub">
-            Зарегистрируйтесь за 30 секунд. Бесплатно. Без карты.
+            Лучше один раз попробовать, чем сто раз читать. Создайте аккаунт за 30 секунд, никаких карт.
           </p>
           <div className="land-cta-btns">
             <Link to="/register" className="land-cta-primary land-cta-primary-lg">
