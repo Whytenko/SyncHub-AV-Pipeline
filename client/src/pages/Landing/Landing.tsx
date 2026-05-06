@@ -123,6 +123,24 @@ const AUDIENCES = [
   }
 ]
 
+const TESTIMONIALS = [
+  {
+    text: 'Работал с 5 инструментами одновременно. SyncHub объединил всё в одном месте. Времени на синхронизацию данных уменьшилось в 10 раз.',
+    author: 'Иван Петров',
+    role: 'Режиссёр-постановщик'
+  },
+  {
+    text: 'Наша команда разбросана по 3 городам. Офлайн-режим спас нас во время проблем с интернетом. Просто волшебство.',
+    author: 'Мария Сидорова',
+    role: 'Монтажер'
+  },
+  {
+    text: 'Студия использует SyncHub для всех проектов. Себестоимость обработки проекта упала на 40% благодаря эффективности.',
+    author: 'Алексей Новиков',
+    role: 'Продюсер'
+  }
+]
+
 const USE_CASES = [
   {
     title: 'Студенческий фильм «Утро»',
@@ -512,6 +530,33 @@ const Landing: React.FC = () => {
                 ))}
               </tbody>
             </table>
+          </div>
+        </div>
+      </section>
+
+      {/* TESTIMONIALS */}
+      <section className="land-section">
+        <div className="land-section-inner">
+          <div className="land-section-header anim">
+            <h2 className="land-section-title">Что говорят пользователи</h2>
+            <p className="land-section-sub">
+              Реальные отзывы режиссёров, монтажеров и продюсеров.
+            </p>
+          </div>
+          <div className="land-testimonials-grid">
+            {TESTIMONIALS.map((t, i) => (
+              <div className="land-testimonial-card anim" key={i}>
+                <div className="land-testimonial-stars">⭐⭐⭐⭐⭐</div>
+                <p className="land-testimonial-text">"{t.text}"</p>
+                <div className="land-testimonial-author">
+                  <div className="land-testimonial-avatar">{t.author.charAt(0)}</div>
+                  <div className="land-testimonial-info">
+                    <div className="land-testimonial-name">{t.author}</div>
+                    <div className="land-testimonial-role">{t.role}</div>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </section>

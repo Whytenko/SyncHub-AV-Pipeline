@@ -658,6 +658,81 @@
   font-size: 15px;
 }
 
+/* ── TESTIMONIALS ── */
+.land-testimonials-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+}
+
+.land-testimonial-card {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  padding: 28px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  transition: transform 0.2s, border-color 0.2s, background 0.2s;
+}
+.land-testimonial-card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.land-testimonial-stars {
+  font-size: 16px;
+  display: block;
+}
+
+.land-testimonial-text {
+  font-size: 14px;
+  line-height: 1.7;
+  color: rgba(255, 255, 255, 0.65);
+  font-style: italic;
+  margin: 0;
+  flex-grow: 1;
+}
+
+.land-testimonial-author {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.land-testimonial-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.7);
+  flex-shrink: 0;
+}
+
+.land-testimonial-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.land-testimonial-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.land-testimonial-role {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.5);
+}
+
 /* ── FAQ ── */
 .land-faq {
   max-width: 700px;
@@ -839,6 +914,9 @@
   .land-trust-badges {
     grid-template-columns: repeat(2, 1fr);
   }
+  .land-testimonials-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 
 @media (max-width: 900px) {
@@ -884,6 +962,10 @@
     grid-template-columns: 1fr;
     gap: 16px;
   }
+  .land-testimonials-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
   .land-audience-grid {
     grid-template-columns: 1fr;
     gap: 16px;
@@ -901,6 +983,9 @@
     grid-template-columns: repeat(2, 1fr);
   }
   .land-usecases-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .land-testimonials-grid {
     grid-template-columns: repeat(2, 1fr);
   }
   .land-section {
@@ -941,6 +1026,9 @@
     grid-template-columns: 1fr;
   }
   .land-usecases-grid {
+    grid-template-columns: 1fr;
+  }
+  .land-testimonials-grid {
     grid-template-columns: 1fr;
   }
   .land-nav-inner {
