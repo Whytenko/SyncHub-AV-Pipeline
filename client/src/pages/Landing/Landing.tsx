@@ -343,6 +343,50 @@ const Landing: React.FC = () => {
         </div>
       </div>
 
+      {/* VISUAL SHOWCASE */}
+      <section className="land-section land-visual-showcase">
+        <div className="land-section-inner">
+          <div className="land-section-header anim">
+            <h2 className="land-section-title">Интерфейс будущего</h2>
+            <p className="land-section-sub">
+              Киберпанк дизайн встречается с функциональностью. Красиво, быстро, эффективно.
+            </p>
+          </div>
+          <div className="land-showcase-grid anim">
+            <div className="land-showcase-card">
+              <div className="land-showcase-icon">🎬</div>
+              <h3>Режиссёр</h3>
+              <p>Профессиональный сценарий редактор</p>
+            </div>
+            <div className="land-showcase-card">
+              <div className="land-showcase-icon">🎞️</div>
+              <h3>Монтажер</h3>
+              <p>Визуальный таймлайн синхронизация</p>
+            </div>
+            <div className="land-showcase-card">
+              <div className="land-showcase-icon">👗</div>
+              <h3>Костюмер</h3>
+              <p>Анатомическая карта персонажей</p>
+            </div>
+            <div className="land-showcase-card">
+              <div className="land-showcase-icon">💄</div>
+              <h3>Визажист</h3>
+              <p>Детальная схема лица и зон</p>
+            </div>
+            <div className="land-showcase-card">
+              <div className="land-showcase-icon">🎙️</div>
+              <h3>Звукорежиссер</h3>
+              <p>Управление аудиотреками</p>
+            </div>
+            <div className="land-showcase-card">
+              <div className="land-showcase-icon">⚡</div>
+              <h3>Синхронизация</h3>
+              <p>Все работают как одна команда</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* FEATURES */}
       <section className="land-section">
         <div className="land-section-inner">
