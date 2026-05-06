@@ -460,6 +460,54 @@
   gap: 24px;
 }
 
+/* ── TRUST BADGES ── */
+.land-trust-badges {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 24px;
+}
+
+.land-trust-badge {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  padding: 28px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 12px;
+  transition: transform 0.2s, border-color 0.2s, background 0.2s;
+}
+.land-trust-badge:hover {
+  transform: translateY(-4px);
+  border-color: rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.land-trust-icon {
+  font-size: 40px;
+  display: block;
+}
+
+.land-trust-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.land-trust-number {
+  font-size: 24px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.land-trust-label {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.5);
+  line-height: 1.4;
+}
+
 .land-benefit-card {
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(255, 255, 255, 0.08);
@@ -788,6 +836,9 @@
   .land-usecases-grid {
     grid-template-columns: repeat(2, 1fr);
   }
+  .land-trust-badges {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 
 @media (max-width: 900px) {
@@ -825,6 +876,10 @@
     grid-template-columns: 1fr;
     gap: 16px;
   }
+  .land-trust-badges {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
   .land-usecases-grid {
     grid-template-columns: 1fr;
     gap: 16px;
@@ -840,6 +895,9 @@
     grid-template-columns: repeat(2, 1fr);
   }
   .land-benefits-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .land-trust-badges {
     grid-template-columns: repeat(2, 1fr);
   }
   .land-usecases-grid {
@@ -877,6 +935,9 @@
     grid-template-columns: 1fr;
   }
   .land-benefits-grid {
+    grid-template-columns: 1fr;
+  }
+  .land-trust-badges {
     grid-template-columns: 1fr;
   }
   .land-usecases-grid {

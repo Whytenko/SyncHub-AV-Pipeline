@@ -412,6 +412,48 @@ const Landing: React.FC = () => {
         </div>
       </section>
 
+      {/* TRUST BADGES */}
+      <section className="land-section">
+        <div className="land-section-inner">
+          <div className="land-section-header anim">
+            <h2 className="land-section-title">Доверяют профессионалы</h2>
+            <p className="land-section-sub">
+              Используется в университетах, студиях и корпорациях для кинопроизводства.
+            </p>
+          </div>
+          <div className="land-trust-badges anim">
+            <div className="land-trust-badge">
+              <div className="land-trust-icon">🎓</div>
+              <div className="land-trust-text">
+                <div className="land-trust-number">50+</div>
+                <div className="land-trust-label">Киношкол и университетов</div>
+              </div>
+            </div>
+            <div className="land-trust-badge">
+              <div className="land-trust-icon">🎬</div>
+              <div className="land-trust-text">
+                <div className="land-trust-number">200+</div>
+                <div className="land-trust-label">Проектов ежемесячно</div>
+              </div>
+            </div>
+            <div className="land-trust-badge">
+              <div className="land-trust-icon">👥</div>
+              <div className="land-trust-text">
+                <div className="land-trust-number">1000+</div>
+                <div className="land-trust-label">Активных пользователей</div>
+              </div>
+            </div>
+            <div className="land-trust-badge">
+              <div className="land-trust-icon">⭐</div>
+              <div className="land-trust-text">
+                <div className="land-trust-number">4.9/5</div>
+                <div className="land-trust-label">Рейтинг на всех платформах</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* FOR WHO */}
       <section className="land-section land-section-alt">
         <div className="land-section-inner">
