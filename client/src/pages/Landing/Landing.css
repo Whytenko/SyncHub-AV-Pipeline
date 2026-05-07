@@ -113,6 +113,7 @@
   pointer-events: none;
   user-select: none;
   z-index: 0;
+  animation: bg-text-drift 24s ease-in-out infinite;
 }
 
 .land-hero-inner {
@@ -172,6 +173,7 @@
   letter-spacing: -0.04em;
   color: #fff;
   margin-bottom: 24px;
+  animation: headline-glitch 11s step-end infinite;
 }
 .land-headline em {
   font-style: normal;
@@ -246,7 +248,14 @@
   background: rgba(255, 255, 255, 0.02);
   transition: background 0.18s, transform 0.18s;
   cursor: default;
+  animation: pill-slide-in 0.5s cubic-bezier(0.2, 0, 0, 1) both;
 }
+.land-role-pill:nth-child(1) { animation-delay: 0.2s; }
+.land-role-pill:nth-child(2) { animation-delay: 0.32s; }
+.land-role-pill:nth-child(3) { animation-delay: 0.44s; }
+.land-role-pill:nth-child(4) { animation-delay: 0.56s; }
+.land-role-pill:nth-child(5) { animation-delay: 0.68s; }
+.land-role-pill:nth-child(6) { animation-delay: 0.80s; }
 .land-role-pill:hover {
   background: rgba(255, 255, 255, 0.04);
   transform: translateX(4px);
@@ -279,6 +288,7 @@
   border-radius: 6px;
   overflow: hidden;
   background: #080808;
+  animation: mockup-pulse 6s ease-in-out infinite;
 }
 .land-mockup-svg {
   width: 100%;
@@ -406,6 +416,10 @@
   padding: 44px 40px;
 }
 
+.land-role-card--full {
+  grid-column: 1 / -1;
+}
+
 .land-role-card-accent {
   position: absolute;
   top: 0;
@@ -457,8 +471,12 @@
   top: 0;
   left: 0;
   height: 100%;
+  width: 0;
+  background: linear-gradient(90deg, rgba(255,255,255,0.3), rgba(255,255,255,0.04));
+  transition: width 1.8s cubic-bezier(0.4, 0, 0.2, 1) 0.4s;
+}
+.land-steps-wrap.is-visible .land-steps-rail-line {
   width: 100%;
-  background: linear-gradient(90deg, rgba(255,255,255,0.25), rgba(255,255,255,0.04));
 }
 .land-steps-rail-dot {
   position: absolute;
@@ -468,9 +486,14 @@
   height: 9px;
   border-radius: 50%;
   background: #fff;
-  opacity: 0.55;
-  box-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+  opacity: 0;
+  box-shadow: 0 0 12px rgba(255, 255, 255, 0.4);
+  transition: opacity 0.3s ease;
 }
+.land-steps-wrap.is-visible .land-steps-rail-dot:nth-child(2) { opacity: 0.6; transition-delay: 0.3s; }
+.land-steps-wrap.is-visible .land-steps-rail-dot:nth-child(3) { opacity: 0.6; transition-delay: 0.85s; }
+.land-steps-wrap.is-visible .land-steps-rail-dot:nth-child(4) { opacity: 0.6; transition-delay: 1.35s; }
+.land-steps-wrap.is-visible .land-steps-rail-dot:nth-child(5) { opacity: 0.6; transition-delay: 1.8s; }
 .land-steps-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -524,6 +547,9 @@
   letter-spacing: -0.05em;
   line-height: 1;
   margin-bottom: 10px;
+  opacity: 0;
+  transform: scale(0.75) translateY(8px);
+  transition: opacity 0.55s ease, transform 0.55s cubic-bezier(0.34, 1.5, 0.64, 1);
 }
 .land-big-stat-label {
   font-size: 12px;
@@ -531,7 +557,14 @@
   color: rgba(255, 255, 255, 0.3);
   letter-spacing: 0.08em;
   text-transform: uppercase;
+  opacity: 0;
+  transition: opacity 0.5s ease 0.5s;
 }
+.land-big-stats-bar.stats-visible .land-big-stat:nth-child(1) .land-big-stat-value { opacity: 1; transform: none; transition-delay: 0.05s; }
+.land-big-stats-bar.stats-visible .land-big-stat:nth-child(2) .land-big-stat-value { opacity: 1; transform: none; transition-delay: 0.18s; }
+.land-big-stats-bar.stats-visible .land-big-stat:nth-child(3) .land-big-stat-value { opacity: 1; transform: none; transition-delay: 0.31s; }
+.land-big-stats-bar.stats-visible .land-big-stat:nth-child(4) .land-big-stat-value { opacity: 1; transform: none; transition-delay: 0.44s; }
+.land-big-stats-bar.stats-visible .land-big-stat-label { opacity: 1; }
 
 /* ── USE CASES ── */
 .land-cases-grid {
@@ -919,6 +952,59 @@
 }
 .land-footer-link:hover {
   color: rgba(255, 255, 255, 0.6);
+}
+
+/* ── CARD SCAN-LINE HOVER ── */
+.land-role-card,
+.land-case-card,
+.land-quote-card,
+.land-benefit-item {
+  overflow: hidden;
+}
+.land-role-card::after,
+.land-case-card::after,
+.land-quote-card::after {
+  content: '';
+  position: absolute;
+  top: -110%;
+  left: 0;
+  right: 0;
+  height: 55%;
+  background: linear-gradient(180deg, transparent 0%, rgba(255,255,255,0.022) 50%, transparent 100%);
+  transition: top 0.55s ease;
+  pointer-events: none;
+  z-index: 1;
+}
+.land-role-card:hover::after,
+.land-case-card:hover::after,
+.land-quote-card:hover::after {
+  top: 160%;
+}
+
+/* ── KEYFRAMES ── */
+@keyframes bg-text-drift {
+  0%, 100% { transform: translateY(-50%) translateX(0); }
+  33%       { transform: translateY(calc(-50% - 22px)) translateX(12px); }
+  66%       { transform: translateY(calc(-50% + 14px)) translateX(-8px); }
+}
+
+@keyframes headline-glitch {
+  0%, 88%, 100% { clip-path: none; transform: none; }
+  89% { clip-path: polygon(0 18%, 100% 18%, 100% 42%, 0 42%); transform: translateX(-4px) skewX(-1.5deg); }
+  90% { clip-path: polygon(0 55%, 100% 55%, 100% 80%, 0 80%); transform: translateX(4px) skewX(1.5deg); }
+  91% { clip-path: none; transform: none; }
+  92% { clip-path: polygon(0 6%, 100% 6%, 100% 26%, 0 26%); transform: translateX(-2px); }
+  93% { clip-path: none; transform: none; }
+}
+
+@keyframes pill-slide-in {
+  from { opacity: 0; transform: translateX(-18px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes mockup-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 transparent; border-color: rgba(255,255,255,0.07); }
+  50%       { box-shadow: 0 0 32px rgba(120,80,255,0.12), 0 0 80px rgba(120,80,255,0.04); border-color: rgba(120,80,255,0.18); }
 }
 
 /* ── RESPONSIVE ── */

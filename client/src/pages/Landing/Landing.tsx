@@ -278,7 +278,7 @@ const Landing: React.FC = () => {
           <div className="land-roles-grid anim">
             {ROLES.map((r, i) => (
               <div
-                className={`land-role-card${i === 0 ? ' land-role-card--hero' : ''}`}
+                className={`land-role-card${i === 0 ? ' land-role-card--hero' : ''}${i === ROLES.length - 1 ? ' land-role-card--full' : ''}`}
                 key={i}
                 style={{ '--rc': r.color } as React.CSSProperties}
               >
