@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import './Landing.css'
 import logo from '../assets/logo.svg'
@@ -78,11 +78,39 @@ function Check({ ok }: { ok: boolean | 'part' }) {
   return <span className="cmp-no">✗</span>
 }
 
+const CountUp: React.FC<{ target: string; active: boolean; delay?: number }> = ({ target, active, delay = 0 }) => {
+  const isAnimatable = /^\d/.test(target) && parseInt(target) > 0
+  const [val, setVal] = useState(isAnimatable ? '0' : target)
+  const done = useRef(false)
+  useEffect(() => {
+    if (!active || done.current || !isAnimatable) return
+    done.current = true
+    const num = parseInt(target)
+    const suffix = target.replace(/^\d+/, '')
+    const timer = setTimeout(() => {
+      const t0 = Date.now()
+      const dur = Math.min(1300, 500 + num * 18)
+      const tick = () => {
+        const p = Math.min((Date.now() - t0) / dur, 1)
+        const eased = 1 - Math.pow(1 - p, 3)
+        setVal(Math.round(eased * num) + suffix)
+        if (p < 1) requestAnimationFrame(tick)
+        else setVal(target)
+      }
+      requestAnimationFrame(tick)
+    }, delay)
+    return () => clearTimeout(timer)
+  }, [active, target, delay, isAnimatable])
+  return <>{val}</>
+}
+
 const Landing: React.FC = () => {
   const navigate = useNavigate()
   const auth = useAuth()
   const [openFaq, setOpenFaq] = useState<number | null>(null)
   const [seconds, setSeconds] = useState(0)
+  const statsRef = useRef<HTMLDivElement>(null)
+  const [statsVisible, setStatsVisible] = useState(false)
 
   useEffect(() => {
     if (auth.user && !auth.loading) navigate('/home')
@@ -105,6 +133,16 @@ const Landing: React.FC = () => {
     )
     document.querySelectorAll('.anim').forEach(el => observer.observe(el))
     return () => observer.disconnect()
+  }, [])
+
+  useEffect(() => {
+    const el = statsRef.current
+    if (!el) return
+    const obs = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) { setStatsVisible(true); obs.disconnect() }
+    }, { threshold: 0.25 })
+    obs.observe(el)
+    return () => obs.disconnect()
   }, [])
 
   const h = String(Math.floor(seconds / 3600)).padStart(2, '0')
@@ -285,12 +323,14 @@ const Landing: React.FC = () => {
       </section>
 
       {/* ── BIG STATS ── */}
-      <div className="land-big-stats-bar anim">
+      <div className={`land-big-stats-bar${statsVisible ? ' stats-visible' : ''}`} ref={statsRef}>
         <div className="land-section-inner">
           <div className="land-big-stats">
             {STATS.map((st, i) => (
               <div className="land-big-stat" key={i}>
-                <div className="land-big-stat-value">{st.value}</div>
+                <div className="land-big-stat-value">
+                  <CountUp target={st.value} active={statsVisible} delay={i * 130} />
+                </div>
                 <div className="land-big-stat-label">{st.label}</div>
               </div>
             ))}
