@@ -4,162 +4,48 @@ import './Landing.css'
 import logo from '../assets/logo.svg'
 import { useAuth } from '../../context/AuthContext'
 
-const FEATURES = [
-  {
-    color: '#6366f1',
-    icon: '🎬',
-    title: 'Режиссёр',
-    desc: 'Профессиональный редактор сценария с правильной типографикой, историей версий и мгновенным доступом коллег.'
-  },
-  {
-    color: '#f59e0b',
-    icon: '🎞',
-    title: 'Монтажёр',
-    desc: 'Интуитивный таймлайн с точной синхронизацией по секундам. Управляйте точками пересинхронизации одним кликом.'
-  },
-  {
-    color: '#ec4899',
-    icon: '👗',
-    title: 'Костюмер',
-    desc: 'Анатомическая карта персонажа. Отмечайте каждый элемент: цвет, материал, особенности. Несколько персонажей в проекте.'
-  },
-  {
-    color: '#8b5cf6',
-    icon: '💄',
-    title: 'Визажист',
-    desc: 'Детальная схема лица с разделением по зонам. Записывайте технику, материалы и особенности макияжа.'
-  },
-  {
-    color: '#06b6d4',
-    icon: '🎙',
-    title: 'Звукорежиссёр',
-    desc: 'Управление аудиотреками с синхронизацией видеоряда. Отмечайте ключевые моменты и эффекты.'
-  }
+const ROLES = [
+  { color: '#9C27B0', label: 'Сценарист', desc: 'Загрузите PDF или Word-сценарий, заполните параметры съёмки: актёры, локации, реквизит, спецэффекты. Данные автоматически передаются в другие отделы.', num: '01' },
+  { color: '#2196F3', label: 'Режиссёр', desc: 'Интерактивная раскадровка: строки — локации, столбцы — кадры. Прикрепляйте фото к каждой ячейке.', num: '02' },
+  { color: '#FF9800', label: 'Костюмер', desc: 'Анатомическая карта персонажа. Отмечайте каждый элемент костюма. Персонажи из сценария — автоматически.', num: '03' },
+  { color: '#E91E63', label: 'Визажист', desc: 'Детальная схема лица по зонам. Записывайте технику и материалы. Персонажи синхронизированы со сценарием.', num: '04' },
+  { color: '#FF391A', label: 'Монтажёр', desc: 'Таймлайн с маркерами. Точная синхронизация по секундам. Управляйте точками пересинхронизации.', num: '05' },
+  { color: '#06b6d4', label: 'Звукорежиссёр', desc: 'Отмечайте ключевые звуковые моменты на таймлайне. Комментарии и синхронизация с видеорядом.', num: '06' },
+]
+
+const TICKER_ITEMS = [
+  '6 профессиональных ролей', 'Синхронизация вживую', 'Работает офлайн',
+  'Бесплатно навсегда', 'Сценарий PDF / Word', 'Раскадровка в таблице',
+  'Тайм-код на таймлайне', 'Анатомическая карта', 'Тёмная тема',
 ]
 
 const STEPS = [
-  {
-    num: '01',
-    title: 'Регистрация за 30 сек',
-    desc: 'Не нужна карта или валидация почты. Просто логин, пароль и готово. Сразу доступен полный функционал.'
-  },
-  {
-    num: '02',
-    title: 'Создайте проект',
-    desc: 'Задайте название и описание. Система автоматически создаст разделы для каждой роли команды.'
-  },
-  {
-    num: '03',
-    title: 'Пригласите коллег',
-    desc: 'Поделитесь ссылкой приглашения. Каждый видит только свой раздел. Никакой путаницы прав доступа.'
-  },
-  {
-    num: '04',
-    title: 'Синхронизация вживую',
-    desc: 'Все изменения видны мгновенно. Работает офлайн, синхронизируется при подключении.'
-  }
+  { num: '01', title: 'Регистрация', desc: 'Без карты, без подтверждения почты. 30 секунд — и полный доступ к системе.' },
+  { num: '02', title: 'Создайте проект', desc: 'Название и описание. Все разделы для каждой роли создаются автоматически.' },
+  { num: '03', title: 'Пригласите команду', desc: 'Каждый видит свой раздел. Никакой путаницы с правами доступа.' },
+  { num: '04', title: 'Работайте вместе', desc: 'Изменения видны мгновенно. Офлайн-режим сохраняет данные при потере связи.' },
 ]
 
-const BENEFITS = [
-  {
-    icon: '⚡',
-    title: 'Экономия времени',
-    desc: 'Снижение времени на координацию команды на 70%. Все в одном месте — ноль переписок.'
-  },
-  {
-    icon: '💰',
-    title: 'Экономия бюджета',
-    desc: 'Бесплатный для команд до 5 человек. Годовая подписка дешевле одного проекта в Cerebro.'
-  },
-  {
-    icon: '🔄',
-    title: 'Синхронизация в реальном времени',
-    desc: 'Изменения синхронизируются мгновенно. Работайте асинхронно без потери данных.'
-  },
-  {
-    icon: '🌍',
-    title: 'Распределённые команды',
-    desc: 'Работайте с коллегами в любой точке мира. Часовые пояса не помеха.'
-  },
-  {
-    icon: '📱',
-    title: 'Мобильные уведомления',
-    desc: 'Получайте оповещения о каждом изменении. Никогда не пропустите важное.'
-  },
-  {
-    icon: '🛡️',
-    title: 'Безопасность данных',
-    desc: 'Шифрование конца-в-конца. Данные хранятся на европейских серверах.'
-  }
-]
-
-const AUDIENCES = [
-  {
-    emoji: '🎓',
-    title: 'Студенты киношкол',
-    points: [
-      'Учебные дипломные проекты',
-      'Совместная работа без бюджета',
-      'Всё необходимое в одном инструменте'
-    ]
-  },
-  {
-    emoji: '🎥',
-    title: 'Независимые студии',
-    points: [
-      'Малобюджетные съёмки и рекламные ролики',
-      'Управление командой до 20 человек',
-      'Офлайн-режим на съёмочной площадке'
-    ]
-  },
-  {
-    emoji: '🏢',
-    title: 'Корпоративный продакшн',
-    points: [
-      'Внутренние презентации и брендовые видео',
-      'Чёткое разделение ролей и ответственности',
-      'Единая история изменений по каждому проекту'
-    ]
-  }
-]
-
-const TESTIMONIALS = [
-  {
-    text: 'Работал с 5 инструментами одновременно. SyncHub объединил всё в одном месте. Времени на синхронизацию данных уменьшилось в 10 раз.',
-    author: 'Иван Петров',
-    role: 'Режиссёр-постановщик'
-  },
-  {
-    text: 'Наша команда разбросана по 3 городам. Офлайн-режим спас нас во время проблем с интернетом. Просто волшебство.',
-    author: 'Мария Сидорова',
-    role: 'Монтажер'
-  },
-  {
-    text: 'Студия использует SyncHub для всех проектов. Себестоимость обработки проекта упала на 40% благодаря эффективности.',
-    author: 'Алексей Новиков',
-    role: 'Продюсер'
-  }
+const STATS = [
+  { value: '6', label: 'Ролей в команде' },
+  { value: '100%', label: 'Синхронизация' },
+  { value: '∞', label: 'Бесплатно' },
+  { value: '0', label: 'Потерь данных' },
 ]
 
 const USE_CASES = [
-  {
-    title: 'Студенческий фильм «Утро»',
-    desc: 'Группа из 8 человек сняла 15-минутный фильм без хаоса с координацией благодаря SyncHub.',
-    stats: '−4 часа на совещания',
-    color: '#6366f1'
-  },
-  {
-    title: 'Реклама для туристического агентства',
-    desc: 'Команда монтажа и режиссуры синхронизировала правки в реальном времени во время последних дней до дедлайна.',
-    stats: '+50% эффективность',
-    color: '#f59e0b'
-  },
-  {
-    title: 'Корпоративное видео',
-    desc: 'Разделённая команда в 3 городах работала в одном проекте с полной синхронизацией. Офлайн не был помехой.',
-    stats: '0 потерь данных',
-    color: '#ec4899'
-  }
+  { stat: '−4 ч', label: 'на совещания', title: 'Студенческий фильм', desc: 'Группа из 8 человек сняла 15-минутный фильм без координационного хаоса.', color: '#9C27B0' },
+  { stat: '+50%', label: 'эффективность', title: 'Рекламный ролик', desc: 'Монтаж и режиссура синхронизировали правки в реальном времени до дедлайна.', color: '#FF391A' },
+  { stat: '0', label: 'потерь данных', title: 'Корпоративное видео', desc: 'Три города, одна команда. Офлайн-режим — не помеха, все данные сохранены.', color: '#06b6d4' },
+]
+
+const BENEFITS = [
+  { num: '01', title: 'Экономия времени', desc: 'Снижение времени на координацию на 70%. Всё в одном месте — ноль переписок.' },
+  { num: '02', title: 'Экономия бюджета', desc: 'Бесплатный для команд до 5 человек. Дешевле любого аналога на рынке.' },
+  { num: '03', title: 'Реальное время', desc: 'Изменения синхронизируются мгновенно. Работайте асинхронно без потерь.' },
+  { num: '04', title: 'Любая точка мира', desc: 'Распределённые команды. Часовые пояса и расстояния — не помеха.' },
+  { num: '05', title: 'Офлайн режим', desc: 'Данные кешируются локально. Синхронизация автоматически при восстановлении.' },
+  { num: '06', title: 'Безопасность', desc: 'Шифрование, история изменений, защищённые серверы.' },
 ]
 
 type CmpVal = boolean | 'part'
@@ -172,27 +58,18 @@ const COMPARISON: { feature: string; synchub: CmpVal; cerebro: CmpVal; celtx: Cm
   { feature: 'Не нужна установка', synchub: true, cerebro: false, celtx: 'part', studio: true },
 ]
 
+const TESTIMONIALS = [
+  { text: 'Работал с 5 инструментами одновременно. SyncHub объединил всё. Время на синхронизацию упало в 10 раз.', author: 'Иван Петров', role: 'Режиссёр-постановщик' },
+  { text: 'Команда в 3 городах. Офлайн-режим спасал нас несколько раз. Просто работает — и это главное.', author: 'Мария Сидорова', role: 'Монтажёр' },
+  { text: 'Студия перешла на SyncHub для всех проектов. Себестоимость обработки упала на 40%.', author: 'Алексей Новиков', role: 'Продюсер' },
+]
+
 const FAQS = [
-  {
-    q: 'Это платно?',
-    a: 'Базовый доступ полностью бесплатный. В планах — профессиональный план для студий с расширенными функциями совместной работы.'
-  },
-  {
-    q: 'Нужно ли что-то устанавливать?',
-    a: 'Нет. SyncHub работает полностью в браузере — Chrome, Firefox, Safari, Edge. Никаких плагинов и дистрибутивов.'
-  },
-  {
-    q: 'Работает ли без интернета?',
-    a: 'Да. При потере соединения данные кешируются локально и синхронизируются автоматически при восстановлении связи.'
-  },
-  {
-    q: 'Сколько участников может быть в проекте?',
-    a: 'Ограничений нет. Каждый участник регистрирует отдельный аккаунт и получает доступ к нужным разделам.'
-  },
-  {
-    q: 'Поддерживаются ли другие языки?',
-    a: 'Да: русский, английский и китайский. Переключить язык можно в любой момент без перезагрузки страницы.'
-  }
+  { q: 'Это платно?', a: 'Базовый доступ полностью бесплатный. В планах — профессиональный план для студий с расширенными функциями совместной работы.' },
+  { q: 'Нужно ли что-то устанавливать?', a: 'Нет. SyncHub работает полностью в браузере — Chrome, Firefox, Safari, Edge. Никаких плагинов и дистрибутивов.' },
+  { q: 'Работает ли без интернета?', a: 'Да. При потере соединения данные кешируются локально и синхронизируются автоматически при восстановлении связи.' },
+  { q: 'Сколько участников может быть в проекте?', a: 'Без ограничений. Каждый участник регистрирует отдельный аккаунт и получает доступ к своим разделам.' },
+  { q: 'Поддерживаются ли другие языки?', a: 'Да: русский, английский, китайский. Переключить язык можно в любой момент без перезагрузки страницы.' },
 ]
 
 function Check({ ok }: { ok: boolean | 'part' }) {
@@ -205,6 +82,7 @@ const Landing: React.FC = () => {
   const navigate = useNavigate()
   const auth = useAuth()
   const [openFaq, setOpenFaq] = useState<number | null>(null)
+  const [seconds, setSeconds] = useState(0)
 
   useEffect(() => {
     if (auth.user && !auth.loading) navigate('/home')
@@ -216,17 +94,28 @@ const Landing: React.FC = () => {
   }, [])
 
   useEffect(() => {
+    const id = setInterval(() => setSeconds(s => s + 1), 1000)
+    return () => clearInterval(id)
+  }, [])
+
+  useEffect(() => {
     const observer = new IntersectionObserver(
-      (entries) => entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('is-visible') }),
-      { threshold: 0.08 }
+      entries => entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('is-visible') }),
+      { threshold: 0.07 }
     )
     document.querySelectorAll('.anim').forEach(el => observer.observe(el))
     return () => observer.disconnect()
   }, [])
 
+  const h = String(Math.floor(seconds / 3600)).padStart(2, '0')
+  const m = String(Math.floor(seconds / 60) % 60).padStart(2, '0')
+  const s = String(seconds % 60).padStart(2, '0')
+  const timecode = `${h}:${m}:${s}:00`
+
   return (
     <div className="landing">
-      {/* NAV */}
+
+      {/* ── NAV ── */}
       <nav className="land-nav">
         <div className="land-nav-inner">
           <Link to="/" className="land-brand">
@@ -240,19 +129,28 @@ const Landing: React.FC = () => {
         </div>
       </nav>
 
-      {/* HERO */}
+      {/* ── HERO ── */}
       <section className="land-hero">
+        <div className="land-hero-bg-text" aria-hidden="true">SYNC<br />HUB</div>
         <div className="land-hero-inner">
-          <div className="land-hero-text anim">
-            <div className="land-badge">🚀 Революция в кинопроизводстве</div>
+          <div className="land-hero-left anim">
+            <div className="land-hero-meta">
+              <span className="land-rec-indicator">
+                <span className="land-rec-dot" />
+                REC
+              </span>
+              <span className="land-timecode">{timecode}</span>
+              <span className="land-hero-take">TAKE 01</span>
+            </div>
             <h1 className="land-headline">
-              Идеальный инструмент<br />
-              <span className="land-headline-accent">для съёмочной группы</span>
+              Инструмент<br />
+              <em>съёмочной</em><br />
+              группы
             </h1>
             <p className="land-sub">
-              Режиссёры, монтажёры, костюмеры, визажисты и звукорежиссёры<br />
-              наконец могут работать вместе без глобальной переписки.<br />
-              Экономия времени, снижение стресса, повышение качества.
+              Режиссёр, монтажёр, костюмер, визажист<br />
+              и звукорежиссёр — в одной системе.<br />
+              Синхронизация данных, офлайн-режим.
             </p>
             <div className="land-hero-btns">
               <Link to="/register" className="land-cta-primary">Создать аккаунт →</Link>
@@ -260,297 +158,199 @@ const Landing: React.FC = () => {
             </div>
           </div>
 
-          <div className="land-hero-visual anim">
-            <div className="land-app-mockup">
-              <svg viewBox="0 0 520 340" xmlns="http://www.w3.org/2000/svg" className="land-mockup-svg">
-                {/* Window frame */}
-                <rect width="520" height="340" rx="14" fill="#0a0a0a" stroke="rgba(255,255,255,0.12)" strokeWidth="1"/>
-                {/* Title bar */}
-                <rect width="520" height="38" rx="14" fill="#141414"/>
-                <rect y="20" width="520" height="18" fill="#141414"/>
-                <circle cx="22" cy="19" r="5.5" fill="#ef4444" opacity="0.75"/>
-                <circle cx="40" cy="19" r="5.5" fill="#fbbf24" opacity="0.75"/>
-                <circle cx="58" cy="19" r="5.5" fill="#4ade80" opacity="0.75"/>
-                <text x="240" y="23" textAnchor="middle" fill="rgba(255,255,255,0.35)" fontSize="10" fontFamily="system-ui">SyncHub — Весенний показ 2026</text>
-                {/* Sidebar */}
-                <rect x="0" y="38" width="88" height="302" fill="#0d0d0d"/>
-                <rect x="12" y="58" width="64" height="26" rx="6" fill="rgba(99,102,241,0.18)" stroke="rgba(99,102,241,0.35)" strokeWidth="1"/>
-                <text x="44" y="75" textAnchor="middle" fill="rgba(255,255,255,0.7)" fontSize="9" fontFamily="system-ui">Проекты</text>
-                <rect x="12" y="94" width="64" height="26" rx="6" fill="rgba(255,255,255,0.04)"/>
-                <text x="44" y="111" textAnchor="middle" fill="rgba(255,255,255,0.4)" fontSize="9" fontFamily="system-ui">Дашборд</text>
-                <rect x="12" y="130" width="64" height="26" rx="6" fill="rgba(255,255,255,0.04)"/>
-                <text x="44" y="147" textAnchor="middle" fill="rgba(255,255,255,0.4)" fontSize="9" fontFamily="system-ui">Профиль</text>
-                <rect x="12" y="166" width="64" height="26" rx="6" fill="rgba(255,255,255,0.04)"/>
-                <text x="44" y="183" textAnchor="middle" fill="rgba(255,255,255,0.4)" fontSize="9" fontFamily="system-ui">Настройки</text>
-                {/* Main area */}
-                <rect x="88" y="38" width="432" height="302" fill="#090909"/>
-                {/* Tab bar */}
-                <rect x="88" y="38" width="432" height="42" fill="#0f0f0f"/>
-                <rect x="100" y="50" width="72" height="20" rx="10" fill="#6366f1"/>
-                <text x="136" y="63" textAnchor="middle" fill="white" fontSize="9" fontFamily="system-ui">Режиссёр</text>
-                <rect x="182" y="50" width="72" height="20" rx="10" fill="rgba(245,158,11,0.18)" stroke="rgba(245,158,11,0.3)" strokeWidth="1"/>
-                <text x="218" y="63" textAnchor="middle" fill="rgba(245,158,11,0.85)" fontSize="9" fontFamily="system-ui">Монтажёр</text>
-                <rect x="264" y="50" width="72" height="20" rx="10" fill="rgba(236,72,153,0.18)" stroke="rgba(236,72,153,0.3)" strokeWidth="1"/>
-                <text x="300" y="63" textAnchor="middle" fill="rgba(236,72,153,0.85)" fontSize="9" fontFamily="system-ui">Костюмер</text>
-                <rect x="346" y="50" width="72" height="20" rx="10" fill="rgba(139,92,246,0.18)" stroke="rgba(139,92,246,0.3)" strokeWidth="1"/>
-                <text x="382" y="63" textAnchor="middle" fill="rgba(139,92,246,0.85)" fontSize="9" fontFamily="system-ui">Визажист</text>
-                <rect x="428" y="50" width="72" height="20" rx="10" fill="rgba(6,182,212,0.18)" stroke="rgba(6,182,212,0.3)" strokeWidth="1"/>
-                <text x="464" y="63" textAnchor="middle" fill="rgba(6,182,212,0.85)" fontSize="9" fontFamily="system-ui">Звук</text>
-                {/* Script content */}
-                <rect x="108" y="96" width="294" height="10" rx="5" fill="rgba(255,255,255,0.12)"/>
-                <rect x="108" y="116" width="240" height="8" rx="4" fill="rgba(255,255,255,0.07)"/>
-                <rect x="108" y="132" width="270" height="8" rx="4" fill="rgba(255,255,255,0.07)"/>
-                <rect x="108" y="148" width="200" height="8" rx="4" fill="rgba(255,255,255,0.07)"/>
-                <rect x="108" y="168" width="250" height="8" rx="4" fill="rgba(255,255,255,0.05)"/>
-                <rect x="108" y="184" width="220" height="8" rx="4" fill="rgba(255,255,255,0.05)"/>
-                {/* Timeline block */}
-                <rect x="108" y="212" width="380" height="90" rx="10" fill="rgba(255,255,255,0.03)" stroke="rgba(255,255,255,0.07)" strokeWidth="1"/>
-                <text x="124" y="230" fill="rgba(255,255,255,0.35)" fontSize="9" fontFamily="system-ui">Таймлайн</text>
-                {/* Timeline rail */}
-                <rect x="124" y="250" width="348" height="3" rx="1.5" fill="rgba(255,255,255,0.08)"/>
-                <rect x="124" y="250" width="160" height="3" rx="1.5" fill="rgba(245,245,245,0.3)"/>
-                {/* Markers */}
-                <rect x="166" y="238" width="2" height="26" rx="1" fill="rgba(245,245,245,0.5)"/>
-                <circle cx="167" cy="236" r="4" fill="rgba(245,245,245,0.7)"/>
-                <rect x="238" y="238" width="2" height="26" rx="1" fill="#f59e0b" opacity="0.8"/>
-                <circle cx="239" cy="236" r="4" fill="#f59e0b" opacity="0.9"/>
-                <rect x="284" y="238" width="2" height="26" rx="1" fill="#6366f1" opacity="0.8"/>
-                <circle cx="285" cy="236" r="4" fill="#6366f1" opacity="0.9"/>
-                <rect x="340" y="238" width="2" height="26" rx="1" fill="#ec4899" opacity="0.8"/>
-                <circle cx="341" cy="236" r="4" fill="#ec4899" opacity="0.9"/>
-                {/* Labels */}
-                <text x="148" y="283" fill="rgba(255,255,255,0.4)" fontSize="8" fontFamily="system-ui">00:00</text>
-                <text x="230" y="283" fill="rgba(245,158,11,0.7)" fontSize="8" fontFamily="system-ui">01:24</text>
-                <text x="276" y="283" fill="rgba(99,102,241,0.7)" fontSize="8" fontFamily="system-ui">02:15</text>
-                <text x="332" y="283" fill="rgba(236,72,153,0.7)" fontSize="8" fontFamily="system-ui">03:40</text>
+          <div className="land-hero-right anim">
+            <div className="land-role-stack">
+              {ROLES.map((r, i) => (
+                <div className="land-role-pill" key={i} style={{ '--rc': r.color } as React.CSSProperties}>
+                  <span className="land-role-num">{r.num}</span>
+                  <span className="land-role-name">{r.label}</span>
+                  <span className="land-role-dot" />
+                </div>
+              ))}
+            </div>
+            <div className="land-hero-mockup-frame">
+              <svg viewBox="0 0 440 240" xmlns="http://www.w3.org/2000/svg" className="land-mockup-svg">
+                <rect width="440" height="240" rx="0" fill="#080808"/>
+                <rect width="440" height="28" fill="#0f0f0f"/>
+                <circle cx="16" cy="14" r="4" fill="#ef4444" opacity="0.6"/>
+                <circle cx="28" cy="14" r="4" fill="#fbbf24" opacity="0.6"/>
+                <circle cx="40" cy="14" r="4" fill="#4ade80" opacity="0.6"/>
+                <text x="220" y="17" textAnchor="middle" fill="rgba(255,255,255,0.2)" fontSize="8" fontFamily="monospace">SyncHub · Дипломный проект 2026</text>
+                <rect x="0" y="28" width="440" height="22" fill="#0a0a0a"/>
+                <rect x="6" y="34" width="52" height="12" rx="6" fill="#9C27B0"/>
+                <text x="32" y="43" textAnchor="middle" fill="white" fontSize="7" fontFamily="system-ui">Сценарий</text>
+                <rect x="64" y="34" width="52" height="12" rx="6" fill="rgba(33,150,243,0.15)" stroke="rgba(33,150,243,0.4)" strokeWidth="0.5"/>
+                <text x="90" y="43" textAnchor="middle" fill="rgba(33,150,243,0.8)" fontSize="7" fontFamily="system-ui">Режиссёр</text>
+                <rect x="122" y="34" width="52" height="12" rx="6" fill="rgba(255,152,0,0.15)" stroke="rgba(255,152,0,0.4)" strokeWidth="0.5"/>
+                <text x="148" y="43" textAnchor="middle" fill="rgba(255,152,0,0.8)" fontSize="7" fontFamily="system-ui">Костюмер</text>
+                <rect x="180" y="34" width="52" height="12" rx="6" fill="rgba(233,30,99,0.15)" stroke="rgba(233,30,99,0.4)" strokeWidth="0.5"/>
+                <text x="206" y="43" textAnchor="middle" fill="rgba(233,30,99,0.8)" fontSize="7" fontFamily="system-ui">Визажист</text>
+                <rect x="238" y="34" width="52" height="12" rx="6" fill="rgba(255,57,26,0.15)" stroke="rgba(255,57,26,0.4)" strokeWidth="0.5"/>
+                <text x="264" y="43" textAnchor="middle" fill="rgba(255,57,26,0.8)" fontSize="7" fontFamily="system-ui">Монтаж</text>
+                <rect x="296" y="34" width="52" height="12" rx="6" fill="rgba(6,182,212,0.15)" stroke="rgba(6,182,212,0.4)" strokeWidth="0.5"/>
+                <text x="322" y="43" textAnchor="middle" fill="rgba(6,182,212,0.8)" fontSize="7" fontFamily="system-ui">Звук</text>
+                <rect x="0" y="50" width="440" height="190" fill="#060606"/>
+                <rect x="8" y="58" width="424" height="130" rx="4" fill="rgba(255,255,255,0.015)" stroke="rgba(255,255,255,0.05)" strokeWidth="0.5"/>
+                <text x="18" y="70" fill="rgba(255,255,255,0.15)" fontSize="7" fontFamily="monospace">РАСКАДРОВКА · 3 ЛОКАЦИИ · 4 КАДРА</text>
+                <line x1="112" y1="58" x2="112" y2="188" stroke="rgba(255,255,255,0.04)" strokeWidth="0.5"/>
+                <line x1="216" y1="58" x2="216" y2="188" stroke="rgba(255,255,255,0.04)" strokeWidth="0.5"/>
+                <line x1="320" y1="58" x2="320" y2="188" stroke="rgba(255,255,255,0.04)" strokeWidth="0.5"/>
+                <line x1="8" y1="108" x2="432" y2="108" stroke="rgba(255,255,255,0.04)" strokeWidth="0.5"/>
+                <line x1="8" y1="148" x2="432" y2="148" stroke="rgba(255,255,255,0.04)" strokeWidth="0.5"/>
+                <rect x="9" y="59" width="102" height="48" rx="3" fill="rgba(33,150,243,0.08)" stroke="rgba(33,150,243,0.25)" strokeWidth="0.5"/>
+                <rect x="217" y="109" width="102" height="38" rx="3" fill="rgba(255,152,0,0.08)" stroke="rgba(255,152,0,0.2)" strokeWidth="0.5"/>
+                <rect x="321" y="59" width="102" height="48" rx="3" fill="rgba(233,30,99,0.08)" stroke="rgba(233,30,99,0.2)" strokeWidth="0.5"/>
+                <rect x="8" y="198" width="424" height="34" rx="4" fill="rgba(255,255,255,0.015)" stroke="rgba(255,255,255,0.05)" strokeWidth="0.5"/>
+                <text x="18" y="208" fill="rgba(255,255,255,0.12)" fontSize="6" fontFamily="monospace">TIMELINE</text>
+                <rect x="16" y="214" width="408" height="1.5" rx="1" fill="rgba(255,255,255,0.05)"/>
+                <rect x="16" y="214" width="200" height="1.5" rx="1" fill="rgba(255,255,255,0.18)"/>
+                <circle cx="80" cy="214" r="4" fill="#9C27B0" opacity="0.85"/>
+                <circle cx="150" cy="214" r="4" fill="#FF391A" opacity="0.85"/>
+                <circle cx="216" cy="214" r="4" fill="#2196F3" opacity="0.85"/>
+                <circle cx="290" cy="214" r="4" fill="#E91E63" opacity="0.85"/>
               </svg>
-              <div className="land-mockup-glow" />
             </div>
           </div>
         </div>
+        <div className="land-hero-cut" aria-hidden="true" />
       </section>
 
-      {/* STATS STRIP */}
-      <div className="land-stats anim">
-        <div className="land-stats-inner">
-          <div className="land-stat"><strong>5</strong> профессиональных ролей</div>
-          <div className="land-stat-sep" />
-          <div className="land-stat"><strong>100%</strong> синхронизация</div>
-          <div className="land-stat-sep" />
-          <div className="land-stat"><strong>Работает</strong> без интернета</div>
-          <div className="land-stat-sep" />
-          <div className="land-stat"><strong>Навсегда</strong> бесплатно</div>
+      {/* ── TICKER ── */}
+      <div className="land-ticker-outer" aria-hidden="true">
+        <div className="land-ticker">
+          {[...TICKER_ITEMS, ...TICKER_ITEMS, ...TICKER_ITEMS].map((item, i) => (
+            <span key={i} className="land-ticker-item">
+              <span className="land-ticker-sep">·</span>
+              {item}
+            </span>
+          ))}
         </div>
       </div>
 
-      {/* VISUAL SHOWCASE */}
-      <section className="land-section land-visual-showcase">
-        <div className="land-section-inner">
-          <div className="land-section-header anim">
-            <h2 className="land-section-title">Интерфейс будущего</h2>
-            <p className="land-section-sub">
-              Киберпанк дизайн встречается с функциональностью. Красиво, быстро, эффективно.
-            </p>
-          </div>
-          <div className="land-showcase-grid anim">
-            <div className="land-showcase-card">
-              <div className="land-showcase-icon">🎬</div>
-              <h3>Режиссёр</h3>
-              <p>Профессиональный сценарий редактор</p>
-            </div>
-            <div className="land-showcase-card">
-              <div className="land-showcase-icon">🎞️</div>
-              <h3>Монтажер</h3>
-              <p>Визуальный таймлайн синхронизация</p>
-            </div>
-            <div className="land-showcase-card">
-              <div className="land-showcase-icon">👗</div>
-              <h3>Костюмер</h3>
-              <p>Анатомическая карта персонажей</p>
-            </div>
-            <div className="land-showcase-card">
-              <div className="land-showcase-icon">💄</div>
-              <h3>Визажист</h3>
-              <p>Детальная схема лица и зон</p>
-            </div>
-            <div className="land-showcase-card">
-              <div className="land-showcase-icon">🎙️</div>
-              <h3>Звукорежиссер</h3>
-              <p>Управление аудиотреками</p>
-            </div>
-            <div className="land-showcase-card">
-              <div className="land-showcase-icon">⚡</div>
-              <h3>Синхронизация</h3>
-              <p>Все работают как одна команда</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* FEATURES */}
+      {/* ── 01 ROLES ── */}
       <section className="land-section">
         <div className="land-section-inner">
-          <div className="land-section-header anim">
-            <h2 className="land-section-title">Пять специализированных рабочих мест</h2>
-            <p className="land-section-sub">
-              Каждая роль получает инструменты, оптимизированные именно под её задачи. Больше никакой адаптации.
-            </p>
+          <div className="land-eyebrow anim">
+            <span className="land-eyebrow-num">01</span>
+            <span className="land-eyebrow-label">Роли в команде</span>
           </div>
-          <div className="land-features-grid">
-            {FEATURES.map((f, i) => (
-              <div className="land-feature-card anim" key={i} style={{ '--feat-color': f.color } as React.CSSProperties}>
-                <div className="land-feature-icon">{f.icon}</div>
-                <div className="land-feature-color-bar" />
-                <h3 className="land-feature-title">{f.title}</h3>
-                <p className="land-feature-desc">{f.desc}</p>
+          <h2 className="land-section-title anim">
+            Каждый специалист<br />получает своё рабочее место
+          </h2>
+          <div className="land-roles-grid anim">
+            {ROLES.map((r, i) => (
+              <div
+                className={`land-role-card${i === 0 ? ' land-role-card--hero' : ''}`}
+                key={i}
+                style={{ '--rc': r.color } as React.CSSProperties}
+              >
+                <div className="land-role-card-accent" />
+                <div className="land-role-card-num">{r.num}</div>
+                <h3 className="land-role-card-title">{r.label}</h3>
+                <p className="land-role-card-desc">{r.desc}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* HOW IT WORKS */}
-      <section className="land-section land-section-alt">
+      {/* ── 02 HOW IT WORKS ── */}
+      <section className="land-section land-section-dark">
         <div className="land-section-inner">
-          <div className="land-section-header anim">
-            <h2 className="land-section-title">Как начать работу</h2>
-            <p className="land-section-sub">Четыре простых шага — и ваша команда уже синхронизирована.</p>
+          <div className="land-eyebrow anim">
+            <span className="land-eyebrow-num">02</span>
+            <span className="land-eyebrow-label">Как начать</span>
           </div>
-          <div className="land-steps">
-            {STEPS.map((s, i) => (
-              <div className="land-step anim" key={i}>
-                <div className="land-step-num">{s.num}</div>
-                <div className="land-step-body">
+          <h2 className="land-section-title anim">
+            Четыре шага<br />до синхронизации команды
+          </h2>
+          <div className="land-steps-wrap anim">
+            <div className="land-steps-rail">
+              <div className="land-steps-rail-line" />
+              {STEPS.map((_, i) => (
+                <div className="land-steps-rail-dot" key={i} style={{ left: `${(i / (STEPS.length - 1)) * 100}%` }} />
+              ))}
+            </div>
+            <div className="land-steps-grid">
+              {STEPS.map((s, i) => (
+                <div className="land-step-item" key={i}>
+                  <div className="land-step-num">{s.num}</div>
                   <h3 className="land-step-title">{s.title}</h3>
                   <p className="land-step-desc">{s.desc}</p>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </div>
       </section>
 
-      {/* USE CASES */}
-      <section className="land-section">
+      {/* ── BIG STATS ── */}
+      <div className="land-big-stats-bar anim">
         <div className="land-section-inner">
-          <div className="land-section-header anim">
-            <h2 className="land-section-title">Реальные примеры</h2>
-            <p className="land-section-sub">
-              Посмотрите, как SyncHub помог командам работать эффективнее.
-            </p>
+          <div className="land-big-stats">
+            {STATS.map((st, i) => (
+              <div className="land-big-stat" key={i}>
+                <div className="land-big-stat-value">{st.value}</div>
+                <div className="land-big-stat-label">{st.label}</div>
+              </div>
+            ))}
           </div>
-          <div className="land-usecases-grid">
+        </div>
+      </div>
+
+      {/* ── 03 USE CASES ── */}
+      <section className="land-section land-section-dark">
+        <div className="land-section-inner">
+          <div className="land-eyebrow anim">
+            <span className="land-eyebrow-num">03</span>
+            <span className="land-eyebrow-label">Реальные кейсы</span>
+          </div>
+          <h2 className="land-section-title anim">Как SyncHub помогает командам</h2>
+          <div className="land-cases-grid anim">
             {USE_CASES.map((uc, i) => (
-              <div className="land-usecase-card anim" key={i} style={{ '--uc-color': uc.color } as React.CSSProperties}>
-                <div className="land-usecase-header">
-                  <h3 className="land-usecase-title">{uc.title}</h3>
-                  <div className="land-usecase-stat">{uc.stats}</div>
+              <div className="land-case-card" key={i} style={{ '--uc': uc.color } as React.CSSProperties}>
+                <div className="land-case-stat-block">
+                  <span className="land-case-stat-value">{uc.stat}</span>
+                  <span className="land-case-stat-label">{uc.label}</span>
                 </div>
-                <p className="land-usecase-desc">{uc.desc}</p>
+                <h3 className="land-case-title">{uc.title}</h3>
+                <p className="land-case-desc">{uc.desc}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* BENEFITS */}
-      <section className="land-section land-section-alt">
-        <div className="land-section-inner">
-          <div className="land-section-header anim">
-            <h2 className="land-section-title">Почему выбирают SyncHub</h2>
-            <p className="land-section-sub">
-              Шесть ключевых преимуществ, которые меняют способ работы кинопроизводства.
-            </p>
-          </div>
-          <div className="land-benefits-grid">
-            {BENEFITS.map((b, i) => (
-              <div className="land-benefit-card anim" key={i}>
-                <div className="land-benefit-icon">{b.icon}</div>
-                <h3 className="land-benefit-title">{b.title}</h3>
-                <p className="land-benefit-desc">{b.desc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* TRUST BADGES */}
+      {/* ── 04 BENEFITS ── */}
       <section className="land-section">
         <div className="land-section-inner">
-          <div className="land-section-header anim">
-            <h2 className="land-section-title">Доверяют профессионалы</h2>
-            <p className="land-section-sub">
-              Используется в университетах, студиях и корпорациях для кинопроизводства.
-            </p>
+          <div className="land-eyebrow anim">
+            <span className="land-eyebrow-num">04</span>
+            <span className="land-eyebrow-label">Преимущества</span>
           </div>
-          <div className="land-trust-badges anim">
-            <div className="land-trust-badge">
-              <div className="land-trust-icon">🎓</div>
-              <div className="land-trust-text">
-                <div className="land-trust-number">50+</div>
-                <div className="land-trust-label">Киношкол и университетов</div>
-              </div>
-            </div>
-            <div className="land-trust-badge">
-              <div className="land-trust-icon">🎬</div>
-              <div className="land-trust-text">
-                <div className="land-trust-number">200+</div>
-                <div className="land-trust-label">Проектов ежемесячно</div>
-              </div>
-            </div>
-            <div className="land-trust-badge">
-              <div className="land-trust-icon">👥</div>
-              <div className="land-trust-text">
-                <div className="land-trust-number">1000+</div>
-                <div className="land-trust-label">Активных пользователей</div>
-              </div>
-            </div>
-            <div className="land-trust-badge">
-              <div className="land-trust-icon">⭐</div>
-              <div className="land-trust-text">
-                <div className="land-trust-number">4.9/5</div>
-                <div className="land-trust-label">Рейтинг на всех платформах</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* FOR WHO */}
-      <section className="land-section land-section-alt">
-        <div className="land-section-inner">
-          <div className="land-section-header anim">
-            <h2 className="land-section-title">Для кого SyncHub</h2>
-            <p className="land-section-sub">
-              От студентов до профессиональных студий — есть план для каждого.
-            </p>
-          </div>
-          <div className="land-audience-grid">
-            {AUDIENCES.map((a, i) => (
-              <div className="land-audience-card anim" key={i}>
-                <div className="land-audience-emoji">{a.emoji}</div>
-                <h3 className="land-audience-title">{a.title}</h3>
-                <ul className="land-audience-list">
-                  {a.points.map((p, j) => (
-                    <li key={j}>{p}</li>
-                  ))}
-                </ul>
+          <h2 className="land-section-title anim">Почему выбирают SyncHub</h2>
+          <div className="land-benefits-list anim">
+            {BENEFITS.map((b, i) => (
+              <div className="land-benefit-item" key={i}>
+                <span className="land-benefit-item-num">{b.num}</span>
+                <div>
+                  <h3 className="land-benefit-item-title">{b.title}</h3>
+                  <p className="land-benefit-item-desc">{b.desc}</p>
+                </div>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* COMPARISON */}
-      <section className="land-section land-section-alt">
+      {/* ── 05 COMPARISON ── */}
+      <section className="land-section land-section-dark">
         <div className="land-section-inner">
-          <div className="land-section-header anim">
-            <h2 className="land-section-title">SyncHub vs альтернативы</h2>
-            <p className="land-section-sub">
-              Cerebro и StudioBinder — мощные инструменты, но они дорогие, не адаптированы под российские реалии
-              и не покрывают визажистов и костюмеров.
-            </p>
+          <div className="land-eyebrow anim">
+            <span className="land-eyebrow-num">05</span>
+            <span className="land-eyebrow-label">Сравнение</span>
           </div>
+          <h2 className="land-section-title anim">SyncHub vs альтернативы</h2>
           <div className="land-cmp-wrap anim">
             <table className="land-cmp-table">
               <thead>
@@ -578,25 +378,24 @@ const Landing: React.FC = () => {
         </div>
       </section>
 
-      {/* TESTIMONIALS */}
+      {/* ── 06 TESTIMONIALS ── */}
       <section className="land-section">
         <div className="land-section-inner">
-          <div className="land-section-header anim">
-            <h2 className="land-section-title">Что говорят пользователи</h2>
-            <p className="land-section-sub">
-              Реальные отзывы режиссёров, монтажеров и продюсеров.
-            </p>
+          <div className="land-eyebrow anim">
+            <span className="land-eyebrow-num">06</span>
+            <span className="land-eyebrow-label">Отзывы</span>
           </div>
-          <div className="land-testimonials-grid">
+          <h2 className="land-section-title anim">Что говорят пользователи</h2>
+          <div className="land-quotes-grid anim">
             {TESTIMONIALS.map((t, i) => (
-              <div className="land-testimonial-card anim" key={i}>
-                <div className="land-testimonial-stars">⭐⭐⭐⭐⭐</div>
-                <p className="land-testimonial-text">"{t.text}"</p>
-                <div className="land-testimonial-author">
-                  <div className="land-testimonial-avatar">{t.author.charAt(0)}</div>
-                  <div className="land-testimonial-info">
-                    <div className="land-testimonial-name">{t.author}</div>
-                    <div className="land-testimonial-role">{t.role}</div>
+              <div className="land-quote-card" key={i}>
+                <div className="land-quote-mark">"</div>
+                <p className="land-quote-text">{t.text}</p>
+                <div className="land-quote-footer">
+                  <div className="land-quote-avatar">{t.author.charAt(0)}</div>
+                  <div>
+                    <div className="land-quote-name">{t.author}</div>
+                    <div className="land-quote-role">{t.role}</div>
                   </div>
                 </div>
               </div>
@@ -605,12 +404,14 @@ const Landing: React.FC = () => {
         </div>
       </section>
 
-      {/* FAQ */}
-      <section className="land-section">
+      {/* ── 07 FAQ ── */}
+      <section className="land-section land-section-dark">
         <div className="land-section-inner">
-          <div className="land-section-header anim">
-            <h2 className="land-section-title">Частые вопросы</h2>
+          <div className="land-eyebrow anim">
+            <span className="land-eyebrow-num">07</span>
+            <span className="land-eyebrow-label">FAQ</span>
           </div>
+          <h2 className="land-section-title anim">Частые вопросы</h2>
           <div className="land-faq anim">
             {FAQS.map((item, i) => (
               <div
@@ -631,41 +432,35 @@ const Landing: React.FC = () => {
         </div>
       </section>
 
-      {/* FINAL CTA */}
-      <section className="land-cta-section anim">
-        <div className="land-cta-inner">
-          <h2 className="land-cta-title">Присоединяйтесь к революции</h2>
-          <p className="land-cta-sub">
-            Лучше один раз попробовать, чем сто раз читать. Создайте аккаунт за 30 секунд, никаких карт.
-          </p>
+      {/* ── CTA ── */}
+      <section className="land-cta-section">
+        <div className="land-cta-slate-bar" aria-hidden="true" />
+        <div className="land-cta-inner anim">
+          <div className="land-cta-label">SCENE 01 · TAKE ∞ · ACTION</div>
+          <h2 className="land-cta-title">Начните прямо сейчас</h2>
+          <p className="land-cta-sub">30 секунд на регистрацию. Никаких карт, никаких ограничений.</p>
           <div className="land-cta-btns">
-            <Link to="/register" className="land-cta-primary land-cta-primary-lg">
-              Создать аккаунт бесплатно →
-            </Link>
-            <div className="land-demo-hint">
-              Или войдите с демо-доступом:&nbsp;
-              <Link to="/login" className="land-demo-link">demo / demo1234</Link>
-            </div>
+            <Link to="/register" className="land-cta-primary land-cta-primary-lg">Создать аккаунт бесплатно →</Link>
+            <Link to="/login" className="land-cta-secondary-sm">Уже есть аккаунт? Войти</Link>
           </div>
         </div>
       </section>
 
-      {/* FOOTER */}
+      {/* ── FOOTER ── */}
       <footer className="land-footer">
         <div className="land-footer-inner">
           <div className="land-footer-brand">
-            <img src={logo} alt="SyncHub" className="land-footer-logo" />
-            <span>SyncHub</span>
+            <img src={logo} alt="SyncHub" className="land-logo" style={{ width: 20, filter: 'invert(1) brightness(0.5)' }} />
+            SyncHub
           </div>
+          <div className="land-footer-copy">© 2026 SyncHub. Дипломный проект.</div>
           <div className="land-footer-links">
-            <Link to="/login">Войти</Link>
-            <Link to="/register">Регистрация</Link>
-          </div>
-          <div className="land-footer-copy">
-            © 2026 SyncHub · Дипломный проект
+            <Link to="/login" className="land-footer-link">Войти</Link>
+            <Link to="/register" className="land-footer-link">Регистрация</Link>
           </div>
         </div>
       </footer>
+
     </div>
   )
 }
