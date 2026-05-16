@@ -2915,19 +2915,22 @@
   width: 100%;
   border: 1px solid var(--border-muted);
   border-radius: 8px;
-  background: var(--bg-core-500);
+  background-color: var(--bg-core-500);
+  background-image: var(--select-chevron);
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  background-size: 12px 8px;
   color: var(--text-primary);
-  padding: 6px 10px;
+  padding: 6px 32px 6px 10px;
   font-size: 14px;
   appearance: none;
-  background-image: linear-gradient(45deg, transparent 50%, var(--text-muted) 50%), linear-gradient(135deg, var(--text-muted) 50%, transparent 50%);
-  background-position: calc(100% - 14px) 50%, calc(100% - 8px) 50%;
-  background-size: 5px 5px, 5px 5px;
-  background-repeat: no-repeat;
-  padding-right: 28px;
+  -webkit-appearance: none;
+  cursor: pointer;
+  transition: border-color 0.2s;
 }
 
-.sp-select:focus { outline: none; border-color: var(--accent-primary); }
+.sp-select:hover { border-color: var(--border-strong); }
+.sp-select:focus { outline: none; border-color: var(--accent-primary); box-shadow: 0 0 0 2px rgba(255,255,255,0.05); }
 
 .sp-textarea {
   width: 100%;
@@ -3405,18 +3408,23 @@ tr:last-child .storyboard-row-label {
 /* ─── Body marker status select ────────────────────────────────────────────── */
 .body-marker-status-select {
   appearance: none;
+  -webkit-appearance: none;
   border: 1px solid rgba(255,255,255,0.15);
   border-radius: 6px;
-  padding: 2px 8px;
+  padding: 2px 22px 2px 8px;
   font-size: 11px;
   font-weight: 600;
   cursor: pointer;
-  background: rgba(255,255,255,0.05);
-  color: #fff;
+  background-color: rgba(255,255,255,0.05);
+  background-image: var(--select-chevron);
+  background-repeat: no-repeat;
+  background-position: right 6px center;
+  background-size: 9px 6px;
+  color: var(--text-primary);
   transition: border-color 0.15s;
   margin-left: auto;
 }
-.body-marker-status-select:hover { border-color: rgba(255,255,255,0.35); }
+.body-marker-status-select:hover { border-color: var(--border-strong); }
 .body-marker-status--todo { border-color: #6b7280; color: #9ca3af; }
 .body-marker-status--in_progress { border-color: #2196F3; color: #2196F3; }
 .body-marker-status--ready { border-color: #22c55e; color: #22c55e; }
@@ -3592,13 +3600,18 @@ tr:last-child .storyboard-row-label {
 .manager-task-scene { font-size: 12px; color: var(--text-secondary, #9ca3af); }
 .manager-task-status-select {
   appearance: none;
+  -webkit-appearance: none;
   border: 1px solid;
   border-radius: 6px;
-  padding: 3px 10px;
+  padding: 3px 24px 3px 10px;
   font-size: 11px;
   font-weight: 600;
   cursor: pointer;
-  background: rgba(255,255,255,0.04);
+  background-color: rgba(255,255,255,0.04);
+  background-image: var(--select-chevron);
+  background-repeat: no-repeat;
+  background-position: right 7px center;
+  background-size: 9px 6px;
   margin-left: auto;
   transition: opacity 0.15s;
 }

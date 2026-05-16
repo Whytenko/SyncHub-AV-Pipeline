@@ -46,6 +46,9 @@
   --toast-border: rgba(255, 255, 255, 0.16);
   --toast-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
 
+  /* Select chevron arrow (SVG, dark theme) */
+  --select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 6 5-6' fill='none' stroke='%238a8a8a' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+
   /* Мобильная нижняя навигация */
   --mobile-nav-bg: rgba(0, 0, 0, 0.86);
   --mobile-nav-border: rgba(255, 255, 255, 0.14);
@@ -87,6 +90,9 @@
   --border-soft: #d9d9d9;
   --border-muted: rgba(0, 0, 0, 0.08);
   --border-strong: rgba(0, 0, 0, 0.2);
+
+  /* Select chevron arrow (light theme — darker stroke) */
+  --select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 6 5-6' fill='none' stroke='%23555555' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
 
   --icon-filter: invert(0) brightness(0.2);
   --icon-filter-on-accent: invert(1) brightness(2);
@@ -147,6 +153,48 @@ input, select, textarea {
   color: var(--text-primary);
   background: var(--bg-core-600);
   border: 1px solid var(--border-muted);
+}
+
+/* ── Universal select styling ──────────────────────────────────────────────── */
+select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  border-radius: 8px;
+  padding: 9px 32px 9px 12px;
+  cursor: pointer;
+  background-color: var(--bg-core-600);
+  background-image: var(--select-chevron);
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  background-size: 12px 8px;
+  transition: border-color 0.2s;
+  font-size: 14px;
+}
+
+select::-ms-expand { display: none; }
+
+select:hover { border-color: var(--border-strong); }
+
+select:focus {
+  outline: none;
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.06);
+}
+
+select option {
+  background: var(--bg-core-500);
+  color: var(--text-primary);
+  padding: 8px;
+}
+
+/* Restore arrow when .form-input shorthand resets background-image */
+select.form-input {
+  padding-right: 32px;
+  background-image: var(--select-chevron);
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  background-size: 12px 8px;
 }
 
 .form-input {

@@ -417,7 +417,24 @@
 .dashboard-search-bar { display: flex; gap: 12px; align-items: center; margin-bottom: 20px; }
 .dashboard-search-input { flex: 1; padding: 9px 14px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.05); color: inherit; font-size: 14px; outline: none; transition: border-color 0.15s; }
 .dashboard-search-input:focus { border-color: rgba(255,255,255,0.3); }
-.dashboard-sort-select { padding: 9px 14px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.12); background: rgba(20,20,40,0.9); color: inherit; font-size: 14px; cursor: pointer; }
+.dashboard-sort-select {
+  appearance: none;
+  -webkit-appearance: none;
+  padding: 9px 36px 9px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--border-muted);
+  background-color: var(--bg-core-600);
+  background-image: var(--select-chevron);
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 12px 8px;
+  color: var(--text-primary);
+  font-size: 14px;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+.dashboard-sort-select:hover { border-color: var(--border-strong); }
+.dashboard-sort-select:focus { outline: none; border-color: var(--accent-primary); }
 
 /* Deadline badges */
 .deadline-badge { display: inline-block; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 5px; margin-left: 8px; }
