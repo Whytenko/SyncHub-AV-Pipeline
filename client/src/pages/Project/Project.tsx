@@ -1209,63 +1209,50 @@ const ProjectPage: React.FC = () => {
       })()}
 
       <div className="timeline-section">
-        <div className="timeline-controls">
-          <button className="play-btn" onClick={handlePlayPause}>
+        {/* ── Toolbar row: controls + scrub bar + actions ── */}
+        <div className="timeline-toolbar">
+          <button className="play-btn" onClick={handlePlayPause} title={isPlaying ? t('Пауза') : t('Воспроизвести')}>
             <img
               src={isPlaying ? PauseIcon : PlayIcon}
               alt={isPlaying ? t('Пауза') : t('Воспроизвести')}
               className="play-icon"
             />
           </button>
+
           <span className="time-display">
-            {formatTime(currentTime)} / {formatTime(timelineDuration)}
+            {formatTime(currentTime)}<span className="time-sep"> / </span>{formatTime(timelineDuration)}
           </span>
 
-          <div className="markers-filter">
-            <label className="filter-checkbox">
-              <input
-                type="checkbox"
-                checked={showAllMarkers}
-                onChange={(e) => setShowAllMarkers(e.target.checked)}
-              />
-              <span>{t('Показать все маркеры')}</span>
-            </label>
-          </div>
-          <button className="print-report-btn no-print" onClick={handlePrintReport} title={t('Экспорт в PDF')}>
-            🖨 {t('PDF')}
-          </button>
-        </div>
-
-        <div className="timeline-container">
-          <div className="timeline-bar" ref={timelineBarRef}>
-            {filteredMarkers.map((marker) => (
+          {/* Scrub track — flex: 1 */}
+          <div className="timeline-track" style={{ '--tl-progress': `${(currentTime / timelineDuration) * 100}%` } as React.CSSProperties}>
+            <div className="timeline-bar" ref={timelineBarRef}>
+              {filteredMarkers.map((marker) => (
+                <div
+                  key={marker.timelineKey}
+                  className="timeline-marker"
+                  style={{
+                    left: `${(Math.min(marker.time, timelineDuration) / timelineDuration) * 100}%`,
+                    backgroundColor: marker.color
+                  }}
+                  title={`${marker.title} (${marker.user}) — ${tabNames[marker.tabId]}${marker.comment ? ` • ${marker.comment}` : ''}`}
+                  onPointerDown={(event) => event.stopPropagation()}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    handleOpenTimelineMarkerDetails(marker);
+                  }}
+                >
+                  <img src={resolveMarkerIcon(marker)} alt={marker.user} className="marker-icon" />
+                </div>
+              ))}
               <div
-                key={marker.timelineKey}
-                className="timeline-marker"
-                style={{
-                  left: `${(Math.min(marker.time, timelineDuration) / timelineDuration) * 100}%`,
-                  backgroundColor: marker.color
-                }}
-                title={`${marker.title} (${marker.user}) - ${tabNames[marker.tabId]}${marker.comment ? ` • ${marker.comment}` : ''}`}
-                onPointerDown={(event) => event.stopPropagation()}
-                onClick={(event) => {
-                  event.stopPropagation();
-                  handleOpenTimelineMarkerDetails(marker);
-                }}
-              >
-                <img src={resolveMarkerIcon(marker)} alt={marker.user} className="marker-icon" />
-              </div>
-            ))}
-
-            <div
-              className={`timeline-cursor ${isTimelineDragging ? 'dragging' : ''}`}
-              style={{ left: `${(currentTime / timelineDuration) * 100}%` }}
-              onPointerDown={handleTimelineScrubStart}
-              onPointerMove={handleTimelineScrubMove}
-              onPointerUp={handleTimelineScrubEnd}
-              onPointerCancel={handleTimelineScrubEnd}
-            />
-
+                className={`timeline-cursor ${isTimelineDragging ? 'dragging' : ''}`}
+                style={{ left: `${(currentTime / timelineDuration) * 100}%` }}
+                onPointerDown={handleTimelineScrubStart}
+                onPointerMove={handleTimelineScrubMove}
+                onPointerUp={handleTimelineScrubEnd}
+                onPointerCancel={handleTimelineScrubEnd}
+              />
+            </div>
             <div
               className="timeline-click-area"
               onPointerDown={handleTimelineScrubStart}
@@ -1275,35 +1262,41 @@ const ProjectPage: React.FC = () => {
             />
           </div>
 
-          <div className="timeline-markers-labels">
-            {timelineLabels.map((time) => (
-              <div key={time} className="timeline-label">
-                {formatTime(time)}
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="timeline-footer">
+          {/* Right-side action buttons */}
           <button
-            className="add-marker-btn"
-            onClick={() => {
-              setMarkerTitle('');
-              setMarkerComment('');
-              setShowMarkerModal(true);
-            }}
+            className="tl-action-btn"
+            onClick={() => { setMarkerTitle(''); setMarkerComment(''); setShowMarkerModal(true); }}
+            title={t('Добавить маркер для {tab}', { tab: t(tabNames[activeTab]) })}
           >
-            <img src={AddMarkerIcon} alt={t('Добавить маркер')} className="add-marker-icon" />
-            {t('Добавить маркер для {tab}', { tab: t(tabNames[activeTab]) })}
+            <img src={AddMarkerIcon} alt="" className="tl-action-icon" />
           </button>
 
-          <div className="markers-legend">
-            <div className="legend-title">{t('Легенда:')}</div>
+          <button
+            className={`tl-action-btn${showAllMarkers ? ' tl-action-btn--active' : ''}`}
+            onClick={() => setShowAllMarkers(v => !v)}
+            title={showAllMarkers ? t('Только текущая вкладка') : t('Показать все маркеры')}
+          >
+            <span className="tl-action-label">{showAllMarkers ? '⊞' : '⊟'}</span>
+          </button>
+
+          <button className="tl-action-btn no-print" onClick={handlePrintReport} title={t('Экспорт в PDF')}>
+            <span className="tl-action-label">PDF</span>
+          </button>
+        </div>
+
+        {/* ── Footer row: time labels + mini legend ── */}
+        <div className="timeline-footer-compact">
+          <div className="timeline-markers-labels">
+            {timelineLabels.map((time) => (
+              <div key={time} className="timeline-label">{formatTime(time)}</div>
+            ))}
+          </div>
+          <div className="timeline-legend-mini">
             {(Object.keys(tabNames) as TabType[]).map((tabId) => (
-              <div key={tabId} className="legend-item">
-                <div className="legend-color" style={{ backgroundColor: tabColors[tabId] }} />
-                <span>{t(tabNames[tabId])}</span>
-              </div>
+              <span key={tabId} className="tl-legend-item" title={t(tabNames[tabId])}>
+                <span className="tl-legend-dot" style={{ background: tabColors[tabId] }} />
+                {t(tabNames[tabId]).slice(0, 3)}
+              </span>
             ))}
           </div>
         </div>
