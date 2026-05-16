@@ -2,6 +2,7 @@
 
 .project-page {
   height: 100%;
+  min-height: 0;
   background: var(--bg-core-800);
   color: var(--text-primary);
   width: 100%;
