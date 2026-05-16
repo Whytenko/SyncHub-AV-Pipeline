@@ -1,4 +1,20 @@
-export type TabType = 'edit' | 'script' | 'director' | 'costumes' | 'makeup' | 'sound';
+export type TabType = 'edit' | 'script' | 'director' | 'costumes' | 'makeup' | 'sound' | 'manager';
+
+export type TaskStatus = 'todo' | 'in_progress' | 'review' | 'approved' | 'changes' | 'blocked';
+export type TaskPriority = 'low' | 'medium' | 'high' | 'critical';
+
+export interface Task {
+  id: string;
+  title: string;
+  description: string;
+  status: TaskStatus;
+  priority: TaskPriority;
+  department: TabType;
+  assignee?: string;
+  sceneRef?: string;
+  createdAt: string;
+  updatedAt: string;
+}
 
 export interface User {
   id: string;
@@ -56,6 +72,7 @@ export interface BodyMarker {
   color: string;
   tabId: TabType;
   personId?: number;
+  status?: 'todo' | 'in_progress' | 'ready' | 'approved';
 }
 
 export interface BodySilhouette {
@@ -159,6 +176,7 @@ export interface StoryboardCell {
   description: string;
   imageUrl: string;
   shotType: string;
+  duration?: number;
 }
 
 export interface StoryboardGrid {
@@ -188,6 +206,7 @@ export interface Project {
   comments: ProjectComment[];
   scriptParams?: ScriptParams;
   storyboardGrid?: StoryboardGrid;
+  tasks?: Task[];
 }
 
 export interface ProjectSummary {

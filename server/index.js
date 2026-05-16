@@ -128,7 +128,7 @@ const normalizeTimelineDuration = (value) => {
   return Math.max(1, Math.floor(parsed));
 };
 
-const PROJECT_TAB_IDS = new Set(['edit', 'script', 'director', 'costumes', 'makeup', 'sound']);
+const PROJECT_TAB_IDS = new Set(['edit', 'script', 'director', 'costumes', 'makeup', 'sound', 'manager']);
 const MEDIA_TYPES = new Set(['audio', 'video', 'other']);
 
 const isObjectRecord = (value) => value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -306,6 +306,11 @@ const validateProjectPatch = (payload) => {
       }
       const personId = hasOwn(marker, 'personId') ? toPositiveInt(marker.personId) : null;
       if (hasOwn(marker, 'personId') && !personId) return { error: 'Некорректный personId body-маркера' };
+      const BODY_MARKER_STATUSES = new Set(['todo', 'in_progress', 'ready', 'approved']);
+      const markerStatus = hasOwn(marker, 'status') ? marker.status : undefined;
+      if (markerStatus !== undefined && !BODY_MARKER_STATUSES.has(markerStatus)) {
+        return { error: 'Некорректный status body-маркера' };
+      }
       normalizedBodyMarkers.push({
         id,
         time: markerTime,
@@ -318,7 +323,8 @@ const validateProjectPatch = (payload) => {
         comments: normalizedComments,
         color: marker.color,
         tabId: marker.tabId,
-        ...(personId ? { personId } : {})
+        ...(personId ? { personId } : {}),
+        ...(markerStatus ? { status: markerStatus } : {})
       });
     }
     patch.bodyMarkers = normalizedBodyMarkers;
@@ -444,6 +450,38 @@ const validateProjectPatch = (payload) => {
       return { error: 'Некорректный формат storyboardGrid' };
     }
     patch.storyboardGrid = payload.storyboardGrid;
+  }
+
+  if (hasOwn(payload, 'tasks')) {
+    if (!Array.isArray(payload.tasks)) {
+      return { error: 'Задачи должны быть массивом' };
+    }
+    const TASK_STATUSES = new Set(['todo', 'in_progress', 'review', 'approved', 'changes', 'blocked']);
+    const TASK_PRIORITIES = new Set(['low', 'medium', 'high', 'critical']);
+    const normalizedTasks = [];
+    for (const task of payload.tasks) {
+      if (!isObjectRecord(task)) return { error: 'Некорректный формат задачи' };
+      if (typeof task.id !== 'string' || !task.id) return { error: 'Некорректный id задачи' };
+      if (typeof task.title !== 'string' || !task.title.trim()) return { error: 'Некорректный title задачи' };
+      if (!TASK_STATUSES.has(task.status)) return { error: 'Некорректный status задачи' };
+      if (!TASK_PRIORITIES.has(task.priority)) return { error: 'Некорректный priority задачи' };
+      if (typeof task.department !== 'string' || !PROJECT_TAB_IDS.has(task.department)) {
+        return { error: 'Некорректный department задачи' };
+      }
+      normalizedTasks.push({
+        id: task.id,
+        title: task.title.trim().slice(0, 200),
+        description: typeof task.description === 'string' ? task.description.slice(0, 1000) : '',
+        status: task.status,
+        priority: task.priority,
+        department: task.department,
+        assignee: typeof task.assignee === 'string' ? task.assignee : '',
+        sceneRef: typeof task.sceneRef === 'string' ? task.sceneRef : '',
+        createdAt: typeof task.createdAt === 'string' ? task.createdAt : nowISO(),
+        updatedAt: nowISO()
+      });
+    }
+    patch.tasks = normalizedTasks;
   }
 
   return { patch };

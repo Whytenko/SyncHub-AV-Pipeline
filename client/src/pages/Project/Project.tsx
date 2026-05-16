@@ -18,7 +18,10 @@ import type {
   ScriptParams,
   StoryboardCell,
   StoryboardGrid,
-  TabType
+  TabType,
+  Task,
+  TaskStatus,
+  TaskPriority
 } from '../../types';
 
 // Импорт иконок
@@ -40,6 +43,7 @@ import CostumesIcon from '../assets/icons/costumes.svg';
 import HumanSilhouette from '../assets/icons/human.svg';
 import FaceSilhouette from '../assets/icons/face.svg';
 import ActionIcon from '../assets/icons/action.svg';
+import ManagerIcon from '../assets/icons/edits.svg';
 
 const tabColors: Record<TabType, string> = {
   script: '#9C27B0',
@@ -47,7 +51,8 @@ const tabColors: Record<TabType, string> = {
   costumes: '#FF9800',
   makeup: '#E91E63',
   edit: '#FF391A',
-  sound: '#06b6d4'
+  sound: '#06b6d4',
+  manager: '#22c55e'
 };
 
 const tabNames: Record<TabType, string> = {
@@ -56,7 +61,8 @@ const tabNames: Record<TabType, string> = {
   costumes: 'Костюмы',
   makeup: 'Визаж',
   edit: 'Монтаж',
-  sound: 'Звук'
+  sound: 'Звук',
+  manager: 'Менеджер'
 };
 
 const mobileTabs: Array<{ id: TabType; label: string; icon: string }> = [
@@ -65,7 +71,8 @@ const mobileTabs: Array<{ id: TabType; label: string; icon: string }> = [
   { id: 'costumes', label: 'Костюмер', icon: CostumesIcon },
   { id: 'makeup', label: 'Визажист', icon: MakeupIcon },
   { id: 'edit', label: 'Монтажер', icon: ActionIcon },
-  { id: 'sound', label: 'Звукорежиссёр', icon: AudioIcon }
+  { id: 'sound', label: 'Звукорежиссёр', icon: AudioIcon },
+  { id: 'manager', label: 'Менеджер', icon: ManagerIcon }
 ];
 
 const mobileTabAriaNames: Record<TabType, string> = {
@@ -74,7 +81,8 @@ const mobileTabAriaNames: Record<TabType, string> = {
   costumes: 'Costumes',
   makeup: 'Makeup',
   edit: 'Action',
-  sound: 'Sound'
+  sound: 'Sound',
+  manager: 'Manager'
 };
 
 const iconMap: Record<string, string> = {
@@ -83,7 +91,8 @@ const iconMap: Record<string, string> = {
   makeup: MakeupIcon,
   costumes: CostumesIcon,
   edit: MarkerIcon,
-  sound: AudioIcon
+  sound: AudioIcon,
+  manager: ManagerIcon
 };
 
 const formatTime = (seconds: number) => {
@@ -254,6 +263,19 @@ const ProjectPage: React.FC = () => {
   } | null>(null);
   const [showProjectSettings, setShowProjectSettings] = useState(false);
   const [projectDraft, setProjectDraft] = useState({ name: '', description: '', deadline: '' });
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
+  const [savedAt, setSavedAt] = useState<Date | null>(null);
+
+  // Tasks
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [taskFilterStatus, setTaskFilterStatus] = useState<TaskStatus | 'all'>('all');
+  const [taskFilterDept, setTaskFilterDept] = useState<TabType | 'all'>('all');
+  const [dragTaskId, setDragTaskId] = useState<string | null>(null);
+  const [showTaskModal, setShowTaskModal] = useState(false);
+  const [taskDraft, setTaskDraft] = useState<{ title: string; description: string; status: TaskStatus; priority: TaskPriority; department: TabType; assignee: string; sceneRef: string }>({
+    title: '', description: '', status: 'todo', priority: 'medium', department: 'edit', assignee: '', sceneRef: ''
+  });
+  const [taskEditId, setTaskEditId] = useState<string | null>(null);
 
   // Script params
   const scriptFileInputRef = useRef<HTMLInputElement>(null);
@@ -336,6 +358,7 @@ const ProjectPage: React.FC = () => {
     setStoryboardGridLocal(project.storyboardGrid
       ? (project.storyboardGrid as StoryboardGrid)
       : defaultStoryboardGrid);
+    setTasks(Array.isArray(project.tasks) ? project.tasks : []);
   }, [project?.id]);
 
   useEffect(() => {
@@ -355,14 +378,46 @@ const ProjectPage: React.FC = () => {
     setCurrentTime((prev) => Math.min(prev, nextDuration));
   }, [project?.timelineDuration]);
 
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      const isInput = e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement || (e.target as HTMLElement)?.isContentEditable;
+      if (e.key === 'Escape') {
+        setShowTaskModal(false);
+        setShowMarkerModal(false);
+        setShowCommentModal(false);
+        setCellEditorOpen(false);
+        setShowBodyMarkerModal(false);
+        setShowProjectSettings(false);
+        setShowMediaModal(false);
+        setShowDocModal(false);
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key === 's' && !isInput) {
+        e.preventDefault();
+        if (directorNotes) saveProject({ directorNotes } as Partial<Project>);
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key === 'm' && !isInput) {
+        e.preventDefault();
+        setShowMarkerModal(true);
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [directorNotes, project]);
+
   const saveProject = async (patch: Partial<Project>) => {
     if (!project) return;
+    setSaveStatus('saving');
     try {
       const response = await projectsApi.update(project.id, patch);
       const normalizedProject = normalizeProjectData(response.project);
       setProject(normalizedProject);
+      setSaveStatus('saved');
+      setSavedAt(new Date());
+      setTimeout(() => setSaveStatus('idle'), 3000);
       return normalizedProject;
     } catch (err) {
+      setSaveStatus('idle');
       const message = err instanceof Error ? err.message : t('Не удалось сохранить изменения');
       showToast(message, 'error');
     }
@@ -611,6 +666,45 @@ const ProjectPage: React.FC = () => {
   const saveStoryboardGrid = async (grid: StoryboardGrid) => {
     setStoryboardGridLocal(grid);
     await saveProject({ storyboardGrid: grid } as Partial<Project>);
+  };
+
+  const saveTasks = async (newTasks: Task[]) => {
+    setTasks(newTasks);
+    await saveProject({ tasks: newTasks } as Partial<Project>);
+  };
+
+  const handleOpenNewTask = () => {
+    setTaskDraft({ title: '', description: '', status: 'todo', priority: 'medium', department: 'edit', assignee: '', sceneRef: '' });
+    setTaskEditId(null);
+    setShowTaskModal(true);
+  };
+
+  const handleOpenEditTask = (task: Task) => {
+    setTaskDraft({ title: task.title, description: task.description, status: task.status, priority: task.priority, department: task.department, assignee: task.assignee || '', sceneRef: task.sceneRef || '' });
+    setTaskEditId(task.id);
+    setShowTaskModal(true);
+  };
+
+  const handleSaveTask = async () => {
+    if (!taskDraft.title.trim()) return;
+    const now = new Date().toISOString();
+    if (taskEditId) {
+      const updated = tasks.map(t => t.id === taskEditId ? { ...t, ...taskDraft, updatedAt: now } : t);
+      await saveTasks(updated);
+    } else {
+      const newTask: Task = { id: `task_${Date.now()}`, ...taskDraft, createdAt: now, updatedAt: now };
+      await saveTasks([...tasks, newTask]);
+    }
+    setShowTaskModal(false);
+  };
+
+  const handleDeleteTask = async (taskId: string) => {
+    await saveTasks(tasks.filter(t => t.id !== taskId));
+  };
+
+  const handleTaskStatusChange = async (taskId: string, newStatus: TaskStatus) => {
+    const now = new Date().toISOString();
+    await saveTasks(tasks.map(t => t.id === taskId ? { ...t, status: newStatus, updatedAt: now } : t));
   };
 
   const handleAddStoryboardRow = async () => {
@@ -964,6 +1058,10 @@ const ProjectPage: React.FC = () => {
     showToast(t('Документ добавлен'), 'success');
   };
 
+  const handlePrintReport = () => {
+    window.print();
+  };
+
   const handleExport = async () => {
     if (!project) return;
     try {
@@ -1039,7 +1137,7 @@ const ProjectPage: React.FC = () => {
         acc[comment.tabId] = [...(acc[comment.tabId] || []), comment];
         return acc;
       },
-      { edit: [], script: [], director: [], costumes: [], makeup: [], sound: [] }
+      { edit: [], script: [], director: [], costumes: [], makeup: [], sound: [], manager: [] }
     );
   }, [comments]);
 
@@ -1081,6 +1179,35 @@ const ProjectPage: React.FC = () => {
         onSettingsClick={() => setShowProjectSettings(true)}
       />
 
+      {/* Save indicator + deadline alert bar */}
+      {(() => {
+        const daysLeft = project.deadline
+          ? Math.ceil((new Date(project.deadline).getTime() - Date.now()) / 86400000)
+          : null;
+        const isOverdue = daysLeft !== null && daysLeft < 0;
+        const isUrgent = daysLeft !== null && daysLeft >= 0 && daysLeft <= 7;
+        return (
+          <div className="project-status-bar">
+            <div className="project-save-indicator">
+              {saveStatus === 'saving' && <span className="save-indicator save-indicator--saving">⟳ {t('Сохранение...')}</span>}
+              {saveStatus === 'saved' && savedAt && (
+                <span className="save-indicator save-indicator--saved">✓ {t('Сохранено')} · {savedAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+              )}
+            </div>
+            {isOverdue && (
+              <div className="project-deadline-alert project-deadline-alert--overdue">
+                ⚠ {t('Дедлайн просрочен на {n} дн.', { n: Math.abs(daysLeft!) })}
+              </div>
+            )}
+            {isUrgent && (
+              <div className="project-deadline-alert project-deadline-alert--urgent">
+                ⏰ {t('До дедлайна {n} дн.', { n: daysLeft })}
+              </div>
+            )}
+          </div>
+        );
+      })()}
+
       <div className="timeline-section">
         <div className="timeline-controls">
           <button className="play-btn" onClick={handlePlayPause}>
@@ -1104,6 +1231,9 @@ const ProjectPage: React.FC = () => {
               <span>{t('Показать все маркеры')}</span>
             </label>
           </div>
+          <button className="print-report-btn no-print" onClick={handlePrintReport} title={t('Экспорт в PDF')}>
+            🖨 {t('PDF')}
+          </button>
         </div>
 
         <div className="timeline-container">
@@ -1181,7 +1311,7 @@ const ProjectPage: React.FC = () => {
 
       <div className="tabs-section">
         <div className="tabs-header">
-          {(['script', 'director', 'costumes', 'makeup', 'edit', 'sound'] as TabType[]).map((tabId) => (
+          {(['script', 'director', 'costumes', 'makeup', 'edit', 'sound', 'manager'] as TabType[]).map((tabId) => (
             <button
               key={tabId}
               className={`tab-btn ${activeTab === tabId ? 'active' : ''}`}
@@ -1194,7 +1324,17 @@ const ProjectPage: React.FC = () => {
             >
               <img src={iconMap[tabId]} alt="" className="tab-btn-icon" />
               {t(tabNames[tabId])}
-              {tabId === 'director' && <span className="notification-badge">2</span>}
+              {tabId !== 'manager' && (() => {
+                const count = (commentsByTab[tabId] || []).filter(c => !c.resolved).length;
+                return count > 0 ? <span className="notification-badge">{count}</span> : null;
+              })()}
+              {tabId === 'manager' && (() => {
+                const blocked = tasks.filter(t => t.status === 'blocked').length;
+                const pending = tasks.filter(t => t.status === 'todo' || t.status === 'in_progress').length;
+                if (blocked > 0) return <span className="notification-badge notification-badge--blocked">{blocked}</span>;
+                if (pending > 0) return <span className="notification-badge notification-badge--pending">{pending}</span>;
+                return null;
+              })()}
             </button>
           ))}
         </div>
@@ -1532,6 +1672,7 @@ const ProjectPage: React.FC = () => {
                                     : <div className="storyboard-cell-add">+</div>}
                                   {cell?.shotType && <div className="storyboard-cell-type">{cell.shotType}</div>}
                                   {cell?.description && <div className="storyboard-cell-desc">{cell.description}</div>}
+                                  {cell?.duration != null && cell.duration > 0 && <div className="storyboard-cell-dur">{cell.duration}с</div>}
                                 </td>
                               );
                             })}
@@ -1539,6 +1680,26 @@ const ProjectPage: React.FC = () => {
                         ))}
                       </tbody>
                     </table>
+                    {(() => {
+                      const allCells = Object.values(storyboardGrid.cells);
+                      const totalSec = allCells.reduce((s, c) => s + (c.duration || 0), 0);
+                      const filled = allCells.filter(c => c.duration && c.duration > 0).length;
+                      const totalCells = storyboardGrid.locationNames.length * storyboardGrid.columnCount;
+                      const overload = totalSec > timelineDuration;
+                      if (filled === 0) return null;
+                      return (
+                        <div className={`storyboard-timing-bar${overload ? ' storyboard-timing-bar--over' : ''}`}>
+                          <span className="storyboard-timing-label">{t('Хронометраж')}:</span>
+                          <span className="storyboard-timing-total" style={{ color: overload ? 'var(--error)' : tabColors.director }}>
+                            {Math.floor(totalSec / 60)}:{String(totalSec % 60).padStart(2, '0')}
+                          </span>
+                          <span className="storyboard-timing-sep">/</span>
+                          <span className="storyboard-timing-max">{Math.floor(timelineDuration / 60)}:{String(timelineDuration % 60).padStart(2, '0')}</span>
+                          {overload && <span className="storyboard-timing-warn">⚠ {t('Превышение')}</span>}
+                          <span className="storyboard-timing-coverage">{filled}/{totalCells} {t('кадров размечено')}</span>
+                        </div>
+                      );
+                    })()}
                   </div>
                 )}
               </div>
@@ -1627,6 +1788,21 @@ const ProjectPage: React.FC = () => {
                           <span className="marker-person-label">
                             {getSilhouetteLabel(getMarkerPersonId(marker))}
                           </span>
+                          <select
+                            className={`body-marker-status-select body-marker-status--${marker.status || 'todo'}`}
+                            value={marker.status || 'todo'}
+                            onClick={(e) => e.stopPropagation()}
+                            onChange={(e) => {
+                              const newStatus = e.target.value as BodyMarker['status'];
+                              const updated = (project?.bodyMarkers || []).map(m => m.id === marker.id ? { ...m, status: newStatus } : m);
+                              saveProject({ bodyMarkers: updated } as Partial<Project>);
+                            }}
+                          >
+                            <option value="todo">{t('Не начато')}</option>
+                            <option value="in_progress">{t('В работе')}</option>
+                            <option value="ready">{t('Готово')}</option>
+                            <option value="approved">{t('Утверждено')}</option>
+                          </select>
                         </div>
                         <div className="marker-description">{marker.description}</div>
                         <div className="marker-images">
@@ -1845,6 +2021,21 @@ const ProjectPage: React.FC = () => {
                           <span className="marker-person-label">
                             {getSilhouetteLabel(getMarkerPersonId(marker))}
                           </span>
+                          <select
+                            className={`body-marker-status-select body-marker-status--${marker.status || 'todo'}`}
+                            value={marker.status || 'todo'}
+                            onClick={(e) => e.stopPropagation()}
+                            onChange={(e) => {
+                              const newStatus = e.target.value as BodyMarker['status'];
+                              const updated = (project?.bodyMarkers || []).map(m => m.id === marker.id ? { ...m, status: newStatus } : m);
+                              saveProject({ bodyMarkers: updated } as Partial<Project>);
+                            }}
+                          >
+                            <option value="todo">{t('Не начато')}</option>
+                            <option value="in_progress">{t('В работе')}</option>
+                            <option value="ready">{t('Готово')}</option>
+                            <option value="approved">{t('Утверждено')}</option>
+                          </select>
                         </div>
                         <div className="marker-description">{marker.description}</div>
                         <div className="marker-images">
@@ -2028,7 +2219,13 @@ const ProjectPage: React.FC = () => {
                         </div>
                       </button>
                     ))}
-                    {mediaFiles.length === 0 && <div className="empty-state">{t('Медиафайлы отсутствуют.')}</div>}
+                    {mediaFiles.length === 0 && (
+                      <div className="empty-state-rich">
+                        <img src={VideoIcon} alt="" className="empty-state-icon" />
+                        <div className="empty-state-text">{t('Медиафайлов пока нет')}</div>
+                        <button className="add-marker-btn" style={{ marginTop: 8 }} onClick={() => setShowMediaModal(true)}>{t('Добавить файл')}</button>
+                      </div>
+                    )}
                   </div>
                   <button className="upload-btn" onClick={() => setShowMediaModal(true)}>
                     <img src={UploadIcon} alt={t('Загрузить')} className="upload-icon" />
@@ -2125,7 +2322,13 @@ const ProjectPage: React.FC = () => {
                   </div>
                   <p className="sound-hint">{t('Переместите курсор таймлайна на нужную позицию, затем нажмите «Добавить метку».')}</p>
                   {soundMarkers.length === 0 ? (
-                    <div className="empty-state">{t('Звуковых меток пока нет.')}</div>
+                    <div className="empty-state-rich">
+                      <img src={AudioIcon} alt="" className="empty-state-icon" />
+                      <div className="empty-state-text">{t('Звуковых меток пока нет')}</div>
+                      <button className="add-marker-btn" style={{ marginTop: 8 }} onClick={() => setShowMarkerModal(true)}>
+                        {t('Добавить метку')}
+                      </button>
+                    </div>
                   ) : (
                     <div className="sound-markers-list">
                       {soundMarkers.map((marker) => (
@@ -2183,6 +2386,197 @@ const ProjectPage: React.FC = () => {
               </div>
             </div>
           )}
+
+          {activeTab === 'manager' && (() => {
+            const TASK_STATUS_ORDER: TaskStatus[] = ['todo', 'in_progress', 'review', 'approved', 'changes', 'blocked'];
+            const taskStatusLabel: Record<TaskStatus, string> = {
+              todo: t('К выполнению'),
+              in_progress: t('В работе'),
+              review: t('На проверке'),
+              approved: t('Утверждено'),
+              changes: t('Правки'),
+              blocked: t('Заблокировано')
+            };
+            const taskStatusColor: Record<TaskStatus, string> = {
+              todo: '#6b7280',
+              in_progress: '#2196F3',
+              review: '#9C27B0',
+              approved: '#22c55e',
+              changes: '#FF9800',
+              blocked: '#FF391A'
+            };
+            const priorityLabel: Record<TaskPriority, string> = {
+              low: t('Низкий'),
+              medium: t('Средний'),
+              high: t('Высокий'),
+              critical: t('Критический')
+            };
+            const priorityColor: Record<TaskPriority, string> = {
+              low: '#6b7280',
+              medium: '#2196F3',
+              high: '#FF9800',
+              critical: '#FF391A'
+            };
+            const deptNames: Partial<Record<TabType, string>> = {
+              script: t('Сценарий'),
+              director: t('Режиссёр'),
+              costumes: t('Костюмы'),
+              makeup: t('Визаж'),
+              edit: t('Монтаж'),
+              sound: t('Звук')
+            };
+
+            const totalTasks = tasks.length;
+            const byStatus = TASK_STATUS_ORDER.reduce<Record<string, number>>((acc, s) => {
+              acc[s] = tasks.filter(t => t.status === s).length;
+              return acc;
+            }, {});
+
+            const visibleTasks = tasks.filter(task => {
+              if (taskFilterStatus !== 'all' && task.status !== taskFilterStatus) return false;
+              if (taskFilterDept !== 'all' && task.department !== taskFilterDept) return false;
+              return true;
+            });
+
+            const deptTabs: TabType[] = ['script', 'director', 'costumes', 'makeup', 'edit', 'sound'];
+            const healthByDept = deptTabs.map(dep => {
+              const depTasks = tasks.filter(t => t.department === dep);
+              const done = depTasks.filter(t => t.status === 'approved').length;
+              const blocked = depTasks.filter(t => t.status === 'blocked').length;
+              const pct = depTasks.length > 0 ? Math.round((done / depTasks.length) * 100) : 0;
+              return { dep, total: depTasks.length, done, blocked, pct };
+            });
+
+            return (
+              <div className="tab-content manager-tab">
+                <div className="manager-layout">
+                  {/* Health dashboard */}
+                  <div className="manager-health-section">
+                    <div className="manager-section-title">{t('Здоровье проекта')}</div>
+                    <div className="manager-health-grid">
+                      {healthByDept.map(({ dep, total, done, blocked, pct }) => (
+                        <div key={dep} className={`manager-health-card${blocked > 0 ? ' manager-health-card--blocked' : ''}`}>
+                          <div className="manager-health-card-head">
+                            <img src={iconMap[dep]} alt="" className="manager-health-icon" style={{ filter: `drop-shadow(0 0 3px ${tabColors[dep]})` }} />
+                            <span className="manager-health-dept" style={{ color: tabColors[dep] }}>{deptNames[dep]}</span>
+                            {blocked > 0 && <span className="manager-health-blocked-badge">⛔ {blocked}</span>}
+                          </div>
+                          <div className="manager-health-bar-wrap">
+                            <div className="manager-health-bar" style={{ width: `${pct}%`, background: blocked > 0 ? '#FF391A' : tabColors[dep] }} />
+                          </div>
+                          <div className="manager-health-stats">
+                            <span>{done}/{total} {t('готово')}</span>
+                            <span>{pct}%</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Status summary */}
+                  <div className="manager-status-row">
+                    {TASK_STATUS_ORDER.map(s => (
+                      <div key={s} className="manager-status-pill" style={{ borderColor: taskStatusColor[s] }}>
+                        <span className="manager-status-count" style={{ color: taskStatusColor[s] }}>{byStatus[s] || 0}</span>
+                        <span className="manager-status-name">{taskStatusLabel[s]}</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Task board */}
+                  <div className="manager-task-head">
+                    <div className="manager-section-title">{t('Задачи')} ({visibleTasks.length}/{totalTasks})</div>
+                    <button className="add-marker-btn" onClick={handleOpenNewTask}>
+                      <img src={AddMarkerIcon} alt="" className="add-marker-icon" />
+                      {t('Новая задача')}
+                    </button>
+                  </div>
+
+                  {/* Filters */}
+                  <div className="manager-filters">
+                    <div className="manager-filter-group">
+                      <button className={`manager-filter-chip${taskFilterStatus === 'all' ? ' manager-filter-chip--active' : ''}`} onClick={() => setTaskFilterStatus('all')}>{t('Все')}</button>
+                      {TASK_STATUS_ORDER.map(s => (
+                        <button key={s} className={`manager-filter-chip${taskFilterStatus === s ? ' manager-filter-chip--active' : ''}`} style={taskFilterStatus === s ? { borderColor: taskStatusColor[s], color: taskStatusColor[s] } : {}} onClick={() => setTaskFilterStatus(taskFilterStatus === s ? 'all' : s)}>
+                          {taskStatusLabel[s]} {byStatus[s] > 0 && <span className="manager-filter-count">{byStatus[s]}</span>}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="manager-filter-group">
+                      <button className={`manager-filter-chip${taskFilterDept === 'all' ? ' manager-filter-chip--active' : ''}`} onClick={() => setTaskFilterDept('all')}>{t('Все отделы')}</button>
+                      {(Object.keys(deptNames) as TabType[]).map(dep => (
+                        <button key={dep} className={`manager-filter-chip${taskFilterDept === dep ? ' manager-filter-chip--active' : ''}`} style={taskFilterDept === dep ? { borderColor: tabColors[dep], color: tabColors[dep] } : {}} onClick={() => setTaskFilterDept(taskFilterDept === dep ? 'all' : dep)}>
+                          {deptNames[dep]}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {tasks.length === 0 ? (
+                    <div className="manager-empty-state">
+                      <img src={ManagerIcon} alt="" style={{ width: 48, opacity: 0.3, marginBottom: 12 }} />
+                      <div>{t('Задач пока нет')}</div>
+                      <button className="add-marker-btn" onClick={handleOpenNewTask}>{t('Создать первую задачу')}</button>
+                    </div>
+                  ) : visibleTasks.length === 0 ? (
+                    <div className="empty-state">{t('Нет задач по выбранным фильтрам')}</div>
+                  ) : (
+                    <div className="manager-task-list">
+                      {visibleTasks.map(task => (
+                        <div
+                          key={task.id}
+                          className={`manager-task-card${task.status === 'blocked' ? ' manager-task-card--blocked' : ''}${dragTaskId === task.id ? ' manager-task-card--dragging' : ''}`}
+                          draggable
+                          onDragStart={() => setDragTaskId(task.id)}
+                          onDragEnd={() => setDragTaskId(null)}
+                          onDragOver={e => e.preventDefault()}
+                          onDrop={async () => {
+                            if (!dragTaskId || dragTaskId === task.id) return;
+                            const from = tasks.findIndex(t => t.id === dragTaskId);
+                            const to = tasks.findIndex(t => t.id === task.id);
+                            if (from === -1 || to === -1) return;
+                            const reordered = [...tasks];
+                            const [moved] = reordered.splice(from, 1);
+                            reordered.splice(to, 0, moved);
+                            await saveTasks(reordered);
+                            setDragTaskId(null);
+                          }}
+                        >
+                          <div className="manager-task-card-top">
+                            <span className="manager-task-priority-dot" style={{ background: priorityColor[task.priority] }} title={priorityLabel[task.priority]} />
+                            <span className="manager-task-title">{task.title}</span>
+                            <div className="manager-task-actions">
+                              <button className="edit-marker-btn" onClick={() => handleOpenEditTask(task)} title={t('Редактировать')}>✏️</button>
+                              <button className="edit-marker-btn" style={{ color: 'var(--error)' }} onClick={() => handleDeleteTask(task.id)} title={t('Удалить')}>🗑</button>
+                            </div>
+                          </div>
+                          {task.description && <div className="manager-task-desc">{task.description}</div>}
+                          <div className="manager-task-meta">
+                            <span className="manager-task-dept" style={{ color: tabColors[task.department] || '#888' }}>
+                              {deptNames[task.department] || task.department}
+                            </span>
+                            {task.assignee && <span className="manager-task-assignee">👤 {task.assignee}</span>}
+                            {task.sceneRef && <span className="manager-task-scene">🎬 {task.sceneRef}</span>}
+                            <select
+                              className={`manager-task-status-select manager-task-status--${task.status}`}
+                              value={task.status}
+                              onClick={e => e.stopPropagation()}
+                              onChange={e => handleTaskStatusChange(task.id, e.target.value as TaskStatus)}
+                              style={{ borderColor: taskStatusColor[task.status], color: taskStatusColor[task.status] }}
+                            >
+                              {TASK_STATUS_ORDER.map(s => (
+                                <option key={s} value={s}>{taskStatusLabel[s]}</option>
+                              ))}
+                            </select>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })()}
         </div>
       </div>
 
@@ -2203,6 +2597,70 @@ const ProjectPage: React.FC = () => {
           </button>
         ))}
       </nav>
+
+      {/* Task modal */}
+      <Modal
+        title={taskEditId ? t('Редактировать задачу') : t('Новая задача')}
+        isOpen={showTaskModal}
+        onClose={() => setShowTaskModal(false)}
+        actions={
+          <>
+            <button className="secondary-btn" onClick={() => setShowTaskModal(false)}>{t('Отмена')}</button>
+            <button className="primary-btn" onClick={handleSaveTask}>{t('Сохранить')}</button>
+          </>
+        }
+      >
+        <input
+          className="form-input"
+          placeholder={t('Название задачи')}
+          value={taskDraft.title}
+          onChange={e => setTaskDraft(prev => ({ ...prev, title: e.target.value }))}
+        />
+        <textarea
+          className="form-input"
+          placeholder={t('Описание (необязательно)')}
+          value={taskDraft.description}
+          onChange={e => setTaskDraft(prev => ({ ...prev, description: e.target.value }))}
+          rows={3}
+        />
+        <div className="form-row-2col">
+          <div>
+            <div className="form-label">{t('Отдел')}</div>
+            <select className="form-input" value={taskDraft.department} onChange={e => setTaskDraft(prev => ({ ...prev, department: e.target.value as TabType }))}>
+              {(['script', 'director', 'costumes', 'makeup', 'edit', 'sound'] as TabType[]).map(dep => (
+                <option key={dep} value={dep}>{tabNames[dep]}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <div className="form-label">{t('Приоритет')}</div>
+            <select className="form-input" value={taskDraft.priority} onChange={e => setTaskDraft(prev => ({ ...prev, priority: e.target.value as TaskPriority }))}>
+              <option value="low">{t('Низкий')}</option>
+              <option value="medium">{t('Средний')}</option>
+              <option value="high">{t('Высокий')}</option>
+              <option value="critical">{t('Критический')}</option>
+            </select>
+          </div>
+        </div>
+        <div className="form-row-2col">
+          <div>
+            <div className="form-label">{t('Статус')}</div>
+            <select className="form-input" value={taskDraft.status} onChange={e => setTaskDraft(prev => ({ ...prev, status: e.target.value as TaskStatus }))}>
+              <option value="todo">{t('К выполнению')}</option>
+              <option value="in_progress">{t('В работе')}</option>
+              <option value="review">{t('На проверке')}</option>
+              <option value="approved">{t('Утверждено')}</option>
+              <option value="changes">{t('Правки')}</option>
+              <option value="blocked">{t('Заблокировано')}</option>
+            </select>
+          </div>
+          <div>
+            <div className="form-label">{t('Исполнитель')}</div>
+            <input className="form-input" placeholder={t('Имя или никнейм')} value={taskDraft.assignee} onChange={e => setTaskDraft(prev => ({ ...prev, assignee: e.target.value }))} />
+          </div>
+        </div>
+        <input className="form-input" placeholder={t('Сцена / тайм-код (необязательно)')} value={taskDraft.sceneRef} onChange={e => setTaskDraft(prev => ({ ...prev, sceneRef: e.target.value }))} />
+      </Modal>
 
       {/* Cell editor modal */}
       <Modal
@@ -2235,6 +2693,18 @@ const ProjectPage: React.FC = () => {
             <option value="">{t('Тип плана...')}</option>
             {[t('Общий план (ОП)'), t('Средний план (СП)'), t('Крупный план (КП)'), t('Деталь (Д)'), t('Субъективная камера'), t('Панорама'), t('Вид сверху'), t('Вид снизу'), t('Движение вперёд (трекинг)')].map(v => <option key={v}>{v}</option>)}
           </select>
+          <div className="cell-editor-duration-row">
+            <label className="cell-editor-duration-label">{t('Длительность кадра, сек')}:</label>
+            <input
+              type="number"
+              className="form-input cell-editor-duration-input"
+              min={0}
+              max={9999}
+              placeholder="0"
+              value={cellEditorDraft.duration ?? ''}
+              onChange={(e) => setCellEditorDraft(prev => ({ ...prev, duration: e.target.value === '' ? undefined : Math.max(0, parseInt(e.target.value) || 0) }))}
+            />
+          </div>
           <textarea
             className="form-input"
             placeholder={t('Описание кадра: действие, персонажи, атмосфера...')}

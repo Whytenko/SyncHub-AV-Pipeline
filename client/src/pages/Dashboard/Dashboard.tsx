@@ -28,6 +28,8 @@ const Dashboard: React.FC = () => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [projectToDelete, setProjectToDelete] = useState<ProjectSummary | null>(null)
   const [deleting, setDeleting] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [sortBy, setSortBy] = useState<'updatedAt' | 'deadline' | 'name'>('updatedAt')
 
   const loadProjects = async () => {
     try {
@@ -67,6 +69,35 @@ const Dashboard: React.FC = () => {
     const locale = language === 'en' ? 'en-US' : language === 'zh' ? 'zh-CN' : 'ru-RU'
     return new Intl.DateTimeFormat(locale).format(new Date(deadline))
   }
+
+  const daysUntilDeadline = (deadline: string | undefined): number | null => {
+    if (!deadline) return null
+    return Math.ceil((new Date(deadline).getTime() - Date.now()) / 86400000)
+  }
+
+  const filteredProjects = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase()
+    let result = projects.filter(p => {
+      if (!q) return true
+      return (
+        p.name.toLowerCase().includes(q) ||
+        (p.description ?? '').toLowerCase().includes(q)
+      )
+    })
+    result = [...result].sort((a, b) => {
+      if (sortBy === 'updatedAt') {
+        return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+      }
+      if (sortBy === 'name') {
+        return a.name.localeCompare(b.name)
+      }
+      // deadline: ascending, nulls last
+      const da = a.deadline ? new Date(a.deadline).getTime() : Infinity
+      const db = b.deadline ? new Date(b.deadline).getTime() : Infinity
+      return da - db
+    })
+    return result
+  }, [projects, searchQuery, sortBy])
 
   const stats = useMemo(() => {
     return {
@@ -132,83 +163,133 @@ const Dashboard: React.FC = () => {
       />
 
       <main className="dashboard-main">
+        <div className="dashboard-search-bar">
+          <input
+            className="dashboard-search-input"
+            placeholder="Поиск по проекту..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+          <select
+            className="dashboard-sort-select"
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value as 'updatedAt' | 'deadline' | 'name')}
+          >
+            <option value="updatedAt">По дате обновления</option>
+            <option value="deadline">По дедлайну</option>
+            <option value="name">По названию</option>
+          </select>
+        </div>
+
         <div className="projects-grid">
           {loading && <div className="empty-state">{t('Загрузка проектов...')}</div>}
           {!loading && projects.length === 0 && (
             <div className="empty-state">{t('Проектов пока нет. Создайте первый!')}</div>
           )}
-          {projects.map(project => (
-            <div
-              key={project.id}
-              className="project-card"
-              onClick={() => navigate(`/project/${project.id}`)}
-            >
-              <div className="project-header">
-                <h3 className="project-name">{project.name}</h3>
-                <span className="project-badge">
-                  {t('Обновлён {value}', { value: formatRelative(project.updatedAt) })}
-                </span>
-              </div>
-              
-              <div className="project-stats">
-                <div className="stat-item">
-                  <span className="stat-icon">
-                    <img src={MembersIcon} alt={t('Участники')} />
-                  </span>
-                  <span className="stat-text" aria-label={t('Участники: {count}', { count: project.members.length })}>
-                    <span className="stat-count">{project.members.length}</span>
-                    <span className="stat-label">{t('участника')}</span>
-                  </span>
-                </div>
-                <div className="stat-item">
-                  <span className="stat-icon">
-                    <img src={VideoIcon} alt={t('Медиафайлы')} />
-                  </span>
-                  <span className="stat-text" aria-label={t('Медиафайлы: {count}', { count: project.mediaCount })}>
-                    <span className="stat-count">{project.mediaCount}</span>
-                    <span className="stat-label">{t('медиафайлов')}</span>
-                  </span>
-                </div>
-                <div className="stat-item">
-                  <span className="stat-icon">
-                    <img src={EditsIcon} alt={t('Правки')} />
-                  </span>
-                  <span className="stat-text" aria-label={t('Новые правки: {count}', { count: project.editsCount })}>
-                    <span className="stat-count">{project.editsCount}</span>
-                    <span className="stat-label">{t('новых правок')}</span>
-                  </span>
-                </div>
-              </div>
+          {!loading && projects.length > 0 && filteredProjects.length === 0 && (
+            <div className="empty-state">Ничего не найдено</div>
+          )}
+          {filteredProjects.map(project => {
+            const days = daysUntilDeadline(project.deadline)
+            const isOverdue = days !== null && days <= 0
+            const isUrgent = days !== null && days > 0 && days <= 7
+            const isWarning = days !== null && days > 7 && days <= 30
+            const cardClass = [
+              'project-card',
+              isOverdue ? 'project-card--overdue' : '',
+              isUrgent ? 'project-card--urgent' : ''
+            ].filter(Boolean).join(' ')
 
-              <div className="project-deadline">
-                <span className="deadline-icon">
-                  <img src={DeadlineIcon} alt={t('Дедлайн')} />
-                </span>
-                <strong>{t('Дедлайн:')}</strong> {formatDeadline(project.deadline)}
-              </div>
+            return (
+              <div
+                key={project.id}
+                className={cardClass}
+                onClick={() => navigate(`/project/${project.id}`)}
+              >
+                <div className="project-header">
+                  <h3 className="project-name">{project.name}</h3>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                    <span className="project-badge">
+                      {t('Обновлён {value}', { value: formatRelative(project.updatedAt) })}
+                    </span>
+                    {isOverdue && (
+                      <span className="deadline-badge deadline-badge--overdue">&#9888; Просрочен</span>
+                    )}
+                    {isUrgent && (
+                      <span className="deadline-badge deadline-badge--urgent">&#9888; Горит</span>
+                    )}
+                  </div>
+                </div>
 
-              <div className="project-actions">
-                <button 
-                  className="open-project-btn"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    navigate(`/project/${project.id}`)
-                  }}
-                >
-                  {t('Открыть проект')}
-                </button>
-                <button 
-                  className="delete-project-btn"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    openDeleteConfirm(project)
-                  }}
-                >
-                  {t('Удалить')}
-                </button>
+                <div className="project-stats">
+                  <div className="stat-item">
+                    <span className="stat-icon">
+                      <img src={MembersIcon} alt={t('Участники')} />
+                    </span>
+                    <span className="stat-text" aria-label={t('Участники: {count}', { count: project.members.length })}>
+                      <span className="stat-count">{project.members.length}</span>
+                      <span className="stat-label">{t('участника')}</span>
+                    </span>
+                  </div>
+                  <div className="stat-item">
+                    <span className="stat-icon">
+                      <img src={VideoIcon} alt={t('Медиафайлы')} />
+                    </span>
+                    <span className="stat-text" aria-label={t('Медиафайлы: {count}', { count: project.mediaCount })}>
+                      <span className="stat-count">{project.mediaCount}</span>
+                      <span className="stat-label">{t('медиафайлов')}</span>
+                    </span>
+                  </div>
+                  <div className="stat-item">
+                    <span className="stat-icon">
+                      <img src={EditsIcon} alt={t('Правки')} />
+                    </span>
+                    <span className="stat-text" aria-label={t('Новые правки: {count}', { count: project.editsCount })}>
+                      <span className="stat-count">{project.editsCount}</span>
+                      <span className="stat-label">{t('новых правок')}</span>
+                    </span>
+                  </div>
+                </div>
+
+                <div className="project-deadline">
+                  <span className="deadline-icon">
+                    <img src={DeadlineIcon} alt={t('Дедлайн')} />
+                  </span>
+                  <strong>{t('Дедлайн:')}</strong> {formatDeadline(project.deadline)}
+                  {isOverdue && (
+                    <span className="deadline-badge deadline-badge--overdue">Просрочен</span>
+                  )}
+                  {isUrgent && days !== null && (
+                    <span className="deadline-badge deadline-badge--urgent">Осталось {days} дн.</span>
+                  )}
+                  {isWarning && days !== null && (
+                    <span className="deadline-badge deadline-badge--normal">Осталось {days} дн.</span>
+                  )}
+                </div>
+
+                <div className="project-actions">
+                  <button
+                    className="open-project-btn"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      navigate(`/project/${project.id}`)
+                    }}
+                  >
+                    {t('Открыть проект')}
+                  </button>
+                  <button
+                    className="delete-project-btn"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      openDeleteConfirm(project)
+                    }}
+                  >
+                    {t('Удалить')}
+                  </button>
+                </div>
               </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
 
         <div className="dashboard-actions">
