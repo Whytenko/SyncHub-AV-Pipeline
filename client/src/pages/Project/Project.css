@@ -225,6 +225,28 @@
   line-height: 1;
 }
 
+/* Inline save indicator inside toolbar */
+.tl-save-indicator {
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.tl-save-indicator--saving { color: #9ca3af; }
+.tl-save-indicator--saved  { color: #22c55e; }
+
+/* Inline deadline badge inside toolbar */
+.tl-deadline-badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 5px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.tl-deadline-badge--urgent  { background: rgba(255,152,0,0.15); color: #FF9800; border: 1px solid rgba(255,152,0,0.3); }
+.tl-deadline-badge--overdue { background: rgba(255,57,26,0.12); color: #FF391A; border: 1px solid rgba(255,57,26,0.3); animation: badgePulse 2s ease-in-out infinite; }
+
 /* ── Footer: time labels + mini legend ───────────────────────────────────────── */
 .timeline-footer-compact {
   display: flex;

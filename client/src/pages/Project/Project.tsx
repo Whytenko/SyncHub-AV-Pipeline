@@ -1179,35 +1179,6 @@ const ProjectPage: React.FC = () => {
         onSettingsClick={() => setShowProjectSettings(true)}
       />
 
-      {/* Save indicator + deadline alert bar */}
-      {(() => {
-        const daysLeft = project.deadline
-          ? Math.ceil((new Date(project.deadline).getTime() - Date.now()) / 86400000)
-          : null;
-        const isOverdue = daysLeft !== null && daysLeft < 0;
-        const isUrgent = daysLeft !== null && daysLeft >= 0 && daysLeft <= 7;
-        return (
-          <div className="project-status-bar">
-            <div className="project-save-indicator">
-              {saveStatus === 'saving' && <span className="save-indicator save-indicator--saving">⟳ {t('Сохранение...')}</span>}
-              {saveStatus === 'saved' && savedAt && (
-                <span className="save-indicator save-indicator--saved">✓ {t('Сохранено')} · {savedAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-              )}
-            </div>
-            {isOverdue && (
-              <div className="project-deadline-alert project-deadline-alert--overdue">
-                ⚠ {t('Дедлайн просрочен на {n} дн.', { n: Math.abs(daysLeft!) })}
-              </div>
-            )}
-            {isUrgent && (
-              <div className="project-deadline-alert project-deadline-alert--urgent">
-                ⏰ {t('До дедлайна {n} дн.', { n: daysLeft })}
-              </div>
-            )}
-          </div>
-        );
-      })()}
-
       <div className="timeline-section">
         {/* ── Toolbar row: controls + scrub bar + actions ── */}
         <div className="timeline-toolbar">
@@ -1222,6 +1193,21 @@ const ProjectPage: React.FC = () => {
           <span className="time-display">
             {formatTime(currentTime)}<span className="time-sep"> / </span>{formatTime(timelineDuration)}
           </span>
+
+          {/* Save indicator — inline, only when active */}
+          {saveStatus === 'saving' && <span className="tl-save-indicator tl-save-indicator--saving">⟳ {t('Сохранение...')}</span>}
+          {saveStatus === 'saved' && savedAt && <span className="tl-save-indicator tl-save-indicator--saved">✓ {t('Сохранено')}</span>}
+
+          {/* Deadline badge — only when urgent/overdue */}
+          {(() => {
+            const daysLeft = project.deadline
+              ? Math.ceil((new Date(project.deadline).getTime() - Date.now()) / 86400000)
+              : null;
+            if (daysLeft === null) return null;
+            if (daysLeft < 0) return <span className="tl-deadline-badge tl-deadline-badge--overdue">⚠ {t('{n} дн. просрочен', { n: Math.abs(daysLeft) })}</span>;
+            if (daysLeft <= 7) return <span className="tl-deadline-badge tl-deadline-badge--urgent">⏰ {t('{n} дн.', { n: daysLeft })}</span>;
+            return null;
+          })()}
 
           {/* Scrub track — flex: 1 */}
           <div className="timeline-track" style={{ '--tl-progress': `${(currentTime / timelineDuration) * 100}%` } as React.CSSProperties}>
