@@ -34,10 +34,10 @@
       "expiresAt": "2026-05-23T21:03:51.164Z"
     },
     {
-      "token": "session_df403853-bd6a-4784-9612-2dd7ca8967d3",
+      "token": "session_6663a323-c5c9-4c71-91b3-e487591f9f8b",
       "userId": "usr_a9407a1c-63fc-4fc9-aa6d-f8ceb2d12717",
-      "createdAt": "2026-04-30T10:19:40.430Z",
-      "expiresAt": "2026-05-30T10:19:40.430Z"
+      "createdAt": "2026-05-16T18:59:54.354Z",
+      "expiresAt": "2026-06-15T18:59:54.353Z"
     }
   ],
   "projects": [
@@ -52,7 +52,7 @@
       "deadline": "2026-11-07",
       "timelineDuration": 205,
       "createdAt": "2026-01-30T08:38:00.006Z",
-      "updatedAt": "2026-01-30T08:38:00.006Z",
+      "updatedAt": "2026-05-16T20:18:11.862Z",
       "scriptText": "СЦЕНА 1\nИНТ. КВАРТИРА - ДЕНЬ\n\nАЛЕКС (30) входит в комнату. Он выглядит уставшим.\n\n[Маркер: Диалог персонажа]\nАЛЕКС\nЯ не думал, что все так сложится...\n\nСОФИЯ (28) сидит на диване, смотрит в окно.\n\nСОФИЯ\nТы всегда так говоришь.",
       "directorNotes": "• Важно передать эмоции персонажа в диалоге\n• Свет должен быть мягким, рассеянным\n• Звук дождя на улице должен быть натуральным",
       "markers": [
@@ -123,6 +123,7 @@
       "bodyMarkers": [
         {
           "id": 1,
+          "time": 0,
           "x": 50,
           "y": 20,
           "title": "Костюм персонажа",
@@ -131,10 +132,13 @@
           "images": [],
           "comments": [],
           "color": "#FF9800",
-          "tabId": "costumes"
+          "tabId": "costumes",
+          "personId": 1,
+          "status": "in_progress"
         },
         {
           "id": 2,
+          "time": 0,
           "x": 50,
           "y": 40,
           "title": "Обувь",
@@ -143,10 +147,12 @@
           "images": [],
           "comments": [],
           "color": "#FF9800",
-          "tabId": "costumes"
+          "tabId": "costumes",
+          "personId": 1
         },
         {
           "id": 3,
+          "time": 0,
           "x": 50,
           "y": 25,
           "title": "Дневной макияж",
@@ -155,7 +161,36 @@
           "images": [],
           "comments": [],
           "color": "#E91E63",
-          "tabId": "makeup"
+          "tabId": "makeup",
+          "personId": 1
+        },
+        {
+          "id": 4,
+          "time": 0,
+          "x": 53.02013422818792,
+          "y": 40.57142857142857,
+          "title": "раз",
+          "description": "пата",
+          "bodyPart": "faceат",
+          "images": [],
+          "comments": [],
+          "color": "#E91E63",
+          "tabId": "makeup",
+          "personId": 2
+        },
+        {
+          "id": 5,
+          "time": 0,
+          "x": 52.013422818791945,
+          "y": 41.14285714285714,
+          "title": "птатпат",
+          "description": "тата",
+          "bodyPart": "face",
+          "images": [],
+          "comments": [],
+          "color": "#E91E63",
+          "tabId": "makeup",
+          "personId": 1
         }
       ],
       "locations": [
@@ -244,6 +279,13 @@
           "type": "video",
           "duration": "0:45",
           "size": "86 MB"
+        },
+        {
+          "id": 5,
+          "name": "пукк",
+          "type": "video",
+          "duration": "21",
+          "size": "3а"
         }
       ],
       "documents": [
@@ -289,7 +331,75 @@
           "timestamp": "1 час назад",
           "resolved": false
         }
-      ]
+      ],
+      "storyboardGrid": {
+        "locationNames": [
+          "Локация 1",
+          "Локация 2",
+          "Локация 3"
+        ],
+        "columnCount": 4,
+        "cells": {
+          "0_0": {
+            "description": "первая сцна ",
+            "imageUrl": "",
+            "shotType": ""
+          }
+        }
+      },
+      "scriptParams": {
+        "scriptFile": null,
+        "actorsCount": 0,
+        "extraActorsCount": 0,
+        "childActorsCount": 0,
+        "animalsCount": 0,
+        "locationsCount": 3,
+        "exteriorScenesCount": 0,
+        "interiorScenesCount": 0,
+        "nightScenesCount": 0,
+        "shootingDaysCount": 0,
+        "totalDurationMin": 90,
+        "propsCount": 0,
+        "costumeSetsCount": 0,
+        "makeupLooksCount": 0,
+        "wigs": false,
+        "prosthetics": false,
+        "vfxShotsCount": 0,
+        "practicalEffectsCount": 0,
+        "stuntsCount": 0,
+        "weaponProps": false,
+        "pyrotechnics": false,
+        "rainScenes": false,
+        "snowScenes": false,
+        "vehiclesCount": 0,
+        "vehicleChases": false,
+        "droneShots": false,
+        "underwaterShots": false,
+        "aerialShots": false,
+        "craneShots": false,
+        "productionFormat": "4K",
+        "aspectRatio": "16:9",
+        "handheldStyle": false,
+        "steadicam": false,
+        "originalMusicTracks": 0,
+        "voiceOverPresent": false,
+        "silentScenes": false,
+        "musicGenre": "",
+        "genre": "",
+        "ageRating": "0+",
+        "targetAudience": "",
+        "dialogLanguage": "Русский",
+        "subtitlesNeeded": false,
+        "weatherDependentDays": 0,
+        "hazardousConditions": false,
+        "internationalShoot": false,
+        "remoteLocations": false,
+        "militaryEquipment": false,
+        "logline": "",
+        "budgetTier": "mid",
+        "colorGrading": "Нейтральная"
+      },
+      "bodySilhouettes": []
     },
     {
       "id": "prj_354c3853-b2a1-4c74-ab25-2c7ae7935dc6",
@@ -302,7 +412,7 @@
       "deadline": "",
       "timelineDuration": 205,
       "createdAt": "2026-04-23T21:04:10.184Z",
-      "updatedAt": "2026-04-23T21:04:10.184Z",
+      "updatedAt": "2026-04-30T22:14:00.293Z",
       "scriptText": "",
       "directorNotes": "",
       "markers": [],
@@ -311,12 +421,108 @@
         {
           "id": 1,
           "name": "Человек 1"
+        },
+        {
+          "id": 2,
+          "name": "Актёр 2"
+        },
+        {
+          "id": 3,
+          "name": "Актёр 3"
+        },
+        {
+          "id": 4,
+          "name": "Актёр 4"
+        },
+        {
+          "id": 5,
+          "name": "Актёр 5"
+        },
+        {
+          "id": 6,
+          "name": "Актёр 6"
         }
       ],
-      "locations": [],
+      "locations": [
+        {
+          "id": 1,
+          "name": "Дом с привидениями",
+          "description": "",
+          "shots": [
+            {
+              "id": 1777585540977,
+              "time": 23,
+              "title": "дом общий план",
+              "description": "",
+              "image": ""
+            }
+          ]
+        }
+      ],
       "mediaFiles": [],
       "documents": [],
-      "comments": []
+      "comments": [],
+      "scriptParams": {
+        "scriptFile": null,
+        "actorsCount": 6,
+        "extraActorsCount": 0,
+        "childActorsCount": 0,
+        "animalsCount": 0,
+        "locationsCount": 3,
+        "exteriorScenesCount": 0,
+        "interiorScenesCount": 0,
+        "nightScenesCount": 0,
+        "shootingDaysCount": 0,
+        "totalDurationMin": 90,
+        "propsCount": 0,
+        "costumeSetsCount": 0,
+        "makeupLooksCount": 0,
+        "wigs": false,
+        "prosthetics": false,
+        "vfxShotsCount": 0,
+        "practicalEffectsCount": 0,
+        "stuntsCount": 0,
+        "weaponProps": false,
+        "pyrotechnics": false,
+        "rainScenes": false,
+        "snowScenes": false,
+        "vehiclesCount": 0,
+        "vehicleChases": false,
+        "droneShots": false,
+        "underwaterShots": false,
+        "aerialShots": false,
+        "craneShots": false,
+        "productionFormat": "4K",
+        "aspectRatio": "16:9",
+        "handheldStyle": false,
+        "steadicam": false,
+        "originalMusicTracks": 0,
+        "voiceOverPresent": false,
+        "silentScenes": false,
+        "musicGenre": "",
+        "genre": "",
+        "ageRating": "16+",
+        "targetAudience": "",
+        "dialogLanguage": "Русский",
+        "subtitlesNeeded": false,
+        "weatherDependentDays": 0,
+        "hazardousConditions": false,
+        "internationalShoot": false,
+        "remoteLocations": false,
+        "militaryEquipment": false,
+        "logline": "",
+        "budgetTier": "mid",
+        "colorGrading": "Нейтральная"
+      },
+      "storyboardGrid": {
+        "locationNames": [
+          "Локация 1",
+          "Локация 2",
+          "Локация 3"
+        ],
+        "columnCount": 4,
+        "cells": {}
+      }
     }
   ]
 }
