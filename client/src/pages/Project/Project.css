@@ -1680,6 +1680,10 @@
 
   .tabs-header {
     flex-shrink: 0;
+    position: relative;
+    top: 0;
+    z-index: 20;
+    background: var(--bg-core-700);
   }
 
   .tabs-content {
