@@ -28,7 +28,7 @@
 }
 
 .sidebar-brand:hover {
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--surface-hover);
 }
 
 .sidebar-brand img {
@@ -52,15 +52,15 @@
 }
 
 .sidebar-btn:hover {
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--surface-elevated);
   color: var(--text-primary);
   border-color: var(--border-muted);
 }
 
 .sidebar-btn.active {
-  background: rgba(255, 255, 255, 0.07);
+  background: var(--surface-active);
   color: var(--text-primary);
-  border-color: rgba(255, 255, 255, 0.1);
+  border-color: var(--border-muted);
 }
 
 .sidebar-btn.active::before {
@@ -97,7 +97,7 @@
 }
 
 .sidebar-cta {
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--surface-hover);
   border-color: var(--border-muted);
   color: var(--text-primary);
   font-weight: 600;
@@ -105,7 +105,7 @@
 }
 
 .sidebar-cta:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--surface-active);
   border-color: var(--border-strong);
 }
 
@@ -156,7 +156,7 @@
 }
 
 .sidebar-menu-btn:hover {
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--surface-hover);
   color: var(--text-primary);
 }
 

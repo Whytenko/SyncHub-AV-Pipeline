@@ -46,6 +46,12 @@
   --toast-border: rgba(255, 255, 255, 0.16);
   --toast-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
 
+  /* Interactive surface layers */
+  --surface-elevated: rgba(255, 255, 255, 0.04);
+  --surface-hover: rgba(255, 255, 255, 0.06);
+  --surface-active: rgba(255, 255, 255, 0.08);
+  --surface-alt: rgba(255, 255, 255, 0.04);
+
   /* Select chevron arrow (SVG, dark theme) */
   --select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 6 5-6' fill='none' stroke='%238a8a8a' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
 
@@ -90,6 +96,12 @@
   --border-soft: #d9d9d9;
   --border-muted: rgba(0, 0, 0, 0.08);
   --border-strong: rgba(0, 0, 0, 0.2);
+
+  /* Interactive surface layers (light theme) */
+  --surface-elevated: rgba(0, 0, 0, 0.02);
+  --surface-hover: rgba(0, 0, 0, 0.05);
+  --surface-active: rgba(0, 0, 0, 0.07);
+  --surface-alt: var(--bg-core-700);
 
   /* Select chevron arrow (light theme — darker stroke) */
   --select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 6 5-6' fill='none' stroke='%23555555' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");

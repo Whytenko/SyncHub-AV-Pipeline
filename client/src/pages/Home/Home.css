@@ -97,7 +97,7 @@
 }
 
 .home-stat-item {
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--surface-elevated);
   border: 1px solid var(--border-muted);
   border-radius: 12px;
   padding: 16px;
@@ -107,7 +107,7 @@
 
 .home-stat-item:hover {
   border-color: var(--border-strong);
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--surface-hover);
 }
 
 .home-stat-label {

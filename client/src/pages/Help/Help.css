@@ -45,7 +45,7 @@
 }
 
 .help-module-card {
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--surface-elevated);
   border: 1px solid var(--border-muted);
   border-radius: 12px;
   padding: 18px 16px;
@@ -54,7 +54,7 @@
 
 .help-module-card:hover {
   border-color: var(--border-strong);
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--surface-hover);
 }
 
 .help-module-emoji {
@@ -165,7 +165,7 @@
   font-size: 13px;
   font-family: 'SFMono-Regular', 'Consolas', monospace;
   color: var(--text-primary);
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--surface-active);
   padding: 3px 9px;
   border-radius: 6px;
   border: 1px solid var(--border-muted);
