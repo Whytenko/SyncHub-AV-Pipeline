@@ -4,6 +4,7 @@ const crypto = require('crypto');
 
 const DATA_DIR = path.join(__dirname, '..', 'data');
 const DB_PATH = path.join(DATA_DIR, 'db.json');
+const BACKUP_PATH = path.join(DATA_DIR, 'db.backup.json');
 
 const nowISO = () => new Date().toISOString();
 
@@ -142,7 +143,20 @@ const readDb = () => {
 
 const writeDb = (db) => {
   ensureDb();
-  fs.writeFileSync(DB_PATH, JSON.stringify(db, null, 2));
+  // Atomic write: write to .tmp then rename (prevents data loss on crash)
+  const tmp = DB_PATH + '.tmp';
+  fs.writeFileSync(tmp, JSON.stringify(db, null, 2));
+  fs.renameSync(tmp, DB_PATH);
+};
+
+const backupDb = () => {
+  try {
+    if (fs.existsSync(DB_PATH)) {
+      fs.copyFileSync(DB_PATH, BACKUP_PATH);
+    }
+  } catch (err) {
+    console.error('[DB] Backup failed:', err.message);
+  }
 };
 
 const updateDb = (mutator) => {
@@ -172,5 +186,6 @@ module.exports = {
   hashPassword,
   verifyPassword,
   sanitizeUser,
-  cleanExpiredSessions
+  cleanExpiredSessions,
+  backupDb
 };

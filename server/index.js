@@ -9,7 +9,8 @@ const {
   hashPassword,
   verifyPassword,
   sanitizeUser,
-  cleanExpiredSessions
+  cleanExpiredSessions,
+  backupDb
 } = require('./src/db');
 
 const app = express();
@@ -477,11 +478,98 @@ const validateProjectPatch = (payload) => {
         department: task.department,
         assignee: typeof task.assignee === 'string' ? task.assignee : '',
         sceneRef: typeof task.sceneRef === 'string' ? task.sceneRef : '',
+        dueDate: typeof task.dueDate === 'string' ? task.dueDate : '',
         createdAt: typeof task.createdAt === 'string' ? task.createdAt : nowISO(),
         updatedAt: nowISO()
       });
     }
     patch.tasks = normalizedTasks;
+  }
+
+  // ── Makeup looks ────────────────────────────────────────────────────────────
+  if (hasOwn(payload, 'makeupLooks')) {
+    if (!Array.isArray(payload.makeupLooks)) {
+      return { error: 'makeupLooks должны быть массивом' };
+    }
+    const LOOK_STATUSES = new Set(['todo', 'in_progress', 'ready', 'approved']);
+    const MAKEUP_ZONES = new Set(['skin', 'eyes', 'brows', 'lips', 'cheeks', 'contour', 'neck', 'other']);
+    const normalizedLooks = [];
+    for (const look of payload.makeupLooks) {
+      if (!isObjectRecord(look)) return { error: 'Некорректный формат образа визажа' };
+      const id = toPositiveInt(look.id);
+      if (!id || typeof look.name !== 'string') return { error: 'Некорректные данные образа визажа' };
+      const products = Array.isArray(look.products) ? look.products : [];
+      const normalizedProducts = [];
+      for (const p of products) {
+        if (!isObjectRecord(p)) return { error: 'Некорректный формат продукта визажа' };
+        const pid = toPositiveInt(p.id);
+        if (!pid) return { error: 'Некорректный id продукта визажа' };
+        normalizedProducts.push({
+          id: pid,
+          zone: MAKEUP_ZONES.has(p.zone) ? p.zone : 'other',
+          productName: typeof p.productName === 'string' ? p.productName.slice(0, 200) : '',
+          colorHex: typeof p.colorHex === 'string' ? p.colorHex : '#888888',
+          technique: typeof p.technique === 'string' ? p.technique.slice(0, 200) : ''
+        });
+      }
+      normalizedLooks.push({
+        id,
+        name: String(look.name).slice(0, 200),
+        characterName: typeof look.characterName === 'string' ? look.characterName.slice(0, 100) : '',
+        sceneRefs: typeof look.sceneRefs === 'string' ? look.sceneRefs.slice(0, 500) : '',
+        applyTimeMin: toNonNegativeInt(look.applyTimeMin) || 0,
+        products: normalizedProducts,
+        skinNotes: typeof look.skinNotes === 'string' ? look.skinNotes.slice(0, 2000) : '',
+        referenceImage: typeof look.referenceImage === 'string' ? look.referenceImage : '',
+        status: LOOK_STATUSES.has(look.status) ? look.status : 'todo'
+      });
+    }
+    patch.makeupLooks = normalizedLooks;
+  }
+
+  // ── Costume outfits ─────────────────────────────────────────────────────────
+  if (hasOwn(payload, 'costumeOutfits')) {
+    if (!Array.isArray(payload.costumeOutfits)) {
+      return { error: 'costumeOutfits должны быть массивом' };
+    }
+    const OUTFIT_STATUSES = new Set(['todo', 'in_progress', 'ready', 'approved']);
+    const GARMENT_CATEGORIES = new Set(['top', 'bottom', 'outerwear', 'shoes', 'accessories', 'headwear', 'underwear']);
+    const GARMENT_ACQUISITIONS = new Set(['owned', 'rented', 'to_buy', 'to_make']);
+    const normalizedOutfits = [];
+    for (const outfit of payload.costumeOutfits) {
+      if (!isObjectRecord(outfit)) return { error: 'Некорректный формат образа костюма' };
+      const id = toPositiveInt(outfit.id);
+      if (!id || typeof outfit.name !== 'string') return { error: 'Некорректные данные образа костюма' };
+      const garments = Array.isArray(outfit.garments) ? outfit.garments : [];
+      const normalizedGarments = [];
+      for (const g of garments) {
+        if (!isObjectRecord(g)) return { error: 'Некорректный формат элемента костюма' };
+        const gid = toPositiveInt(g.id);
+        if (!gid) return { error: 'Некорректный id элемента костюма' };
+        normalizedGarments.push({
+          id: gid,
+          category: GARMENT_CATEGORIES.has(g.category) ? g.category : 'accessories',
+          name: typeof g.name === 'string' ? g.name.slice(0, 200) : '',
+          colorHex: typeof g.colorHex === 'string' ? g.colorHex : '#888888',
+          material: typeof g.material === 'string' ? g.material.slice(0, 100) : '',
+          brand: typeof g.brand === 'string' ? g.brand.slice(0, 100) : '',
+          acquisition: GARMENT_ACQUISITIONS.has(g.acquisition) ? g.acquisition : 'to_buy',
+          price: toNonNegativeInt(g.price) || 0,
+          notes: typeof g.notes === 'string' ? g.notes.slice(0, 500) : ''
+        });
+      }
+      normalizedOutfits.push({
+        id,
+        name: String(outfit.name).slice(0, 200),
+        characterName: typeof outfit.characterName === 'string' ? outfit.characterName.slice(0, 100) : '',
+        sceneRefs: typeof outfit.sceneRefs === 'string' ? outfit.sceneRefs.slice(0, 500) : '',
+        garments: normalizedGarments,
+        referenceImage: typeof outfit.referenceImage === 'string' ? outfit.referenceImage : '',
+        outfitNotes: typeof outfit.outfitNotes === 'string' ? outfit.outfitNotes.slice(0, 2000) : '',
+        status: OUTFIT_STATUSES.has(outfit.status) ? outfit.status : 'todo'
+      });
+    }
+    patch.costumeOutfits = normalizedOutfits;
   }
 
   return { patch };
@@ -620,11 +708,11 @@ app.post('/api/auth/login', (req, res) => {
     return res.status(401).json({ success: false, message: 'Пользователь не найден' });
   }
 
-  // Password is optional for demo/development — allow login without it only for demo account
-  if (password) {
-    if (!verifyPassword(password, user.passwordHash)) {
-      return res.status(401).json({ success: false, message: 'Неверный пароль' });
-    }
+  if (!password || typeof password !== 'string') {
+    return res.status(400).json({ success: false, message: 'Укажите пароль' });
+  }
+  if (!verifyPassword(password, user.passwordHash)) {
+    return res.status(401).json({ success: false, message: 'Неверный пароль' });
   }
 
   const expiresAt = new Date(Date.now() + SESSION_TTL_MS).toISOString();
@@ -769,7 +857,9 @@ app.post('/api/projects', authRequired, (req, res) => {
     documents: [],
     comments: [],
     scriptParams: null,
-    storyboardGrid: { locationNames: [], columnCount: 4, cells: {} }
+    storyboardGrid: { locationNames: [], columnCount: 4, cells: {} },
+    makeupLooks: [],
+    costumeOutfits: []
   };
 
   updateDb((db) => {
@@ -883,6 +973,11 @@ app.use((err, req, res, next) => {
 // ─── Startup ───────────────────────────────────────────────────────────────────
 const server = app.listen(PORT, () => {
   cleanExpiredSessions();
+  backupDb();
+  // Periodic backup every 5 minutes
+  setInterval(() => backupDb(), 5 * 60 * 1000);
+  // Periodic session cleanup every hour
+  setInterval(() => cleanExpiredSessions(), 60 * 60 * 1000);
   console.log('═'.repeat(60));
   console.log('🚀 SyncHub AV Pipeline Server v2.1.0');
   console.log('═'.repeat(60));

@@ -3794,3 +3794,712 @@ tr:last-child .storyboard-row-label {
 }
 
 /* ─── #7 Autosave (already in .save-indicator above) ────────────────────────── */
+
+/* ════════════════════════════════════════════════════════════════════════════
+   CRAFT PANEL — shared layout for Makeup & Costumes redesign
+   ════════════════════════════════════════════════════════════════════════════ */
+
+.craft-layout {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  gap: 0;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* ── Sidebar ── */
+.craft-sidebar {
+  border-right: 1px solid var(--border-muted);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--bg-core-700);
+  border-radius: 0 0 0 12px;
+}
+
+.craft-sidebar-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 14px 10px;
+  border-bottom: 1px solid var(--border-muted);
+  flex-shrink: 0;
+}
+
+.craft-sidebar-title {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+}
+
+.craft-add-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 5px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--accent-primary);
+  background: transparent;
+  color: var(--accent-primary);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  white-space: nowrap;
+}
+
+.craft-add-btn:hover {
+  background: var(--accent-primary);
+  color: var(--text-on-accent);
+}
+
+.craft-add-btn--lg {
+  padding: 9px 18px;
+  font-size: 14px;
+}
+
+.craft-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 32px 16px;
+  color: var(--text-muted);
+  font-size: 13px;
+  text-align: center;
+}
+
+.craft-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px;
+}
+
+.craft-list-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s;
+  position: relative;
+}
+
+.craft-list-item:hover { background: var(--surface-hover); }
+
+.craft-list-item--active {
+  background: var(--surface-active);
+}
+
+.craft-list-item-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.craft-list-item-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.craft-list-item-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.craft-list-item-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 2px;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.craft-list-item-meta span {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.craft-list-item-arrow {
+  color: var(--text-muted);
+  opacity: 0;
+  transition: opacity 0.15s;
+  flex-shrink: 0;
+}
+
+.craft-list-item--active .craft-list-item-arrow,
+.craft-list-item:hover .craft-list-item-arrow { opacity: 1; }
+
+/* ── Detail panel ── */
+.craft-detail {
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  padding: 20px;
+  gap: 0;
+}
+
+.craft-detail-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  height: 100%;
+  min-height: 200px;
+  color: var(--text-muted);
+  font-size: 14px;
+  text-align: center;
+}
+
+.craft-detail-header {
+  margin-bottom: 18px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--border-muted);
+}
+
+.craft-detail-title-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.craft-detail-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-primary);
+  flex: 1;
+  min-width: 0;
+}
+
+.craft-detail-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.craft-detail-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.craft-meta-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  padding: 3px 9px;
+  background: var(--surface-elevated);
+  border: 1px solid var(--border-muted);
+  border-radius: 12px;
+  color: var(--text-secondary);
+}
+
+.craft-meta-chip--price {
+  background: rgba(34, 197, 94, 0.1);
+  border-color: rgba(34, 197, 94, 0.25);
+  color: #22c55e;
+  font-weight: 600;
+}
+
+.craft-status-select {
+  appearance: none;
+  -webkit-appearance: none;
+  padding: 5px 28px 5px 10px;
+  border-radius: 6px;
+  border: 1px solid currentColor;
+  background-color: transparent;
+  background-image: var(--select-chevron);
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  background-size: 10px 7px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.craft-status-select:focus { outline: none; }
+
+.craft-icon-btn {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  background: transparent;
+  border: 1px solid var(--border-muted);
+  cursor: pointer;
+  font-size: 13px;
+  transition: border-color 0.15s, background 0.15s;
+  color: var(--text-secondary);
+}
+
+.craft-icon-btn:hover { background: var(--surface-hover); border-color: var(--border-strong); }
+
+.craft-icon-btn--danger { color: var(--error); }
+.craft-icon-btn--danger:hover { border-color: var(--error); background: rgba(255, 57, 26, 0.08); }
+
+/* ── Sections ── */
+.craft-section {
+  margin-bottom: 20px;
+}
+
+.craft-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.craft-section-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+}
+
+/* ── Table ── */
+.craft-table-empty {
+  font-size: 13px;
+  color: var(--text-muted);
+  padding: 10px 0;
+}
+
+.craft-table {
+  display: grid;
+  grid-template-columns: 90px 1fr 90px 80px 60px;
+  border: 1px solid var(--border-muted);
+  border-radius: 8px;
+  overflow: hidden;
+  font-size: 13px;
+}
+
+.craft-table--costumes {
+  grid-template-columns: 1.4fr 1.2fr 80px 70px 60px;
+}
+
+.craft-table-head {
+  display: contents;
+}
+
+.craft-table-head > span {
+  padding: 8px 10px;
+  background: var(--surface-elevated);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border-muted);
+}
+
+.craft-table-row {
+  display: contents;
+}
+
+.craft-table-row > span {
+  padding: 10px 10px;
+  border-bottom: 1px solid var(--border-muted);
+  display: flex;
+  align-items: center;
+  color: var(--text-secondary);
+}
+
+.craft-table-row:last-of-type > span {
+  border-bottom: none;
+}
+
+.craft-zone-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  background: var(--surface-active);
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.craft-product-name {
+  font-weight: 500;
+  color: var(--text-primary) !important;
+}
+
+.craft-color-cell {
+  display: flex !important;
+  align-items: center;
+  gap: 6px;
+}
+
+.craft-color-swatch {
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  border: 1px solid rgba(0,0,0,0.15);
+  flex-shrink: 0;
+}
+
+.craft-color-hex, .craft-material {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-family: monospace;
+}
+
+.craft-technique {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.craft-row-actions {
+  display: flex !important;
+  gap: 4px;
+  align-items: center;
+}
+
+.craft-garment-name {
+  display: flex !important;
+  align-items: center;
+  gap: 6px;
+  font-weight: 500;
+  color: var(--text-primary) !important;
+}
+
+.craft-garment-icon { font-size: 15px; }
+
+.craft-acq-badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 8px;
+  border: 1px solid currentColor;
+  opacity: 0.85;
+}
+
+.craft-price {
+  font-weight: 600;
+  color: var(--text-primary) !important;
+  font-size: 13px;
+}
+
+.craft-table-total {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 8px 12px;
+  background: var(--surface-elevated);
+  border-top: 1px solid var(--border-muted);
+  font-size: 13px;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.craft-table-total-price {
+  color: #22c55e;
+  font-weight: 700;
+}
+
+/* ── Color strip ── */
+.craft-color-strip {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.craft-strip-swatch {
+  width: 36px;
+  height: 36px;
+  border-radius: 6px;
+  border: 1px solid rgba(0,0,0,0.12);
+  cursor: pointer;
+  transition: transform 0.15s;
+}
+
+.craft-strip-swatch:hover { transform: scale(1.15); }
+
+/* ── Notes & upload ── */
+.craft-notes-input {
+  width: 100%;
+  box-sizing: border-box;
+  background: var(--surface-elevated);
+  border: 1px solid var(--border-muted);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 13px;
+  color: var(--text-primary);
+  resize: vertical;
+  font-family: inherit;
+  transition: border-color 0.15s;
+}
+
+.craft-notes-input:focus {
+  outline: none;
+  border-color: var(--accent-primary);
+}
+
+.craft-upload-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 16px;
+  border-radius: 8px;
+  border: 1px dashed var(--border-strong);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 13px;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.craft-upload-btn:hover {
+  border-color: var(--accent-primary);
+  color: var(--accent-primary);
+}
+
+.craft-ref-img-wrap {
+  position: relative;
+  display: inline-block;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.craft-ref-img {
+  max-width: 280px;
+  max-height: 200px;
+  border-radius: 8px;
+  display: block;
+  object-fit: cover;
+  border: 1px solid var(--border-muted);
+}
+
+.craft-ref-remove {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: rgba(0,0,0,0.65);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s;
+}
+
+.craft-ref-remove:hover { background: rgba(255,57,26,0.8); }
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .craft-layout {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr;
+  }
+
+  .craft-sidebar {
+    border-right: none;
+    border-bottom: 1px solid var(--border-muted);
+    border-radius: 0;
+    max-height: 180px;
+  }
+
+  .craft-list {
+    display: flex;
+    gap: 8px;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding: 8px;
+  }
+
+  .craft-list-item {
+    flex-direction: column;
+    gap: 4px;
+    min-width: 120px;
+    align-items: flex-start;
+  }
+
+  .craft-list-item-arrow { display: none; }
+  .craft-table { grid-template-columns: 1fr 1fr 70px 50px; font-size: 12px; }
+  .craft-table--costumes { grid-template-columns: 1fr 1fr 70px 50px; }
+  .craft-table .craft-table-head > span:nth-child(4),
+  .craft-table .craft-table-row > span:nth-child(4) { display: none; }
+}
+
+/* ════════════════════════════════════════════════════════════════════════════
+   KANBAN BOARD
+   ════════════════════════════════════════════════════════════════════════════ */
+
+.kanban-board {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 10px;
+  width: 100%;
+  min-height: 300px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.kanban-column {
+  background: var(--bg-core-700);
+  border: 1px solid var(--border-muted);
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  min-height: 200px;
+  min-width: 160px;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.kanban-column--drop-target {
+  background: var(--surface-active);
+  border-color: var(--accent-primary);
+}
+
+.kanban-col-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px 8px;
+  border-bottom: 1px solid var(--border-muted);
+  border-top: 3px solid transparent;
+  border-radius: 10px 10px 0 0;
+  flex-shrink: 0;
+}
+
+.kanban-col-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.kanban-col-count {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-muted);
+  background: var(--surface-elevated);
+  padding: 1px 7px;
+  border-radius: 10px;
+}
+
+.kanban-col-cards {
+  flex: 1;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  overflow-y: auto;
+}
+
+.kanban-col-empty {
+  padding: 16px 8px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+/* Kanban task cards are compact versions of manager-task-card */
+.kanban-col-cards .manager-task-card {
+  font-size: 12px;
+  padding: 8px 10px;
+  cursor: grab;
+}
+
+.kanban-col-cards .manager-task-card:active { cursor: grabbing; }
+
+/* ── Manager view toggle ── */
+.manager-view-toggle {
+  display: flex;
+  gap: 2px;
+  margin-right: 8px;
+}
+
+.manager-view-btn {
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  border: 1px solid var(--border-muted);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.manager-view-btn:hover { background: var(--surface-hover); color: var(--text-primary); }
+.manager-view-btn--active {
+  background: var(--surface-active);
+  border-color: var(--accent-primary);
+  color: var(--accent-primary);
+}
+
+/* ── Task due date badges ── */
+.manager-task-due {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+  color: var(--text-muted);
+  padding: 1px 6px;
+  border-radius: 8px;
+  border: 1px solid var(--border-muted);
+}
+
+.manager-task-due--soon {
+  color: #FF9800;
+  border-color: rgba(255,152,0,0.3);
+  background: rgba(255,152,0,0.08);
+}
+
+.manager-task-due--overdue {
+  color: #FF391A;
+  border-color: rgba(255,57,26,0.3);
+  background: rgba(255,57,26,0.08);
+}
+
+.manager-task-assignee {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+@media (max-width: 992px) {
+  .kanban-board {
+    grid-template-columns: repeat(3, minmax(150px, 1fr));
+  }
+}
+
+@media (max-width: 600px) {
+  .kanban-board {
+    grid-template-columns: repeat(2, minmax(140px, 1fr));
+  }
+}

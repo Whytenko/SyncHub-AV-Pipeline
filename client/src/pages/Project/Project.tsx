@@ -11,6 +11,12 @@ import type {
   BodySilhouette,
   DocumentFile,
   Location,
+  LookStatus,
+  MakeupLook,
+  MakeupZone,
+  CostumeOutfit,
+  GarmentCategory,
+  GarmentAcquisition,
   MediaFile,
   Project,
   ProjectComment,
@@ -25,12 +31,12 @@ import type {
 } from '../../types';
 
 // Импорт иконок
-import HumanSilhouette from '../assets/icons/human.svg';
-import FaceSilhouette from '../assets/icons/face.svg';
 import {
   Play, Pause, Music, Film, Upload, MapPin, MapPinPlus,
   MessageSquarePlus, ArrowLeft, Eye, Clapperboard, Sparkles,
-  ScrollText, Reply, Shirt, Zap, ClipboardList,
+  ScrollText, Reply, Shirt, Zap, ClipboardList, Plus, Trash2,
+  ChevronRight, Palette, Clock, AlertCircle, LayoutGrid, List,
+  CalendarDays, User2,
   type LucideIcon
 } from 'lucide-react';
 
@@ -251,11 +257,43 @@ const ProjectPage: React.FC = () => {
   const [taskFilterStatus, setTaskFilterStatus] = useState<TaskStatus | 'all'>('all');
   const [taskFilterDept, setTaskFilterDept] = useState<TabType | 'all'>('all');
   const [dragTaskId, setDragTaskId] = useState<string | null>(null);
+  const [kanbanDragOver, setKanbanDragOver] = useState<TaskStatus | null>(null);
+  const [managerView, setManagerView] = useState<'list' | 'kanban'>('list');
   const [showTaskModal, setShowTaskModal] = useState(false);
-  const [taskDraft, setTaskDraft] = useState<{ title: string; description: string; status: TaskStatus; priority: TaskPriority; department: TabType; assignee: string; sceneRef: string }>({
-    title: '', description: '', status: 'todo', priority: 'medium', department: 'edit', assignee: '', sceneRef: ''
+  const [taskDraft, setTaskDraft] = useState<{ title: string; description: string; status: TaskStatus; priority: TaskPriority; department: TabType; assignee: string; sceneRef: string; dueDate: string }>({
+    title: '', description: '', status: 'todo', priority: 'medium', department: 'edit', assignee: '', sceneRef: '', dueDate: ''
   });
   const [taskEditId, setTaskEditId] = useState<string | null>(null);
+
+  // Makeup looks
+  const [makeupLooks, setMakeupLooks] = useState<MakeupLook[]>([]);
+  const [selectedLookId, setSelectedLookId] = useState<number | null>(null);
+  const [showLookModal, setShowLookModal] = useState(false);
+  const [lookEditId, setLookEditId] = useState<number | null>(null);
+  const [lookDraft, setLookDraft] = useState<{ name: string; characterName: string; sceneRefs: string; applyTimeMin: number; skinNotes: string; status: LookStatus }>({
+    name: '', characterName: '', sceneRefs: '', applyTimeMin: 30, skinNotes: '', status: 'todo'
+  });
+  const [showProductModal, setShowProductModal] = useState(false);
+  const [productEditId, setProductEditId] = useState<number | null>(null);
+  const [productTargetLookId, setProductTargetLookId] = useState<number | null>(null);
+  const [productDraft, setProductDraft] = useState<{ zone: MakeupZone; productName: string; colorHex: string; technique: string }>({
+    zone: 'skin', productName: '', colorHex: '#F5D5C0', technique: ''
+  });
+
+  // Costume outfits
+  const [costumeOutfits, setCostumeOutfits] = useState<CostumeOutfit[]>([]);
+  const [selectedOutfitId, setSelectedOutfitId] = useState<number | null>(null);
+  const [showOutfitModal, setShowOutfitModal] = useState(false);
+  const [outfitEditId, setOutfitEditId] = useState<number | null>(null);
+  const [outfitDraft, setOutfitDraft] = useState<{ name: string; characterName: string; sceneRefs: string; outfitNotes: string; status: LookStatus }>({
+    name: '', characterName: '', sceneRefs: '', outfitNotes: '', status: 'todo'
+  });
+  const [showGarmentModal, setShowGarmentModal] = useState(false);
+  const [garmentEditId, setGarmentEditId] = useState<number | null>(null);
+  const [garmentTargetOutfitId, setGarmentTargetOutfitId] = useState<number | null>(null);
+  const [garmentDraft, setGarmentDraft] = useState<{ category: GarmentCategory; name: string; colorHex: string; material: string; brand: string; acquisition: GarmentAcquisition; price: number; notes: string }>({
+    category: 'top', name: '', colorHex: '#333333', material: '', brand: '', acquisition: 'to_buy', price: 0, notes: ''
+  });
 
   // Script params
   const scriptFileInputRef = useRef<HTMLInputElement>(null);
@@ -339,6 +377,8 @@ const ProjectPage: React.FC = () => {
       ? (project.storyboardGrid as StoryboardGrid)
       : defaultStoryboardGrid);
     setTasks(Array.isArray(project.tasks) ? project.tasks : []);
+    setMakeupLooks(Array.isArray((project as any).makeupLooks) ? (project as any).makeupLooks : []);
+    setCostumeOutfits(Array.isArray((project as any).costumeOutfits) ? (project as any).costumeOutfits : []);
   }, [project?.id]);
 
   useEffect(() => {
@@ -478,11 +518,6 @@ const ProjectPage: React.FC = () => {
 
   const resolveMarkerIcon = (marker: ProjectMarker): LucideIcon => {
     return iconMap[marker.icon] || MapPin;
-  };
-
-  const getSilhouetteLabel = (personId: number) => {
-    const person = bodySilhouettes.find((item) => item.id === personId);
-    return person?.name || `Человек ${personId}`;
   };
 
   const handlePlayPause = () => setIsPlaying((prev) => !prev);
@@ -654,13 +689,145 @@ const ProjectPage: React.FC = () => {
   };
 
   const handleOpenNewTask = () => {
-    setTaskDraft({ title: '', description: '', status: 'todo', priority: 'medium', department: 'edit', assignee: '', sceneRef: '' });
+    setTaskDraft({ title: '', description: '', status: 'todo', priority: 'medium', department: 'edit', assignee: '', sceneRef: '', dueDate: '' });
     setTaskEditId(null);
     setShowTaskModal(true);
   };
 
+  // ── Makeup helpers ───────────────────────────────────────────────────────────
+
+  const saveMakeupLooks = async (looks: MakeupLook[]) => {
+    setMakeupLooks(looks);
+    await saveProject({ makeupLooks: looks } as Partial<Project>);
+  };
+
+  const handleSaveLook = async () => {
+    if (!lookDraft.name.trim()) { showToast(t('Введите название образа'), 'error'); return; }
+    const now = Date.now();
+    const updatedLooks = lookEditId
+      ? makeupLooks.map(l => l.id === lookEditId ? { ...l, ...lookDraft } : l)
+      : [...makeupLooks, { id: now, ...lookDraft, products: [], referenceImage: '' }];
+    await saveMakeupLooks(updatedLooks);
+    if (!lookEditId) setSelectedLookId(now);
+    setShowLookModal(false);
+  };
+
+  const handleDeleteLook = async (id: number) => {
+    const updated = makeupLooks.filter(l => l.id !== id);
+    if (selectedLookId === id) setSelectedLookId(updated[0]?.id ?? null);
+    await saveMakeupLooks(updated);
+  };
+
+  const handleSaveProduct = async () => {
+    if (!productDraft.productName.trim()) { showToast(t('Введите название продукта'), 'error'); return; }
+    if (productTargetLookId == null) return;
+    const now = Date.now();
+    const updatedLooks = makeupLooks.map(l => {
+      if (l.id !== productTargetLookId) return l;
+      const products = productEditId
+        ? l.products.map(p => p.id === productEditId ? { ...p, ...productDraft } : p)
+        : [...l.products, { id: now, ...productDraft }];
+      return { ...l, products };
+    });
+    await saveMakeupLooks(updatedLooks);
+    setShowProductModal(false);
+  };
+
+  const handleDeleteProduct = async (lookId: number, productId: number) => {
+    const updatedLooks = makeupLooks.map(l =>
+      l.id === lookId ? { ...l, products: l.products.filter(p => p.id !== productId) } : l
+    );
+    await saveMakeupLooks(updatedLooks);
+  };
+
+  const handleLookRefImage = async (lookId: number) => {
+    const input = document.createElement('input');
+    input.type = 'file'; input.accept = 'image/*';
+    input.onchange = async (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+      try {
+        const img = await compressImage(file, 480, 320);
+        const updatedLooks = makeupLooks.map(l => l.id === lookId ? { ...l, referenceImage: img } : l);
+        await saveMakeupLooks(updatedLooks);
+      } catch { showToast(t('Ошибка загрузки изображения'), 'error'); }
+    };
+    input.click();
+  };
+
+  const handleLookStatusChange = async (lookId: number, status: LookStatus) => {
+    const updatedLooks = makeupLooks.map(l => l.id === lookId ? { ...l, status } : l);
+    await saveMakeupLooks(updatedLooks);
+  };
+
+  // ── Costumes helpers ─────────────────────────────────────────────────────────
+
+  const saveCostumeOutfits = async (outfits: CostumeOutfit[]) => {
+    setCostumeOutfits(outfits);
+    await saveProject({ costumeOutfits: outfits } as Partial<Project>);
+  };
+
+  const handleSaveOutfit = async () => {
+    if (!outfitDraft.name.trim()) { showToast(t('Введите название образа'), 'error'); return; }
+    const now = Date.now();
+    const updatedOutfits = outfitEditId
+      ? costumeOutfits.map(o => o.id === outfitEditId ? { ...o, ...outfitDraft } : o)
+      : [...costumeOutfits, { id: now, ...outfitDraft, garments: [], referenceImage: '' }];
+    await saveCostumeOutfits(updatedOutfits);
+    if (!outfitEditId) setSelectedOutfitId(now);
+    setShowOutfitModal(false);
+  };
+
+  const handleDeleteOutfit = async (id: number) => {
+    const updated = costumeOutfits.filter(o => o.id !== id);
+    if (selectedOutfitId === id) setSelectedOutfitId(updated[0]?.id ?? null);
+    await saveCostumeOutfits(updated);
+  };
+
+  const handleSaveGarment = async () => {
+    if (!garmentDraft.name.trim()) { showToast(t('Введите название элемента'), 'error'); return; }
+    if (garmentTargetOutfitId == null) return;
+    const now = Date.now();
+    const updatedOutfits = costumeOutfits.map(o => {
+      if (o.id !== garmentTargetOutfitId) return o;
+      const garments = garmentEditId
+        ? o.garments.map(g => g.id === garmentEditId ? { ...g, ...garmentDraft } : g)
+        : [...o.garments, { id: now, ...garmentDraft }];
+      return { ...o, garments };
+    });
+    await saveCostumeOutfits(updatedOutfits);
+    setShowGarmentModal(false);
+  };
+
+  const handleDeleteGarment = async (outfitId: number, garmentId: number) => {
+    const updatedOutfits = costumeOutfits.map(o =>
+      o.id === outfitId ? { ...o, garments: o.garments.filter(g => g.id !== garmentId) } : o
+    );
+    await saveCostumeOutfits(updatedOutfits);
+  };
+
+  const handleOutfitRefImage = async (outfitId: number) => {
+    const input = document.createElement('input');
+    input.type = 'file'; input.accept = 'image/*';
+    input.onchange = async (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+      try {
+        const img = await compressImage(file, 480, 320);
+        const updatedOutfits = costumeOutfits.map(o => o.id === outfitId ? { ...o, referenceImage: img } : o);
+        await saveCostumeOutfits(updatedOutfits);
+      } catch { showToast(t('Ошибка загрузки изображения'), 'error'); }
+    };
+    input.click();
+  };
+
+  const handleOutfitStatusChange = async (outfitId: number, status: LookStatus) => {
+    const updatedOutfits = costumeOutfits.map(o => o.id === outfitId ? { ...o, status } : o);
+    await saveCostumeOutfits(updatedOutfits);
+  };
+
   const handleOpenEditTask = (task: Task) => {
-    setTaskDraft({ title: task.title, description: task.description, status: task.status, priority: task.priority, department: task.department, assignee: task.assignee || '', sceneRef: task.sceneRef || '' });
+    setTaskDraft({ title: task.title, description: task.description, status: task.status, priority: task.priority, department: task.department, assignee: task.assignee || '', sceneRef: task.sceneRef || '', dueDate: task.dueDate || '' });
     setTaskEditId(task.id);
     setShowTaskModal(true);
   };
@@ -859,53 +1026,6 @@ const ProjectPage: React.FC = () => {
     }
   };
 
-  const handleAddSilhouette = async () => {
-    const lastId = bodySilhouettes.reduce((max, person) => Math.max(max, person.id), 0);
-    const nextSilhouette: BodySilhouette = {
-      id: lastId + 1,
-      name: t('Человек {count}', { count: bodySilhouettes.length + 1 })
-    };
-    const nextSilhouettes = [...bodySilhouettes, nextSilhouette];
-    await saveProject({ bodySilhouettes: nextSilhouettes });
-    showToast(t('Добавлен новый силуэт'), 'success');
-  };
-
-  const handleRenameSilhouette = async (personId: number) => {
-    const person = bodySilhouettes.find((item) => item.id === personId);
-    if (!person) return;
-    const nextNameRaw = window.prompt(t('Введите новое имя человека'), person.name);
-    if (nextNameRaw === null) return;
-    const nextName = nextNameRaw.trim();
-    if (!nextName) {
-      showToast(t('Имя человека не может быть пустым'), 'error');
-      return;
-    }
-    const duplicate = bodySilhouettes.some(
-      (item) => item.id !== personId && item.name.toLowerCase() === nextName.toLowerCase()
-    );
-    if (duplicate) {
-      showToast(t('Человек с таким именем уже есть'), 'error');
-      return;
-    }
-    if (nextName === person.name) return;
-
-    const nextSilhouettes = bodySilhouettes.map((item) =>
-      item.id === personId ? { ...item, name: nextName } : item
-    );
-    await saveProject({ bodySilhouettes: nextSilhouettes });
-    showToast(t('Имя человека обновлено'), 'success');
-  };
-
-  const handleRemoveSilhouette = async (personId: number) => {
-    if (bodySilhouettes.length <= 1) {
-      showToast(t('Нельзя удалить последнего человека'), 'error');
-      return;
-    }
-    const personName = getSilhouetteLabel(personId);
-    const relatedMarkersCount = bodyMarkers.filter((marker) => getMarkerPersonId(marker) === personId).length;
-    setPendingSilhouetteRemoval({ personId, personName, relatedMarkersCount });
-  };
-
   const handleConfirmSilhouetteRemoval = async () => {
     if (!pendingSilhouetteRemoval) return;
 
@@ -989,16 +1109,6 @@ const ProjectPage: React.FC = () => {
     setBodyMarkerEditId(null);
     await saveProject({ bodyMarkers: updatedMarkers });
     showToast(wasEditing ? t('Маркер обновлен') : t('Маркер добавлен'), 'success');
-  };
-
-  const handleAddBodyImage = async (markerId: number) => {
-    const url = window.prompt(t('Вставьте ссылку на изображение'));
-    if (!url) return;
-    const updated = bodyMarkers.map((marker) =>
-      marker.id === markerId ? { ...marker, images: [...marker.images, url] } : marker
-    );
-    await saveProject({ bodyMarkers: updated });
-    showToast(t('Изображение добавлено'), 'success');
   };
 
   const handleAddMedia = async () => {
@@ -1694,463 +1804,464 @@ const ProjectPage: React.FC = () => {
             </div>
           )}
 
-          {activeTab === 'costumes' && (
-            <div className="tab-content costumes-tab">
-              <div className="costumes-container">
-                <div className="markers-list-section">
-                  <h3>{t('Маркеры костюмов')}</h3>
-                  <div className="markers-description-list">
-                    {bodyMarkers.filter((marker) => marker.tabId === 'costumes').length === 0 && (
-                      <div className="body-markers-empty">
-                        <Shirt size={32} className="empty-tab-icon" />
-                        <p>{t('Кликните на силуэт, чтобы добавить первый маркер')}</p>
+          {activeTab === 'costumes' && (() => {
+            const selectedOutfit = costumeOutfits.find(o => o.id === selectedOutfitId) ?? costumeOutfits[0] ?? null;
+            const activeOutfitId = selectedOutfit?.id ?? null;
+
+            const GARMENT_LABELS: Record<string, string> = {
+              top: 'Верх', bottom: 'Низ', outerwear: 'Верхняя одежда',
+              shoes: 'Обувь', accessories: 'Аксессуары', headwear: 'Головной убор', underwear: 'Бельё'
+            };
+            const GARMENT_ICONS: Record<string, string> = {
+              top: '👕', bottom: '👖', outerwear: '🧥',
+              shoes: '👟', accessories: '💍', headwear: '🎩', underwear: '🩲'
+            };
+            const ACQ_LABELS: Record<string, string> = {
+              owned: 'Есть', rented: 'Аренда', to_buy: 'Купить', to_make: 'Сшить'
+            };
+            const ACQ_COLORS: Record<string, string> = {
+              owned: '#22c55e', rented: '#2196F3', to_buy: '#FF9800', to_make: '#9C27B0'
+            };
+            const STATUS_LABELS: Record<string, string> = {
+              todo: 'Не начато', in_progress: 'В работе', ready: 'Готово', approved: 'Утверждено'
+            };
+            const STATUS_COLORS: Record<string, string> = {
+              todo: '#6b7280', in_progress: '#2196F3', ready: '#FF9800', approved: '#22c55e'
+            };
+
+            const totalPrice = selectedOutfit
+              ? selectedOutfit.garments.reduce((s, g) => s + (g.price || 0), 0)
+              : 0;
+
+            return (
+              <div className="tab-content costumes-tab">
+                <div className="craft-layout">
+                  {/* Left panel — outfits list */}
+                  <div className="craft-sidebar">
+                    <div className="craft-sidebar-head">
+                      <span className="craft-sidebar-title">{t('Образы')}</span>
+                      <button className="craft-add-btn" onClick={() => {
+                        setOutfitDraft({ name: '', characterName: '', sceneRefs: '', outfitNotes: '', status: 'todo' });
+                        setOutfitEditId(null);
+                        setShowOutfitModal(true);
+                      }}>
+                        <Plus size={14} /> {t('Добавить')}
+                      </button>
+                    </div>
+
+                    {costumeOutfits.length === 0 && (
+                      <div className="craft-empty">
+                        <Shirt size={28} style={{ opacity: 0.3 }} />
+                        <p>{t('Добавьте первый образ')}</p>
                       </div>
                     )}
-                    {bodyMarkers.filter((marker) => marker.tabId === 'costumes').map((marker) => (
-                      <div
-                        key={marker.id}
-                        className="marker-description-card"
-                        style={{ '--mc': marker.color } as React.CSSProperties}
-                      >
-                        <div className="marker-header">
-                          <div className="marker-badge" style={{ backgroundColor: marker.color }}>
-                            {marker.id}
+
+                    <div className="craft-list">
+                      {costumeOutfits.map(outfit => (
+                        <div
+                          key={outfit.id}
+                          className={`craft-list-item${activeOutfitId === outfit.id ? ' craft-list-item--active' : ''}`}
+                          onClick={() => setSelectedOutfitId(outfit.id)}
+                        >
+                          <div className="craft-list-item-dot" style={{ background: STATUS_COLORS[outfit.status] }} />
+                          <div className="craft-list-item-body">
+                            <div className="craft-list-item-name">{outfit.name}</div>
+                            <div className="craft-list-item-meta">
+                              {outfit.characterName && <span><User2 size={11} /> {outfit.characterName}</span>}
+                              {outfit.sceneRefs && <span>{outfit.sceneRefs}</span>}
+                              {outfit.garments.length > 0 && <span>{outfit.garments.length} эл.</span>}
+                            </div>
                           </div>
-                          <div className="marker-title">{marker.title}</div>
-                          <button
-                            className="edit-marker-btn"
-                            title={t('Редактировать')}
-                            onClick={() => {
-                              setBodyMarkerDraft({
-                                title: marker.title,
-                                description: marker.description,
-                                bodyPart: marker.bodyPart,
-                                time: formatTime(getBodyMarkerTime(marker)),
-                                x: marker.x,
-                                y: marker.y,
-                                tabId: marker.tabId,
-                                personId: getMarkerPersonId(marker)
-                              });
-                              setBodyMarkerEditId(marker.id);
-                              setShowBodyMarkerModal(true);
-                            }}
-                          >
-                            ✏️
-                          </button>
+                          <ChevronRight size={14} className="craft-list-item-arrow" />
                         </div>
-                        <div className="marker-meta-row">
-                          <span className="marker-part-badge">{marker.bodyPart || '—'}</span>
-                          <span className="marker-person-label">
-                            {getSilhouetteLabel(getMarkerPersonId(marker))}
-                          </span>
-                          <select
-                            className={`body-marker-status-select body-marker-status--${marker.status || 'todo'}`}
-                            value={marker.status || 'todo'}
-                            onClick={(e) => e.stopPropagation()}
-                            onChange={(e) => {
-                              const newStatus = e.target.value as BodyMarker['status'];
-                              const updated = (project?.bodyMarkers || []).map(m => m.id === marker.id ? { ...m, status: newStatus } : m);
-                              saveProject({ bodyMarkers: updated } as Partial<Project>);
-                            }}
-                          >
-                            <option value="todo">{t('Не начато')}</option>
-                            <option value="in_progress">{t('В работе')}</option>
-                            <option value="ready">{t('Готово')}</option>
-                            <option value="approved">{t('Утверждено')}</option>
-                          </select>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Right panel — outfit detail */}
+                  <div className="craft-detail">
+                    {!selectedOutfit ? (
+                      <div className="craft-detail-empty">
+                        <Shirt size={48} style={{ opacity: 0.15, marginBottom: 16 }} />
+                        <p>{t('Выберите или создайте образ костюма')}</p>
+                        <button className="craft-add-btn craft-add-btn--lg" onClick={() => {
+                          setOutfitDraft({ name: '', characterName: '', sceneRefs: '', outfitNotes: '', status: 'todo' });
+                          setOutfitEditId(null);
+                          setShowOutfitModal(true);
+                        }}>
+                          <Plus size={16} /> {t('Создать образ')}
+                        </button>
+                      </div>
+                    ) : (
+                      <>
+                        {/* Detail header */}
+                        <div className="craft-detail-header">
+                          <div className="craft-detail-title-row">
+                            <h3 className="craft-detail-title">{selectedOutfit.name}</h3>
+                            <div className="craft-detail-actions">
+                              <select
+                                className="craft-status-select"
+                                value={selectedOutfit.status}
+                                style={{ borderColor: STATUS_COLORS[selectedOutfit.status], color: STATUS_COLORS[selectedOutfit.status] }}
+                                onChange={e => handleOutfitStatusChange(selectedOutfit.id, e.target.value as LookStatus)}
+                              >
+                                {Object.entries(STATUS_LABELS).map(([k, v]) => (
+                                  <option key={k} value={k}>{v}</option>
+                                ))}
+                              </select>
+                              <button className="craft-icon-btn" title={t('Редактировать')} onClick={() => {
+                                setOutfitDraft({ name: selectedOutfit.name, characterName: selectedOutfit.characterName, sceneRefs: selectedOutfit.sceneRefs, outfitNotes: selectedOutfit.outfitNotes, status: selectedOutfit.status });
+                                setOutfitEditId(selectedOutfit.id);
+                                setShowOutfitModal(true);
+                              }}>✏️</button>
+                              <button className="craft-icon-btn craft-icon-btn--danger" title={t('Удалить образ')} onClick={() => handleDeleteOutfit(selectedOutfit.id)}>
+                                <Trash2 size={14} />
+                              </button>
+                            </div>
+                          </div>
+                          <div className="craft-detail-meta">
+                            {selectedOutfit.characterName && (
+                              <span className="craft-meta-chip"><User2 size={12} /> {selectedOutfit.characterName}</span>
+                            )}
+                            {selectedOutfit.sceneRefs && (
+                              <span className="craft-meta-chip">{selectedOutfit.sceneRefs}</span>
+                            )}
+                            {totalPrice > 0 && (
+                              <span className="craft-meta-chip craft-meta-chip--price">
+                                💰 {totalPrice.toLocaleString('ru-RU')} ₽
+                              </span>
+                            )}
+                          </div>
                         </div>
-                        <div className="marker-description">{marker.description}</div>
-                        <div className="marker-images">
-                          {marker.images.length === 0 ? (
-                            <button className="add-image-btn" onClick={() => handleAddBodyImage(marker.id)}>
-                              <Upload size={18} />
-                              {t('Загрузить изображение')}
+
+                        {/* Garments table */}
+                        <div className="craft-section">
+                          <div className="craft-section-head">
+                            <span className="craft-section-title"><Shirt size={14} /> {t('Гардероб')}</span>
+                            <button className="craft-add-btn" onClick={() => {
+                              setGarmentDraft({ category: 'top', name: '', colorHex: '#333333', material: '', brand: '', acquisition: 'to_buy', price: 0, notes: '' });
+                              setGarmentEditId(null);
+                              setGarmentTargetOutfitId(selectedOutfit.id);
+                              setShowGarmentModal(true);
+                            }}>
+                              <Plus size={12} /> {t('Добавить')}
                             </button>
+                          </div>
+                          {selectedOutfit.garments.length === 0 ? (
+                            <div className="craft-table-empty">{t('Добавьте элементы гардероба')}</div>
                           ) : (
-                            <div className="images-preview">
-                              {marker.images.map((image, index) => (
-                                <img key={`${marker.id}-${index}`} src={image} alt={marker.title} />
+                            <div className="craft-table craft-table--costumes">
+                              <div className="craft-table-head">
+                                <span>{t('Элемент')}</span>
+                                <span>{t('Цвет / материал')}</span>
+                                <span>{t('Статус')}</span>
+                                <span>{t('Цена')}</span>
+                                <span></span>
+                              </div>
+                              {selectedOutfit.garments.map(g => (
+                                <div key={g.id} className="craft-table-row">
+                                  <span className="craft-garment-name">
+                                    <span className="craft-garment-icon">{GARMENT_ICONS[g.category] || '🧴'}</span>
+                                    <span>{g.name || GARMENT_LABELS[g.category]}</span>
+                                  </span>
+                                  <span className="craft-color-cell">
+                                    <span className="craft-color-swatch" style={{ background: g.colorHex }} />
+                                    <span className="craft-material">{g.material || '—'}</span>
+                                  </span>
+                                  <span>
+                                    <span className="craft-acq-badge" style={{ color: ACQ_COLORS[g.acquisition], borderColor: ACQ_COLORS[g.acquisition] }}>
+                                      {ACQ_LABELS[g.acquisition]}
+                                    </span>
+                                  </span>
+                                  <span className="craft-price">
+                                    {g.price > 0 ? `${g.price.toLocaleString('ru-RU')} ₽` : '—'}
+                                  </span>
+                                  <span className="craft-row-actions">
+                                    <button className="craft-icon-btn" onClick={() => {
+                                      setGarmentDraft({ category: g.category, name: g.name, colorHex: g.colorHex, material: g.material, brand: g.brand, acquisition: g.acquisition, price: g.price, notes: g.notes });
+                                      setGarmentEditId(g.id);
+                                      setGarmentTargetOutfitId(selectedOutfit.id);
+                                      setShowGarmentModal(true);
+                                    }}>✏️</button>
+                                    <button className="craft-icon-btn craft-icon-btn--danger" onClick={() => handleDeleteGarment(selectedOutfit.id, g.id)}>
+                                      <Trash2 size={12} />
+                                    </button>
+                                  </span>
+                                </div>
+                              ))}
+                              {totalPrice > 0 && (
+                                <div className="craft-table-total">
+                                  <span>{t('Итого')}:</span>
+                                  <span className="craft-table-total-price">{totalPrice.toLocaleString('ru-RU')} ₽</span>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Color strip */}
+                        {selectedOutfit.garments.some(g => g.colorHex) && (
+                          <div className="craft-section">
+                            <div className="craft-section-title"><Palette size={14} /> {t('Цветовая палитра образа')}</div>
+                            <div className="craft-color-strip">
+                              {selectedOutfit.garments.filter(g => g.colorHex).map(g => (
+                                <div
+                                  key={g.id}
+                                  className="craft-strip-swatch"
+                                  style={{ background: g.colorHex }}
+                                  title={`${GARMENT_LABELS[g.category]}: ${g.colorHex}`}
+                                />
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Notes */}
+                        <div className="craft-section">
+                          <div className="craft-section-title"><ScrollText size={14} /> {t('Заметки к образу')}</div>
+                          <textarea
+                            className="craft-notes-input"
+                            placeholder={t('Примерка 15 мая, пиджак взять у костюмера...')}
+                            value={selectedOutfit.outfitNotes}
+                            rows={3}
+                            onChange={e => {
+                              const updated = costumeOutfits.map(o => o.id === selectedOutfit.id ? { ...o, outfitNotes: e.target.value } : o);
+                              setCostumeOutfits(updated);
+                            }}
+                            onBlur={async () => { await saveCostumeOutfits(costumeOutfits); }}
+                          />
+                        </div>
+
+                        {/* Reference image */}
+                        <div className="craft-section">
+                          <div className="craft-section-title"><Upload size={14} /> {t('Референс')}</div>
+                          {selectedOutfit.referenceImage ? (
+                            <div className="craft-ref-img-wrap">
+                              <img src={selectedOutfit.referenceImage} alt="reference" className="craft-ref-img" />
+                              <button className="craft-ref-remove" onClick={async () => {
+                                const updated = costumeOutfits.map(o => o.id === selectedOutfit.id ? { ...o, referenceImage: '' } : o);
+                                await saveCostumeOutfits(updated);
+                              }}>✕</button>
+                            </div>
+                          ) : (
+                            <button className="craft-upload-btn" onClick={() => handleOutfitRefImage(selectedOutfit.id)}>
+                              <Upload size={16} /> {t('Загрузить фото')}
+                            </button>
+                          )}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+
+          {activeTab === 'makeup' && (() => {
+            const selectedLook = makeupLooks.find(l => l.id === selectedLookId) ?? makeupLooks[0] ?? null;
+            const activeLookId = selectedLook?.id ?? null;
+
+            const ZONE_LABELS: Record<string, string> = {
+              skin: 'Кожа', eyes: 'Глаза', brows: 'Брови', lips: 'Губы',
+              cheeks: 'Скулы', contour: 'Контур', neck: 'Шея', other: 'Другое'
+            };
+            const STATUS_LABELS: Record<string, string> = {
+              todo: 'Не начато', in_progress: 'В работе', ready: 'Готово', approved: 'Утверждено'
+            };
+            const STATUS_COLORS: Record<string, string> = {
+              todo: '#6b7280', in_progress: '#2196F3', ready: '#FF9800', approved: '#22c55e'
+            };
+
+            return (
+              <div className="tab-content makeup-tab">
+                <div className="craft-layout">
+                  {/* Left panel — list of looks */}
+                  <div className="craft-sidebar">
+                    <div className="craft-sidebar-head">
+                      <span className="craft-sidebar-title">{t('Образы')}</span>
+                      <button className="craft-add-btn" onClick={() => {
+                        setLookDraft({ name: '', characterName: '', sceneRefs: '', applyTimeMin: 30, skinNotes: '', status: 'todo' });
+                        setLookEditId(null);
+                        setShowLookModal(true);
+                      }}>
+                        <Plus size={14} /> {t('Добавить')}
+                      </button>
+                    </div>
+
+                    {makeupLooks.length === 0 && (
+                      <div className="craft-empty">
+                        <Sparkles size={28} style={{ opacity: 0.3 }} />
+                        <p>{t('Добавьте первый образ')}</p>
+                      </div>
+                    )}
+
+                    <div className="craft-list">
+                      {makeupLooks.map(look => (
+                        <div
+                          key={look.id}
+                          className={`craft-list-item${activeLookId === look.id ? ' craft-list-item--active' : ''}`}
+                          onClick={() => setSelectedLookId(look.id)}
+                        >
+                          <div className="craft-list-item-dot" style={{ background: STATUS_COLORS[look.status] }} />
+                          <div className="craft-list-item-body">
+                            <div className="craft-list-item-name">{look.name}</div>
+                            <div className="craft-list-item-meta">
+                              {look.characterName && <span><User2 size={11} /> {look.characterName}</span>}
+                              {look.sceneRefs && <span>{look.sceneRefs}</span>}
+                            </div>
+                          </div>
+                          <ChevronRight size={14} className="craft-list-item-arrow" />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Right panel — selected look detail */}
+                  <div className="craft-detail">
+                    {!selectedLook ? (
+                      <div className="craft-detail-empty">
+                        <Sparkles size={48} style={{ opacity: 0.15, marginBottom: 16 }} />
+                        <p>{t('Выберите или создайте образ визажа')}</p>
+                        <button className="craft-add-btn craft-add-btn--lg" onClick={() => {
+                          setLookDraft({ name: '', characterName: '', sceneRefs: '', applyTimeMin: 30, skinNotes: '', status: 'todo' });
+                          setLookEditId(null);
+                          setShowLookModal(true);
+                        }}>
+                          <Plus size={16} /> {t('Создать образ')}
+                        </button>
+                      </div>
+                    ) : (
+                      <>
+                        {/* Detail header */}
+                        <div className="craft-detail-header">
+                          <div className="craft-detail-title-row">
+                            <h3 className="craft-detail-title">{selectedLook.name}</h3>
+                            <div className="craft-detail-actions">
+                              <select
+                                className="craft-status-select"
+                                value={selectedLook.status}
+                                style={{ borderColor: STATUS_COLORS[selectedLook.status], color: STATUS_COLORS[selectedLook.status] }}
+                                onChange={e => handleLookStatusChange(selectedLook.id, e.target.value as LookStatus)}
+                              >
+                                {Object.entries(STATUS_LABELS).map(([k, v]) => (
+                                  <option key={k} value={k}>{v}</option>
+                                ))}
+                              </select>
+                              <button className="craft-icon-btn" title={t('Редактировать')} onClick={() => {
+                                setLookDraft({ name: selectedLook.name, characterName: selectedLook.characterName, sceneRefs: selectedLook.sceneRefs, applyTimeMin: selectedLook.applyTimeMin, skinNotes: selectedLook.skinNotes, status: selectedLook.status });
+                                setLookEditId(selectedLook.id);
+                                setShowLookModal(true);
+                              }}>✏️</button>
+                              <button className="craft-icon-btn craft-icon-btn--danger" title={t('Удалить образ')} onClick={() => handleDeleteLook(selectedLook.id)}>
+                                <Trash2 size={14} />
+                              </button>
+                            </div>
+                          </div>
+                          <div className="craft-detail-meta">
+                            {selectedLook.characterName && (
+                              <span className="craft-meta-chip"><User2 size={12} /> {selectedLook.characterName}</span>
+                            )}
+                            {selectedLook.sceneRefs && (
+                              <span className="craft-meta-chip">{selectedLook.sceneRefs}</span>
+                            )}
+                            {selectedLook.applyTimeMin > 0 && (
+                              <span className="craft-meta-chip"><Clock size={12} /> {selectedLook.applyTimeMin} мин</span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Products table */}
+                        <div className="craft-section">
+                          <div className="craft-section-head">
+                            <span className="craft-section-title"><Palette size={14} /> {t('Продукты')}</span>
+                            <button className="craft-add-btn" onClick={() => {
+                              setProductDraft({ zone: 'skin', productName: '', colorHex: '#F5D5C0', technique: '' });
+                              setProductEditId(null);
+                              setProductTargetLookId(selectedLook.id);
+                              setShowProductModal(true);
+                            }}>
+                              <Plus size={12} /> {t('Добавить')}
+                            </button>
+                          </div>
+                          {selectedLook.products.length === 0 ? (
+                            <div className="craft-table-empty">{t('Добавьте продукты для этого образа')}</div>
+                          ) : (
+                            <div className="craft-table">
+                              <div className="craft-table-head">
+                                <span>{t('Зона')}</span>
+                                <span>{t('Продукт')}</span>
+                                <span>{t('Цвет')}</span>
+                                <span>{t('Техника')}</span>
+                                <span></span>
+                              </div>
+                              {selectedLook.products.map(p => (
+                                <div key={p.id} className="craft-table-row">
+                                  <span className="craft-zone-badge">{ZONE_LABELS[p.zone] || p.zone}</span>
+                                  <span className="craft-product-name">{p.productName}</span>
+                                  <span className="craft-color-cell">
+                                    <span className="craft-color-swatch" style={{ background: p.colorHex }} />
+                                    <span className="craft-color-hex">{p.colorHex}</span>
+                                  </span>
+                                  <span className="craft-technique">{p.technique || '—'}</span>
+                                  <span className="craft-row-actions">
+                                    <button className="craft-icon-btn" onClick={() => {
+                                      setProductDraft({ zone: p.zone, productName: p.productName, colorHex: p.colorHex, technique: p.technique });
+                                      setProductEditId(p.id);
+                                      setProductTargetLookId(selectedLook.id);
+                                      setShowProductModal(true);
+                                    }}>✏️</button>
+                                    <button className="craft-icon-btn craft-icon-btn--danger" onClick={() => handleDeleteProduct(selectedLook.id, p.id)}>
+                                      <Trash2 size={12} />
+                                    </button>
+                                  </span>
+                                </div>
                               ))}
                             </div>
                           )}
                         </div>
-                      </div>
-                    ))}
-                  </div>
-                  <button
-                    className="add-description-btn"
-                    onClick={() => {
-                      setBodyMarkerDraft({
-                        title: '',
-                        description: '',
-                        bodyPart: '',
-                        time: formatTime(currentTime),
-                        x: 50,
-                        y: 50,
-                        tabId: 'costumes',
-                        personId: bodySilhouettes[0]?.id || 1
-                      });
-                      setBodyMarkerEditId(null);
-                      setShowBodyMarkerModal(true);
-                    }}
-                  >
-                    <MapPinPlus size={16} />
-                    {t('Добавить описание маркера')}
-                  </button>
-                </div>
 
-                <div className="human-silhouette-section">
-                  <div className="silhouette-header">
-                    <h3>{t('Силуэт человека')}</h3>
-                    <button className="add-person-btn" onClick={handleAddSilhouette}>
-                      {t('+ Добавить человека')}
-                    </button>
-                  </div>
-                  <div className="silhouette-people-grid">
-                    {bodySilhouettes.map((person) => (
-                      <div key={`costumes-${person.id}`} className="silhouette-person-card">
-                        <div className="silhouette-person-head">
-                          <div className="silhouette-person-title">{person.name}</div>
-                          <div className="silhouette-person-actions">
-                            <button
-                              type="button"
-                              className="rename-person-btn"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleRenameSilhouette(person.id);
-                              }}
-                              title={t('Переименовать')}
-                            >
-                              {t('Изм.')}
-                            </button>
-                            <button
-                              type="button"
-                              className="remove-person-btn"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleRemoveSilhouette(person.id);
-                              }}
-                              disabled={bodySilhouettes.length <= 1}
-                              title={t('Удалить человека')}
-                            >
-                              {t('Удалить')}
-                            </button>
-                          </div>
-                        </div>
-                        <div className="silhouette-container">
-                          <div
-                            className="silhouette-wrapper"
-                            onClick={(e) => {
-                              const rect = e.currentTarget.getBoundingClientRect();
-                              const x = ((e.clientX - rect.left) / rect.width) * 100;
-                              const y = ((e.clientY - rect.top) / rect.height) * 100;
-                              setBodyMarkerDraft({
-                                title: '',
-                                description: '',
-                                bodyPart: 'torso',
-                                time: formatTime(currentTime),
-                                x,
-                                y,
-                                tabId: 'costumes',
-                                personId: person.id
-                              });
-                              setBodyMarkerEditId(null);
-                              setShowBodyMarkerModal(true);
+                        {/* Skin notes */}
+                        <div className="craft-section">
+                          <div className="craft-section-title"><AlertCircle size={14} /> {t('Особенности кожи / аллергии')}</div>
+                          <textarea
+                            className="craft-notes-input"
+                            placeholder={t('Нет аллергий, тип кожи — комбинированная...')}
+                            value={selectedLook.skinNotes}
+                            rows={3}
+                            onChange={async e => {
+                              const updated = makeupLooks.map(l => l.id === selectedLook.id ? { ...l, skinNotes: e.target.value } : l);
+                              setMakeupLooks(updated);
                             }}
-                          >
-                            <div className="body-zone-guides" aria-hidden="true">
-                              <span className="body-zone" style={{ top: '4%' }}>{t('Голова')}</span>
-                              <span className="body-zone" style={{ top: '22%' }}>{t('Плечи')}</span>
-                              <span className="body-zone" style={{ top: '40%' }}>{t('Торс')}</span>
-                              <span className="body-zone" style={{ top: '60%' }}>{t('Бёдра')}</span>
-                              <span className="body-zone" style={{ top: '78%' }}>{t('Ноги')}</span>
-                              <span className="body-zone" style={{ top: '94%' }}>{t('Стопы')}</span>
+                            onBlur={async () => {
+                              await saveMakeupLooks(makeupLooks);
+                            }}
+                          />
+                        </div>
+
+                        {/* Reference image */}
+                        <div className="craft-section">
+                          <div className="craft-section-title"><Upload size={14} /> {t('Референс')}</div>
+                          {selectedLook.referenceImage ? (
+                            <div className="craft-ref-img-wrap">
+                              <img src={selectedLook.referenceImage} alt="reference" className="craft-ref-img" />
+                              <button className="craft-ref-remove" onClick={async () => {
+                                const updated = makeupLooks.map(l => l.id === selectedLook.id ? { ...l, referenceImage: '' } : l);
+                                await saveMakeupLooks(updated);
+                              }}>✕</button>
                             </div>
-                            <img src={HumanSilhouette} alt={person.name} className="human-silhouette-img" />
-                            {bodyMarkers
-                              .filter((marker) => marker.tabId === 'costumes' && getMarkerPersonId(marker) === person.id)
-                              .map((marker) => (
-                                <div
-                                  key={marker.id}
-                                  className="body-marker"
-                                  style={{ left: `${marker.x}%`, top: `${marker.y}%`, backgroundColor: marker.color }}
-                                  title={`${marker.title} • ${person.name}`}
-                                >
-                                  <div className="marker-number">{marker.id}</div>
-                                  <div className="marker-tooltip">
-                                    <strong>{marker.title}</strong>
-                                    <div>{marker.bodyPart}</div>
-                                  </div>
-                                </div>
-                              ))}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="silhouette-instructions">{t('Кликните на силуэт, чтобы добавить маркер костюма')}</div>
-                </div>
-
-                <div className="costume-comments-section">
-                  <h3>{t('Комментарии к костюмам')}</h3>
-                <div className="comments-list">
-                  {commentsByTab.costumes.length === 0 && (
-                    <div className="empty-state">{t('Комментариев пока нет.')}</div>
-                  )}
-                  {commentsByTab.costumes.map((comment) => (
-                      <div key={comment.id} className="comment-card">
-                        <div className="comment-header">
-                          <div className="user-badge" style={{ backgroundColor: '#FF9800' }}>
-                            {comment.user}
-                          </div>
-                          <div className="comment-time">{comment.timestamp}</div>
-                        </div>
-                        <div className="comment-text">{comment.text}</div>
-                        <div className="comment-footer">
-                          <span className="resolved-badge" onClick={() => handleToggleResolved(comment.id)}>
-                            {comment.resolved ? t('Решено') : t('Не решено')}
-                          </span>
-                          <button className="reply-btn" onClick={() => openCommentModal('costumes')}>
-                            <Reply size={14} />
-                            {t('Ответить')}
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                  <button className="add-comment-btn" onClick={() => openCommentModal('costumes')}>
-                    <MessageSquarePlus size={16} />
-                    {t('Добавить комментарий')}
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {activeTab === 'makeup' && (
-            <div className="tab-content makeup-tab">
-              <div className="makeup-container">
-                <div className="markers-list-section">
-                  <h3>{t('Маркеры визажа')}</h3>
-                  <div className="markers-description-list">
-                    {bodyMarkers.filter((marker) => marker.tabId === 'makeup').length === 0 && (
-                      <div className="body-markers-empty">
-                        <Sparkles size={32} className="empty-tab-icon" />
-                        <p>{t('Кликните на лицо, чтобы добавить первую точку визажа')}</p>
-                      </div>
-                    )}
-                    {bodyMarkers.filter((marker) => marker.tabId === 'makeup').map((marker) => (
-                      <div
-                        key={marker.id}
-                        className="marker-description-card"
-                        style={{ '--mc': marker.color } as React.CSSProperties}
-                      >
-                        <div className="marker-header">
-                          <div className="marker-badge" style={{ backgroundColor: marker.color }}>
-                            {marker.id}
-                          </div>
-                          <div className="marker-title">{marker.title}</div>
-                          <button
-                            className="edit-marker-btn"
-                            title={t('Редактировать')}
-                            onClick={() => {
-                              setBodyMarkerDraft({
-                                title: marker.title,
-                                description: marker.description,
-                                bodyPart: marker.bodyPart,
-                                time: formatTime(getBodyMarkerTime(marker)),
-                                x: marker.x,
-                                y: marker.y,
-                                tabId: marker.tabId,
-                                personId: getMarkerPersonId(marker)
-                              });
-                              setBodyMarkerEditId(marker.id);
-                              setShowBodyMarkerModal(true);
-                            }}
-                          >
-                            ✏️
-                          </button>
-                        </div>
-                        <div className="marker-meta-row">
-                          <span className="marker-part-badge">{marker.bodyPart || '—'}</span>
-                          <span className="marker-person-label">
-                            {getSilhouetteLabel(getMarkerPersonId(marker))}
-                          </span>
-                          <select
-                            className={`body-marker-status-select body-marker-status--${marker.status || 'todo'}`}
-                            value={marker.status || 'todo'}
-                            onClick={(e) => e.stopPropagation()}
-                            onChange={(e) => {
-                              const newStatus = e.target.value as BodyMarker['status'];
-                              const updated = (project?.bodyMarkers || []).map(m => m.id === marker.id ? { ...m, status: newStatus } : m);
-                              saveProject({ bodyMarkers: updated } as Partial<Project>);
-                            }}
-                          >
-                            <option value="todo">{t('Не начато')}</option>
-                            <option value="in_progress">{t('В работе')}</option>
-                            <option value="ready">{t('Готово')}</option>
-                            <option value="approved">{t('Утверждено')}</option>
-                          </select>
-                        </div>
-                        <div className="marker-description">{marker.description}</div>
-                        <div className="marker-images">
-                          {marker.images.length === 0 ? (
-                            <button className="add-image-btn" onClick={() => handleAddBodyImage(marker.id)}>
-                              <Upload size={18} />
-                              {t('Загрузить мокап')}
-                            </button>
                           ) : (
-                            <div className="images-preview">
-                              {marker.images.map((image, index) => (
-                                <img key={`${marker.id}-${index}`} src={image} alt={marker.title} />
-                              ))}
-                            </div>
+                            <button className="craft-upload-btn" onClick={() => handleLookRefImage(selectedLook.id)}>
+                              <Upload size={16} /> {t('Загрузить фото')}
+                            </button>
                           )}
                         </div>
-                      </div>
-                    ))}
+                      </>
+                    )}
                   </div>
-                  <button
-                    className="add-description-btn"
-                    onClick={() => {
-                      setBodyMarkerDraft({
-                        title: '',
-                        description: '',
-                        bodyPart: 'face',
-                        time: formatTime(currentTime),
-                        x: 50,
-                        y: 25,
-                        tabId: 'makeup',
-                        personId: bodySilhouettes[0]?.id || 1
-                      });
-                      setBodyMarkerEditId(null);
-                      setShowBodyMarkerModal(true);
-                    }}
-                  >
-                    <MapPinPlus size={16} />
-                    {t('Добавить описание визажа')}
-                  </button>
-                </div>
-
-                <div className="human-silhouette-section">
-                  <div className="silhouette-header">
-                    <h3>{t('Силуэт для визажа')}</h3>
-                    <button className="add-person-btn" onClick={handleAddSilhouette}>
-                      {t('+ Добавить человека')}
-                    </button>
-                  </div>
-                  <div className="silhouette-people-grid">
-                    {bodySilhouettes.map((person) => (
-                      <div key={`makeup-${person.id}`} className="silhouette-person-card">
-                        <div className="silhouette-person-head">
-                          <div className="silhouette-person-title">{person.name}</div>
-                          <div className="silhouette-person-actions">
-                            <button
-                              type="button"
-                              className="rename-person-btn"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleRenameSilhouette(person.id);
-                              }}
-                              title={t('Переименовать')}
-                            >
-                              {t('Изм.')}
-                            </button>
-                            <button
-                              type="button"
-                              className="remove-person-btn"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleRemoveSilhouette(person.id);
-                              }}
-                              disabled={bodySilhouettes.length <= 1}
-                              title={t('Удалить человека')}
-                            >
-                              {t('Удалить')}
-                            </button>
-                          </div>
-                        </div>
-                        <div className="silhouette-container">
-                          <div
-                            className="silhouette-wrapper face-silhouette-wrapper"
-                            onClick={(e) => {
-                              const rect = e.currentTarget.getBoundingClientRect();
-                              const x = ((e.clientX - rect.left) / rect.width) * 100;
-                              const y = ((e.clientY - rect.top) / rect.height) * 100;
-                              setBodyMarkerDraft({
-                                title: '',
-                                description: '',
-                                bodyPart: 'face',
-                                time: formatTime(currentTime),
-                                x,
-                                y,
-                                tabId: 'makeup',
-                                personId: person.id
-                              });
-                              setBodyMarkerEditId(null);
-                              setShowBodyMarkerModal(true);
-                            }}
-                          >
-                            <img src={FaceSilhouette} alt={person.name} className="face-silhouette-img" />
-                            {bodyMarkers
-                              .filter((marker) => marker.tabId === 'makeup' && getMarkerPersonId(marker) === person.id)
-                              .map((marker) => (
-                                <div
-                                  key={marker.id}
-                                  className="body-marker"
-                                  style={{ left: `${marker.x}%`, top: `${marker.y}%`, backgroundColor: marker.color }}
-                                  title={`${marker.title} • ${person.name}`}
-                                >
-                                  <div className="marker-number">{marker.id}</div>
-                                  <div className="marker-tooltip">
-                                    <strong>{marker.title}</strong>
-                                    <div>{marker.bodyPart}</div>
-                                  </div>
-                                </div>
-                              ))}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="silhouette-instructions">{t('Кликните на часть тела для добавления точки визажа')}</div>
-                </div>
-
-                <div className="makeup-comments-section">
-                  <h3>{t('Комментарии к визажу')}</h3>
-                <div className="comments-list">
-                  {commentsByTab.makeup.length === 0 && (
-                    <div className="empty-state">{t('Комментариев пока нет.')}</div>
-                  )}
-                  {commentsByTab.makeup.map((comment) => (
-                      <div key={comment.id} className="comment-card">
-                        <div className="comment-header">
-                          <div className="user-badge" style={{ backgroundColor: '#E91E63' }}>
-                            {comment.user}
-                          </div>
-                          <div className="comment-time">{comment.timestamp}</div>
-                        </div>
-                        <div className="comment-text">{comment.text}</div>
-                        <div className="comment-footer">
-                          <span className="resolved-badge" onClick={() => handleToggleResolved(comment.id)}>
-                            {comment.resolved ? t('Решено') : t('Не решено')}
-                          </span>
-                          <button className="reply-btn" onClick={() => openCommentModal('makeup')}>
-                            <Reply size={14} />
-                            {t('Ответить')}
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                  <button className="add-comment-btn" onClick={() => openCommentModal('makeup')}>
-                    <MessageSquarePlus size={16} />
-                    {t('Добавить комментарий')}
-                  </button>
                 </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
 
           {activeTab === 'edit' && (
             <div className="tab-content edit-tab">
@@ -2401,6 +2512,83 @@ const ProjectPage: React.FC = () => {
               return { dep, total: depTasks.length, done, blocked, pct };
             });
 
+            const isDueSoon = (dueDate?: string) => {
+              if (!dueDate) return false;
+              const days = Math.ceil((new Date(dueDate).getTime() - Date.now()) / 86400000);
+              return days >= 0 && days <= 3;
+            };
+            const isOverdue = (dueDate?: string) => {
+              if (!dueDate) return false;
+              return new Date(dueDate).getTime() < Date.now();
+            };
+            const formatDue = (dueDate?: string) => {
+              if (!dueDate) return null;
+              const d = new Date(dueDate);
+              return d.toLocaleDateString('ru-RU', { day:'numeric', month:'short' });
+            };
+
+            // ── Task card (shared between list and kanban) ──────────────────
+            const renderTaskCard = (task: Task, compact = false) => (
+              <div
+                key={task.id}
+                className={`manager-task-card${task.status === 'blocked' ? ' manager-task-card--blocked' : ''}${dragTaskId === task.id ? ' manager-task-card--dragging' : ''}`}
+                draggable
+                onDragStart={() => setDragTaskId(task.id)}
+                onDragEnd={() => { setDragTaskId(null); setKanbanDragOver(null); }}
+                onDragOver={e => e.preventDefault()}
+                onDrop={async () => {
+                  if (!dragTaskId || dragTaskId === task.id) return;
+                  const from = tasks.findIndex(t => t.id === dragTaskId);
+                  const to = tasks.findIndex(t => t.id === task.id);
+                  if (from === -1 || to === -1) return;
+                  const reordered = [...tasks];
+                  const [moved] = reordered.splice(from, 1);
+                  reordered.splice(to, 0, moved);
+                  await saveTasks(reordered);
+                  setDragTaskId(null);
+                }}
+              >
+                <div className="manager-task-card-top">
+                  <span className="manager-task-priority-dot" style={{ background: priorityColor[task.priority] }} title={priorityLabel[task.priority]} />
+                  <span className="manager-task-title">{task.title}</span>
+                  {!compact && (
+                    <div className="manager-task-actions">
+                      <button className="edit-marker-btn" onClick={() => handleOpenEditTask(task)} title={t('Редактировать')}>✏️</button>
+                      <button className="edit-marker-btn" style={{ color: 'var(--error)' }} onClick={() => handleDeleteTask(task.id)} title={t('Удалить')}>🗑</button>
+                    </div>
+                  )}
+                  {compact && (
+                    <button className="craft-icon-btn" style={{ marginLeft:'auto' }} onClick={() => handleOpenEditTask(task)}>✏️</button>
+                  )}
+                </div>
+                {!compact && task.description && <div className="manager-task-desc">{task.description}</div>}
+                <div className="manager-task-meta">
+                  <span className="manager-task-dept" style={{ color: tabColors[task.department] || '#888' }}>
+                    {deptNames[task.department] || task.department}
+                  </span>
+                  {task.assignee && <span className="manager-task-assignee"><User2 size={11} /> {task.assignee}</span>}
+                  {task.dueDate && (
+                    <span className={`manager-task-due${isOverdue(task.dueDate) ? ' manager-task-due--overdue' : isDueSoon(task.dueDate) ? ' manager-task-due--soon' : ''}`}>
+                      <CalendarDays size={11} /> {formatDue(task.dueDate)}
+                    </span>
+                  )}
+                  {!compact && (
+                    <select
+                      className={`manager-task-status-select manager-task-status--${task.status}`}
+                      value={task.status}
+                      onClick={e => e.stopPropagation()}
+                      onChange={e => handleTaskStatusChange(task.id, e.target.value as TaskStatus)}
+                      style={{ borderColor: taskStatusColor[task.status], color: taskStatusColor[task.status] }}
+                    >
+                      {TASK_STATUS_ORDER.map(s => (
+                        <option key={s} value={s}>{taskStatusLabel[s]}</option>
+                      ))}
+                    </select>
+                  )}
+                </div>
+              </div>
+            );
+
             return (
               <div className="tab-content manager-tab">
                 <div className="manager-layout">
@@ -2437,9 +2625,25 @@ const ProjectPage: React.FC = () => {
                     ))}
                   </div>
 
-                  {/* Task board */}
+                  {/* Task board header */}
                   <div className="manager-task-head">
                     <div className="manager-section-title">{t('Задачи')} ({visibleTasks.length}/{totalTasks})</div>
+                    <div className="manager-view-toggle">
+                      <button
+                        className={`manager-view-btn${managerView === 'list' ? ' manager-view-btn--active' : ''}`}
+                        onClick={() => setManagerView('list')}
+                        title={t('Список')}
+                      >
+                        <List size={15} />
+                      </button>
+                      <button
+                        className={`manager-view-btn${managerView === 'kanban' ? ' manager-view-btn--active' : ''}`}
+                        onClick={() => setManagerView('kanban')}
+                        title={t('Канбан')}
+                      >
+                        <LayoutGrid size={15} />
+                      </button>
+                    </div>
                     <button className="add-marker-btn" onClick={handleOpenNewTask}>
                       <MapPinPlus size={16} className="add-marker-icon" />
                       {t('Новая задача')}
@@ -2472,59 +2676,51 @@ const ProjectPage: React.FC = () => {
                       <div>{t('Задач пока нет')}</div>
                       <button className="add-marker-btn" onClick={handleOpenNewTask}>{t('Создать первую задачу')}</button>
                     </div>
+                  ) : managerView === 'kanban' ? (
+                    /* ── KANBAN BOARD ── */
+                    <div className="kanban-board">
+                      {TASK_STATUS_ORDER.map(colStatus => {
+                        const colTasks = tasks.filter(t =>
+                          t.status === colStatus &&
+                          (taskFilterDept === 'all' || t.department === taskFilterDept)
+                        );
+                        const isDropTarget = kanbanDragOver === colStatus;
+                        return (
+                          <div
+                            key={colStatus}
+                            className={`kanban-column${isDropTarget ? ' kanban-column--drop-target' : ''}`}
+                            onDragOver={e => { e.preventDefault(); setKanbanDragOver(colStatus); }}
+                            onDragLeave={() => setKanbanDragOver(null)}
+                            onDrop={async () => {
+                              if (!dragTaskId) return;
+                              const task = tasks.find(t => t.id === dragTaskId);
+                              if (task && task.status !== colStatus) {
+                                await handleTaskStatusChange(dragTaskId, colStatus);
+                              }
+                              setDragTaskId(null);
+                              setKanbanDragOver(null);
+                            }}
+                          >
+                            <div className="kanban-col-head" style={{ borderTopColor: taskStatusColor[colStatus] }}>
+                              <span className="kanban-col-title" style={{ color: taskStatusColor[colStatus] }}>{taskStatusLabel[colStatus]}</span>
+                              <span className="kanban-col-count">{colTasks.length}</span>
+                            </div>
+                            <div className="kanban-col-cards">
+                              {colTasks.map(task => renderTaskCard(task, true))}
+                              {colTasks.length === 0 && (
+                                <div className="kanban-col-empty">{t('Нет задач')}</div>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
                   ) : visibleTasks.length === 0 ? (
                     <div className="empty-state">{t('Нет задач по выбранным фильтрам')}</div>
                   ) : (
+                    /* ── LIST VIEW ── */
                     <div className="manager-task-list">
-                      {visibleTasks.map(task => (
-                        <div
-                          key={task.id}
-                          className={`manager-task-card${task.status === 'blocked' ? ' manager-task-card--blocked' : ''}${dragTaskId === task.id ? ' manager-task-card--dragging' : ''}`}
-                          draggable
-                          onDragStart={() => setDragTaskId(task.id)}
-                          onDragEnd={() => setDragTaskId(null)}
-                          onDragOver={e => e.preventDefault()}
-                          onDrop={async () => {
-                            if (!dragTaskId || dragTaskId === task.id) return;
-                            const from = tasks.findIndex(t => t.id === dragTaskId);
-                            const to = tasks.findIndex(t => t.id === task.id);
-                            if (from === -1 || to === -1) return;
-                            const reordered = [...tasks];
-                            const [moved] = reordered.splice(from, 1);
-                            reordered.splice(to, 0, moved);
-                            await saveTasks(reordered);
-                            setDragTaskId(null);
-                          }}
-                        >
-                          <div className="manager-task-card-top">
-                            <span className="manager-task-priority-dot" style={{ background: priorityColor[task.priority] }} title={priorityLabel[task.priority]} />
-                            <span className="manager-task-title">{task.title}</span>
-                            <div className="manager-task-actions">
-                              <button className="edit-marker-btn" onClick={() => handleOpenEditTask(task)} title={t('Редактировать')}>✏️</button>
-                              <button className="edit-marker-btn" style={{ color: 'var(--error)' }} onClick={() => handleDeleteTask(task.id)} title={t('Удалить')}>🗑</button>
-                            </div>
-                          </div>
-                          {task.description && <div className="manager-task-desc">{task.description}</div>}
-                          <div className="manager-task-meta">
-                            <span className="manager-task-dept" style={{ color: tabColors[task.department] || '#888' }}>
-                              {deptNames[task.department] || task.department}
-                            </span>
-                            {task.assignee && <span className="manager-task-assignee">👤 {task.assignee}</span>}
-                            {task.sceneRef && <span className="manager-task-scene">{task.sceneRef}</span>}
-                            <select
-                              className={`manager-task-status-select manager-task-status--${task.status}`}
-                              value={task.status}
-                              onClick={e => e.stopPropagation()}
-                              onChange={e => handleTaskStatusChange(task.id, e.target.value as TaskStatus)}
-                              style={{ borderColor: taskStatusColor[task.status], color: taskStatusColor[task.status] }}
-                            >
-                              {TASK_STATUS_ORDER.map(s => (
-                                <option key={s} value={s}>{taskStatusLabel[s]}</option>
-                              ))}
-                            </select>
-                          </div>
-                        </div>
-                      ))}
+                      {visibleTasks.map(task => renderTaskCard(task, false))}
                     </div>
                   )}
                 </div>
@@ -2609,7 +2805,186 @@ const ProjectPage: React.FC = () => {
             <input className="form-input" placeholder={t('Имя или никнейм')} value={taskDraft.assignee} onChange={e => setTaskDraft(prev => ({ ...prev, assignee: e.target.value }))} />
           </div>
         </div>
-        <input className="form-input" placeholder={t('Сцена / тайм-код (необязательно)')} value={taskDraft.sceneRef} onChange={e => setTaskDraft(prev => ({ ...prev, sceneRef: e.target.value }))} />
+        <div className="form-row-2col">
+          <div>
+            <div className="form-label">{t('Сцена / тайм-код')}</div>
+            <input className="form-input" placeholder={t('Сц. 3, 0:45')} value={taskDraft.sceneRef} onChange={e => setTaskDraft(prev => ({ ...prev, sceneRef: e.target.value }))} />
+          </div>
+          <div>
+            <div className="form-label"><CalendarDays size={13} style={{ display:'inline', verticalAlign:'middle', marginRight:4 }} />{t('Дедлайн')}</div>
+            <input className="form-input" type="date" value={taskDraft.dueDate} onChange={e => setTaskDraft(prev => ({ ...prev, dueDate: e.target.value }))} />
+          </div>
+        </div>
+      </Modal>
+
+      {/* Makeup look modal */}
+      <Modal
+        title={lookEditId ? t('Редактировать образ') : t('Новый образ визажа')}
+        isOpen={showLookModal}
+        onClose={() => setShowLookModal(false)}
+        actions={
+          <>
+            <button className="secondary-btn" onClick={() => setShowLookModal(false)}>{t('Отмена')}</button>
+            <button className="primary-btn" onClick={handleSaveLook}>{t('Сохранить')}</button>
+          </>
+        }
+      >
+        <input className="form-input" placeholder={t('Название образа')} value={lookDraft.name} onChange={e => setLookDraft(p => ({ ...p, name: e.target.value }))} />
+        <div className="form-row-2col">
+          <div>
+            <div className="form-label">{t('Персонаж')}</div>
+            <input className="form-input" placeholder={t('Алекс')} value={lookDraft.characterName} onChange={e => setLookDraft(p => ({ ...p, characterName: e.target.value }))} />
+          </div>
+          <div>
+            <div className="form-label"><Clock size={13} style={{ display:'inline', verticalAlign:'middle', marginRight:4 }} />{t('Время нанесения (мин)')}</div>
+            <input className="form-input" type="number" min={0} value={lookDraft.applyTimeMin} onChange={e => setLookDraft(p => ({ ...p, applyTimeMin: Math.max(0, parseInt(e.target.value)||0) }))} />
+          </div>
+        </div>
+        <div className="form-label">{t('Сцены')}</div>
+        <input className="form-input" placeholder={t('Сц. 1, 3, 7')} value={lookDraft.sceneRefs} onChange={e => setLookDraft(p => ({ ...p, sceneRefs: e.target.value }))} />
+        <div className="form-label">{t('Статус')}</div>
+        <select className="form-input" value={lookDraft.status} onChange={e => setLookDraft(p => ({ ...p, status: e.target.value as LookStatus }))}>
+          <option value="todo">{t('Не начато')}</option>
+          <option value="in_progress">{t('В работе')}</option>
+          <option value="ready">{t('Готово')}</option>
+          <option value="approved">{t('Утверждено')}</option>
+        </select>
+      </Modal>
+
+      {/* Makeup product modal */}
+      <Modal
+        title={productEditId ? t('Редактировать продукт') : t('Добавить продукт')}
+        isOpen={showProductModal}
+        onClose={() => setShowProductModal(false)}
+        actions={
+          <>
+            <button className="secondary-btn" onClick={() => setShowProductModal(false)}>{t('Отмена')}</button>
+            <button className="primary-btn" onClick={handleSaveProduct}>{t('Сохранить')}</button>
+          </>
+        }
+      >
+        <div className="form-label">{t('Зона')}</div>
+        <select className="form-input" value={productDraft.zone} onChange={e => setProductDraft(p => ({ ...p, zone: e.target.value as MakeupZone }))}>
+          {(['skin','eyes','brows','lips','cheeks','contour','neck','other'] as MakeupZone[]).map(z => (
+            <option key={z} value={z}>{{ skin:'Кожа', eyes:'Глаза', brows:'Брови', lips:'Губы', cheeks:'Скулы', contour:'Контур', neck:'Шея', other:'Другое' }[z]}</option>
+          ))}
+        </select>
+        <input className="form-input" placeholder={t('Название продукта')} value={productDraft.productName} onChange={e => setProductDraft(p => ({ ...p, productName: e.target.value }))} />
+        <div className="form-row-2col">
+          <div>
+            <div className="form-label">{t('Цвет')}</div>
+            <div style={{ display:'flex', gap:8, alignItems:'center' }}>
+              <input type="color" value={productDraft.colorHex} onChange={e => setProductDraft(p => ({ ...p, colorHex: e.target.value }))} style={{ width:40, height:36, padding:2, border:'1px solid var(--border-muted)', borderRadius:6, background:'none', cursor:'pointer' }} />
+              <input className="form-input" style={{ flex:1 }} placeholder="#F5D5C0" value={productDraft.colorHex} onChange={e => setProductDraft(p => ({ ...p, colorHex: e.target.value }))} />
+            </div>
+          </div>
+          <div>
+            <div className="form-label">{t('Техника нанесения')}</div>
+            <input className="form-input" placeholder={t('Кисть, растушевка...')} value={productDraft.technique} onChange={e => setProductDraft(p => ({ ...p, technique: e.target.value }))} />
+          </div>
+        </div>
+      </Modal>
+
+      {/* Costume outfit modal */}
+      <Modal
+        title={outfitEditId ? t('Редактировать образ') : t('Новый образ костюма')}
+        isOpen={showOutfitModal}
+        onClose={() => setShowOutfitModal(false)}
+        actions={
+          <>
+            <button className="secondary-btn" onClick={() => setShowOutfitModal(false)}>{t('Отмена')}</button>
+            <button className="primary-btn" onClick={handleSaveOutfit}>{t('Сохранить')}</button>
+          </>
+        }
+      >
+        <input className="form-input" placeholder={t('Название образа')} value={outfitDraft.name} onChange={e => setOutfitDraft(p => ({ ...p, name: e.target.value }))} />
+        <div className="form-row-2col">
+          <div>
+            <div className="form-label">{t('Персонаж')}</div>
+            <input className="form-input" placeholder={t('Алекс')} value={outfitDraft.characterName} onChange={e => setOutfitDraft(p => ({ ...p, characterName: e.target.value }))} />
+          </div>
+          <div>
+            <div className="form-label">{t('Статус')}</div>
+            <select className="form-input" value={outfitDraft.status} onChange={e => setOutfitDraft(p => ({ ...p, status: e.target.value as LookStatus }))}>
+              <option value="todo">{t('Не начато')}</option>
+              <option value="in_progress">{t('В работе')}</option>
+              <option value="ready">{t('Готово')}</option>
+              <option value="approved">{t('Утверждено')}</option>
+            </select>
+          </div>
+        </div>
+        <div className="form-label">{t('Сцены')}</div>
+        <input className="form-input" placeholder={t('Сц. 1, 3, 7')} value={outfitDraft.sceneRefs} onChange={e => setOutfitDraft(p => ({ ...p, sceneRefs: e.target.value }))} />
+      </Modal>
+
+      {/* Garment modal */}
+      <Modal
+        title={garmentEditId ? t('Редактировать элемент') : t('Добавить элемент гардероба')}
+        isOpen={showGarmentModal}
+        onClose={() => setShowGarmentModal(false)}
+        actions={
+          <>
+            <button className="secondary-btn" onClick={() => setShowGarmentModal(false)}>{t('Отмена')}</button>
+            <button className="primary-btn" onClick={handleSaveGarment}>{t('Сохранить')}</button>
+          </>
+        }
+      >
+        <div className="form-row-2col">
+          <div>
+            <div className="form-label">{t('Категория')}</div>
+            <select className="form-input" value={garmentDraft.category} onChange={e => setGarmentDraft(p => ({ ...p, category: e.target.value as GarmentCategory }))}>
+              <option value="top">👕 {t('Верх')}</option>
+              <option value="bottom">👖 {t('Низ')}</option>
+              <option value="outerwear">🧥 {t('Верхняя одежда')}</option>
+              <option value="shoes">👟 {t('Обувь')}</option>
+              <option value="accessories">💍 {t('Аксессуары')}</option>
+              <option value="headwear">🎩 {t('Головной убор')}</option>
+              <option value="underwear">🩲 {t('Бельё')}</option>
+            </select>
+          </div>
+          <div>
+            <div className="form-label">{t('Название')}</div>
+            <input className="form-input" placeholder={t('Белая рубашка')} value={garmentDraft.name} onChange={e => setGarmentDraft(p => ({ ...p, name: e.target.value }))} />
+          </div>
+        </div>
+        <div className="form-row-2col">
+          <div>
+            <div className="form-label">{t('Цвет')}</div>
+            <div style={{ display:'flex', gap:8, alignItems:'center' }}>
+              <input type="color" value={garmentDraft.colorHex} onChange={e => setGarmentDraft(p => ({ ...p, colorHex: e.target.value }))} style={{ width:40, height:36, padding:2, border:'1px solid var(--border-muted)', borderRadius:6, background:'none', cursor:'pointer' }} />
+              <input className="form-input" style={{ flex:1 }} value={garmentDraft.colorHex} onChange={e => setGarmentDraft(p => ({ ...p, colorHex: e.target.value }))} />
+            </div>
+          </div>
+          <div>
+            <div className="form-label">{t('Материал')}</div>
+            <input className="form-input" placeholder={t('Шерсть, хлопок...')} value={garmentDraft.material} onChange={e => setGarmentDraft(p => ({ ...p, material: e.target.value }))} />
+          </div>
+        </div>
+        <div className="form-row-2col">
+          <div>
+            <div className="form-label">{t('Бренд')}</div>
+            <input className="form-input" placeholder={t('Zara, H&M...')} value={garmentDraft.brand} onChange={e => setGarmentDraft(p => ({ ...p, brand: e.target.value }))} />
+          </div>
+          <div>
+            <div className="form-label">{t('Статус')}</div>
+            <select className="form-input" value={garmentDraft.acquisition} onChange={e => setGarmentDraft(p => ({ ...p, acquisition: e.target.value as GarmentAcquisition }))}>
+              <option value="owned">✅ {t('Есть')}</option>
+              <option value="rented">🔄 {t('Аренда')}</option>
+              <option value="to_buy">🛒 {t('Купить')}</option>
+              <option value="to_make">✂️ {t('Сшить')}</option>
+            </select>
+          </div>
+        </div>
+        <div className="form-row-2col">
+          <div>
+            <div className="form-label">{t('Цена (₽)')}</div>
+            <input className="form-input" type="number" min={0} value={garmentDraft.price} onChange={e => setGarmentDraft(p => ({ ...p, price: Math.max(0, parseInt(e.target.value)||0) }))} />
+          </div>
+          <div>
+            <div className="form-label">{t('Заметки')}</div>
+            <input className="form-input" placeholder={t('Примерка 15.05...')} value={garmentDraft.notes} onChange={e => setGarmentDraft(p => ({ ...p, notes: e.target.value }))} />
+          </div>
+        </div>
       </Modal>
 
       {/* Cell editor modal */}

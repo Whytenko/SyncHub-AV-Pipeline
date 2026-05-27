@@ -12,8 +12,60 @@ export interface Task {
   department: TabType;
   assignee?: string;
   sceneRef?: string;
+  dueDate?: string;
   createdAt: string;
   updatedAt: string;
+}
+
+// ── Makeup ────────────────────────────────────────────────────────────────────
+export type MakeupZone = 'skin' | 'eyes' | 'brows' | 'lips' | 'cheeks' | 'contour' | 'neck' | 'other';
+export type LookStatus = 'todo' | 'in_progress' | 'ready' | 'approved';
+
+export interface MakeupProduct {
+  id: number;
+  zone: MakeupZone;
+  productName: string;
+  colorHex: string;
+  technique: string;
+}
+
+export interface MakeupLook {
+  id: number;
+  name: string;
+  characterName: string;
+  sceneRefs: string;
+  applyTimeMin: number;
+  products: MakeupProduct[];
+  skinNotes: string;
+  referenceImage: string;
+  status: LookStatus;
+}
+
+// ── Costumes ──────────────────────────────────────────────────────────────────
+export type GarmentCategory = 'top' | 'bottom' | 'outerwear' | 'shoes' | 'accessories' | 'headwear' | 'underwear';
+export type GarmentAcquisition = 'owned' | 'rented' | 'to_buy' | 'to_make';
+
+export interface CostumeGarment {
+  id: number;
+  category: GarmentCategory;
+  name: string;
+  colorHex: string;
+  material: string;
+  brand: string;
+  acquisition: GarmentAcquisition;
+  price: number;
+  notes: string;
+}
+
+export interface CostumeOutfit {
+  id: number;
+  name: string;
+  characterName: string;
+  sceneRefs: string;
+  garments: CostumeGarment[];
+  referenceImage: string;
+  outfitNotes: string;
+  status: LookStatus;
 }
 
 export interface User {
@@ -207,6 +259,8 @@ export interface Project {
   scriptParams?: ScriptParams;
   storyboardGrid?: StoryboardGrid;
   tasks?: Task[];
+  makeupLooks?: MakeupLook[];
+  costumeOutfits?: CostumeOutfit[];
 }
 
 export interface ProjectSummary {
