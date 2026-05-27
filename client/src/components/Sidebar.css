@@ -83,16 +83,15 @@
   flex-shrink: 0;
 }
 
-.sidebar-icon img {
+.sidebar-icon svg {
   width: 16px;
   height: 16px;
-  filter: var(--icon-filter);
   opacity: 0.6;
   transition: opacity 0.15s ease;
 }
 
-.sidebar-btn:hover .sidebar-icon img,
-.sidebar-btn.active .sidebar-icon img {
+.sidebar-btn:hover .sidebar-icon svg,
+.sidebar-btn.active .sidebar-icon svg {
   opacity: 0.9;
 }
 

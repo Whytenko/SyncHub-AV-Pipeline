@@ -53,7 +53,6 @@
 .play-icon {
   width: 14px;
   height: 14px;
-  filter: var(--icon-filter-on-accent);
 }
 
 /* Time counter */
@@ -139,7 +138,6 @@
 .marker-icon {
   width: 13px;
   height: 13px;
-  filter: var(--icon-filter);
 }
 
 /* Scrub cursor — vertical line with drag handle */
@@ -216,7 +214,6 @@
 .tl-action-icon {
   width: 14px;
   height: 14px;
-  filter: var(--icon-filter);
 }
 
 .tl-action-label {
@@ -358,7 +355,6 @@
 .tab-btn-icon {
   width: 16px;
   height: 16px;
-  filter: var(--icon-filter);
   opacity: 0.65;
   flex-shrink: 0;
   transition: opacity 0.18s ease;
@@ -462,7 +458,6 @@
 }
 
 .media-item:hover .media-icon img {
-  filter: var(--icon-filter);
 }
 
 .media-icon {
@@ -477,7 +472,6 @@
 .media-icon img {
   width: 28px;
   height: 28px;
-  filter: var(--icon-filter);
   transition: all 0.3s ease;
 }
 
@@ -528,12 +522,10 @@
 .upload-icon {
   width: 20px;
   height: 20px;
-  filter: var(--icon-filter);
   transition: all 0.3s ease;
 }
 
 .upload-btn:hover .upload-icon {
-  filter: var(--icon-filter);
 }
 
 /* Центральная колонка - Превью */
@@ -623,7 +615,6 @@
   width: 64px;
   height: 64px;
   margin-bottom: 16px;
-  filter: var(--icon-filter);
 }
 
 .video-placeholder-text {
@@ -730,12 +721,10 @@
 .reply-icon {
   width: 16px;
   height: 16px;
-  filter: var(--icon-filter);
   transition: all 0.3s ease;
 }
 
 .reply-btn:hover .reply-icon {
-  filter: var(--icon-filter);
 }
 
 .add-comment-btn {
@@ -764,12 +753,10 @@
 .add-comment-icon {
   width: 20px;
   height: 20px;
-  filter: var(--icon-filter);
   transition: all 0.3s ease;
 }
 
 .add-comment-btn:hover .add-comment-icon {
-  filter: var(--icon-filter);
 }
 
 /* ==================== */
@@ -1360,7 +1347,6 @@
   width: 32px;
   height: 32px;
   opacity: 0.3;
-  filter: var(--icon-filter);
 }
 
 .marker-description {
@@ -1407,7 +1393,6 @@
   width: 18px;
   height: 18px;
   flex-shrink: 0;
-  filter: var(--icon-filter);
 }
 
 /* Силуэт человека */
@@ -1575,7 +1560,6 @@
   opacity: 0.7;
   transition: opacity 0.25s ease;
   pointer-events: none;
-  filter: var(--icon-filter);
 }
 
 .face-silhouette-img {
@@ -1585,7 +1569,6 @@
   opacity: 0.7;
   transition: opacity 0.25s ease;
   pointer-events: none;
-  filter: var(--icon-filter);
 }
 
 .silhouette-wrapper:hover .human-silhouette-img,

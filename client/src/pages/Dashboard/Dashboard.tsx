@@ -8,12 +8,7 @@ import { useI18n } from '../../context/I18nContext'
 import type { ProjectSummary } from '../../types'
 import Modal from '../../components/Modal'
 
-// Импорт иконок
-import MembersIcon from '../assets/icons/members.svg'
-import VideoIcon from '../assets/icons/video.svg'
-import EditsIcon from '../assets/icons/edits.svg'
-import DeadlineIcon from '../assets/icons/deadline.svg'
-import NewProjectIcon from '../assets/icons/newproject.svg'
+import { Users, Film, ClipboardList, CalendarClock, FolderPlus } from 'lucide-react'
 
 const Dashboard: React.FC = () => {
   const navigate = useNavigate()
@@ -223,27 +218,21 @@ const Dashboard: React.FC = () => {
 
                 <div className="project-stats">
                   <div className="stat-item">
-                    <span className="stat-icon">
-                      <img src={MembersIcon} alt={t('Участники')} />
-                    </span>
+                    <span className="stat-icon"><Users size={18} /></span>
                     <span className="stat-text" aria-label={t('Участники: {count}', { count: project.members.length })}>
                       <span className="stat-count">{project.members.length}</span>
                       <span className="stat-label">{t('участника')}</span>
                     </span>
                   </div>
                   <div className="stat-item">
-                    <span className="stat-icon">
-                      <img src={VideoIcon} alt={t('Медиафайлы')} />
-                    </span>
+                    <span className="stat-icon"><Film size={18} /></span>
                     <span className="stat-text" aria-label={t('Медиафайлы: {count}', { count: project.mediaCount })}>
                       <span className="stat-count">{project.mediaCount}</span>
                       <span className="stat-label">{t('медиафайлов')}</span>
                     </span>
                   </div>
                   <div className="stat-item">
-                    <span className="stat-icon">
-                      <img src={EditsIcon} alt={t('Правки')} />
-                    </span>
+                    <span className="stat-icon"><ClipboardList size={18} /></span>
                     <span className="stat-text" aria-label={t('Новые правки: {count}', { count: project.editsCount })}>
                       <span className="stat-count">{project.editsCount}</span>
                       <span className="stat-label">{t('новых правок')}</span>
@@ -253,7 +242,7 @@ const Dashboard: React.FC = () => {
 
                 <div className="project-deadline">
                   <span className="deadline-icon">
-                    <img src={DeadlineIcon} alt={t('Дедлайн')} />
+                    <CalendarClock size={14} />
                   </span>
                   <strong>{t('Дедлайн:')}</strong> {formatDeadline(project.deadline)}
                   {isOverdue && (
@@ -294,7 +283,7 @@ const Dashboard: React.FC = () => {
 
         <div className="dashboard-actions">
           <button className="create-project-btn" onClick={() => setShowCreate(true)}>
-            <img src={NewProjectIcon} alt={t('Создать проект')} className="create-icon" />
+            <FolderPlus size={20} className="create-icon" />
             {t('Создать новый проект')}
           </button>
         </div>

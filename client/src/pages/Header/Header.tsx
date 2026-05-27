@@ -5,16 +5,10 @@ import logo from '../assets/logo.svg';
 import { useAuth } from '../../context/AuthContext';
 import { useHint } from '../../context/HintContext';
 import { useI18n } from '../../context/I18nContext';
-
-// Импорт иконок
-import HomeIcon from '../assets/icons/home.svg';
-import MembersIcon from '../assets/icons/members.svg';
-import SettingsIcon from '../assets/icons/options.svg';
-import ExportIcon from '../assets/icons/export.svg';
-import ProfileIcon from '../assets/icons/profile.svg';
-import LogoutIcon from '../assets/icons/logout.svg';
-import NewProjectIcon from '../assets/icons/newproject.svg';
-import ProjectsIcon from '../assets/icons/projects.svg';
+import {
+  Home, Users, Settings2, Download, User, LogOut,
+  FolderPlus, LayoutDashboard, ArrowLeft, type LucideIcon
+} from 'lucide-react';
 
 interface HeaderProps {
   title?: string;
@@ -23,7 +17,7 @@ interface HeaderProps {
   showLogo?: boolean;
   backButtonText?: string;
   backButtonPath?: string;
-  backButtonIcon?: string; // Новое свойство
+  backButtonIcon?: LucideIcon;
   showHomeButton?: boolean;
   showUserInfo?: boolean;
   showExportButton?: boolean;
@@ -45,7 +39,7 @@ const Header: React.FC<HeaderProps> = ({
   showBackButton = false,
   backButtonText = 'Назад',
   backButtonPath = '/dashboard',
-  backButtonIcon, // Новое свойство
+  backButtonIcon: BackIcon,
   showHomeButton = false,
   showUserInfo = true,
   showExportButton = false,
@@ -192,7 +186,7 @@ const Header: React.FC<HeaderProps> = ({
               title={t('Настройки')}
               style={navAccentStyle('#34d399')}
             >
-              <img src={SettingsIcon} alt={t('Настройки')} />
+              <Settings2 size={22} />
               <span>{t('Настройки')}</span>
             </button>
             <button
@@ -201,7 +195,7 @@ const Header: React.FC<HeaderProps> = ({
               title={t('Проекты')}
               style={navAccentStyle('#3b82f6')}
             >
-              <img src={ProjectsIcon} alt={t('Проекты')} />
+              <LayoutDashboard size={22} />
               <span>{t('Проекты')}</span>
             </button>
             <button
@@ -210,7 +204,7 @@ const Header: React.FC<HeaderProps> = ({
               title={t('Главная')}
               style={navAccentStyle('#f59e0b')}
             >
-              <img src={HomeIcon} alt={t('Главная')} />
+              <Home size={22} />
               <span>{t('Главная')}</span>
             </button>
             <button
@@ -219,7 +213,7 @@ const Header: React.FC<HeaderProps> = ({
               title={t('Создать')}
               style={navAccentStyle('#ff391a')}
             >
-              <img src={NewProjectIcon} alt={t('Создать')} />
+              <FolderPlus size={22} />
               <span>{t('Создать')}</span>
             </button>
             <button
@@ -228,7 +222,7 @@ const Header: React.FC<HeaderProps> = ({
               title={t('Профиль')}
               style={navAccentStyle('#22d3ee')}
             >
-              <img src={ProfileIcon} alt={t('Профиль')} />
+              <User size={22} />
               <span>{t('Профиль')}</span>
             </button>
           </nav>
@@ -248,17 +242,17 @@ const Header: React.FC<HeaderProps> = ({
 
         {showBackButton && (
           <button className="header-btn back-btn" onClick={handleBackClick} title={translatedBackText}>
-            {backButtonIcon ? (
-              <img src={backButtonIcon} alt={translatedBackText} className="back-icon" />
+            {BackIcon ? (
+              <BackIcon size={18} className="back-icon" />
             ) : (
-              <span className="back-arrow">←</span>
+              <ArrowLeft size={18} className="back-icon" />
             )}
           </button>
         )}
 
         {showHomeButton && (
           <button className="header-btn home-btn" onClick={handleHomeClick} title={t('Главная')}>
-            <img src={HomeIcon} alt={t('Главная')} className="home-icon" />
+            <Home size={18} className="home-icon" />
           </button>
         )}
       </div>
@@ -272,7 +266,7 @@ const Header: React.FC<HeaderProps> = ({
         <div className="header-hint">{hint || t('Подсказка: наведите на элемент')}</div>
         {teamCount > 0 && (
           <button className="header-btn team-btn" title={t('участника')}>
-            <img src={MembersIcon} alt={t('участника')} className="team-icon" />
+            <Users size={18} className="team-icon" />
             <span>{teamCount}</span>
           </button>
         )}
@@ -283,7 +277,7 @@ const Header: React.FC<HeaderProps> = ({
             onClick={onSettingsClick || (() => navigate('/settings'))}
             title={t('Настройки')}
           >
-            <img src={SettingsIcon} alt={t('Настройки')} className="settings-icon" />
+            <Settings2 size={18} className="settings-icon" />
           </button>
         )}
 
@@ -293,7 +287,7 @@ const Header: React.FC<HeaderProps> = ({
             onClick={onExportClick}
             title={t('Экспорт')}
           >
-            <img src={ExportIcon} alt={t('Экспорт')} className="export-icon" />
+            <Download size={18} className="export-icon" />
             <span>{t('Экспорт')}</span>
           </button>
         )}
@@ -305,7 +299,7 @@ const Header: React.FC<HeaderProps> = ({
             title={t('Профиль')}
           >
             <span className="user-avatar">
-              <img src={ProfileIcon} alt={t('Профиль')} className="profile-icon" />
+              <User size={16} className="profile-icon" />
             </span>
             <span className="user-name">{displayName}</span>
           </button>
@@ -317,7 +311,7 @@ const Header: React.FC<HeaderProps> = ({
             onClick={handleLogoutClick}
             title={t('Выйти')}
           >
-            <img src={LogoutIcon} alt={t('Выйти')} className="logout-icon" />
+            <LogOut size={18} className="logout-icon" />
             <span>{t('Выйти')}</span>
           </button>
         )}

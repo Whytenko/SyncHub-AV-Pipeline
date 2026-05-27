@@ -3,11 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import './Sidebar.css'
 import { useAuth } from '../context/AuthContext'
 import { useI18n } from '../context/I18nContext'
-
-import ProjectsIcon from '../pages/assets/icons/projects.svg'
-import OptionsIcon from '../pages/assets/icons/options.svg'
-import HelpIcon from '../pages/assets/icons/help.svg'
-import ProfileIcon from '../pages/assets/icons/profile.svg'
+import { LayoutDashboard, Settings2, CircleHelp, User } from 'lucide-react'
 import logo from '../pages/assets/logo.svg'
 
 const Sidebar: React.FC = () => {
@@ -33,9 +29,9 @@ const Sidebar: React.FC = () => {
   }, [])
 
   const items = [
-    { id: 'projects', title: t('Проекты'), path: '/dashboard', icon: ProjectsIcon },
-    { id: 'settings', title: t('Настройки'), path: '/settings', icon: OptionsIcon },
-    { id: 'help', title: t('Помощь'), path: '/help', icon: HelpIcon }
+    { id: 'projects', title: t('Проекты'), path: '/dashboard', Icon: LayoutDashboard },
+    { id: 'settings', title: t('Настройки'), path: '/settings', Icon: Settings2 },
+    { id: 'help', title: t('Помощь'), path: '/help', Icon: CircleHelp }
   ]
 
   return (
@@ -54,7 +50,7 @@ const Sidebar: React.FC = () => {
           onClick={() => navigate(item.path)}
         >
           <span className="sidebar-icon">
-            <img src={item.icon} alt={item.title} />
+            <item.Icon size={16} />
           </span>
           <span>{item.title}</span>
         </button>
@@ -84,7 +80,7 @@ const Sidebar: React.FC = () => {
         )}
         <button className="sidebar-btn sidebar-bottom" onClick={() => setOpen((prev) => !prev)}>
           <span className="sidebar-icon">
-            <img src={ProfileIcon} alt={t('Профиль')} />
+            <User size={16} />
           </span>
           <span>{t('Профиль')}</span>
         </button>

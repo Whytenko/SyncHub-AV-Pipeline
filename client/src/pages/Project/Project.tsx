@@ -25,25 +25,14 @@ import type {
 } from '../../types';
 
 // Импорт иконок
-import PlayIcon from '../assets/icons/play.svg';
-import PauseIcon from '../assets/icons/pause.svg';
-import AudioIcon from '../assets/icons/audio.svg';
-import VideoIcon from '../assets/icons/video.svg';
-import UploadIcon from '../assets/icons/import.svg';
-import MarkerIcon from '../assets/icons/marker.svg';
-import AddMarkerIcon from '../assets/icons/add_marker.svg';
-import AddCommentIcon from '../assets/icons/add_comment.svg';
-import BackToProjectIcon from '../assets/icons/backtoproject.svg';
-import PreviewIcon from '../assets/icons/preview.svg';
-import DirectorIcon from '../assets/icons/director.svg';
-import MakeupIcon from '../assets/icons/makeup.svg';
-import ScenarioIcon from '../assets/icons/scenario.svg';
-import ReplyIcon from '../assets/icons/comments.svg';
-import CostumesIcon from '../assets/icons/costumes.svg';
 import HumanSilhouette from '../assets/icons/human.svg';
 import FaceSilhouette from '../assets/icons/face.svg';
-import ActionIcon from '../assets/icons/action.svg';
-import ManagerIcon from '../assets/icons/edits.svg';
+import {
+  Play, Pause, Music, Film, Upload, MapPin, MapPinPlus,
+  MessageSquarePlus, ArrowLeft, Eye, Clapperboard, Sparkles,
+  ScrollText, Reply, Shirt, Zap, ClipboardList,
+  type LucideIcon
+} from 'lucide-react';
 
 const tabColors: Record<TabType, string> = {
   script: '#9C27B0',
@@ -65,34 +54,25 @@ const tabNames: Record<TabType, string> = {
   manager: 'Менеджер'
 };
 
-const mobileTabs: Array<{ id: TabType; label: string; icon: string }> = [
-  { id: 'script', label: 'Сценарий', icon: ScenarioIcon },
-  { id: 'director', label: 'Режиссёр', icon: DirectorIcon },
-  { id: 'costumes', label: 'Костюмер', icon: CostumesIcon },
-  { id: 'makeup', label: 'Визажист', icon: MakeupIcon },
-  { id: 'edit', label: 'Монтажер', icon: ActionIcon },
-  { id: 'sound', label: 'Звукорежиссёр', icon: AudioIcon },
-  { id: 'manager', label: 'Менеджер', icon: ManagerIcon }
+const mobileTabs: Array<{ id: TabType; label: string; Icon: LucideIcon }> = [
+  { id: 'script', label: 'Сценарий', Icon: ScrollText },
+  { id: 'director', label: 'Режиссёр', Icon: Clapperboard },
+  { id: 'costumes', label: 'Костюмер', Icon: Shirt },
+  { id: 'makeup', label: 'Визажист', Icon: Sparkles },
+  { id: 'edit', label: 'Монтажер', Icon: Zap },
+  { id: 'sound', label: 'Звукорежиссёр', Icon: Music },
+  { id: 'manager', label: 'Менеджер', Icon: ClipboardList }
 ];
 
-const mobileTabAriaNames: Record<TabType, string> = {
-  script: 'Scenario',
-  director: 'Director',
-  costumes: 'Costumes',
-  makeup: 'Makeup',
-  edit: 'Action',
-  sound: 'Sound',
-  manager: 'Manager'
-};
 
-const iconMap: Record<string, string> = {
-  director: DirectorIcon,
-  script: ScenarioIcon,
-  makeup: MakeupIcon,
-  costumes: CostumesIcon,
-  edit: MarkerIcon,
-  sound: AudioIcon,
-  manager: ManagerIcon
+const iconMap: Record<string, LucideIcon> = {
+  director: Clapperboard,
+  script: ScrollText,
+  makeup: Sparkles,
+  costumes: Shirt,
+  edit: Zap,
+  sound: Music,
+  manager: ClipboardList
 };
 
 const formatTime = (seconds: number) => {
@@ -496,8 +476,8 @@ const ProjectPage: React.FC = () => {
     return Array.from(new Set([0, ...labels, timelineDuration])).sort((a, b) => a - b);
   }, [timelineDuration]);
 
-  const resolveMarkerIcon = (marker: ProjectMarker) => {
-    return iconMap[marker.icon] || MarkerIcon;
+  const resolveMarkerIcon = (marker: ProjectMarker): LucideIcon => {
+    return iconMap[marker.icon] || MapPin;
   };
 
   const getSilhouetteLabel = (personId: number) => {
@@ -1168,7 +1148,7 @@ const ProjectPage: React.FC = () => {
         showBackButton={true}
         backButtonText={t('К проектам')}
         backButtonPath="/dashboard"
-        backButtonIcon={BackToProjectIcon}
+        backButtonIcon={ArrowLeft}
         showHomeButton={true}
         showUserInfo={false}
         showExportButton={true}
@@ -1183,11 +1163,7 @@ const ProjectPage: React.FC = () => {
         {/* ── Toolbar row: controls + scrub bar + actions ── */}
         <div className="timeline-toolbar">
           <button className="play-btn" onClick={handlePlayPause} title={isPlaying ? t('Пауза') : t('Воспроизвести')}>
-            <img
-              src={isPlaying ? PauseIcon : PlayIcon}
-              alt={isPlaying ? t('Пауза') : t('Воспроизвести')}
-              className="play-icon"
-            />
+            {isPlaying ? <Pause size={14} className="play-icon" /> : <Play size={14} className="play-icon" />}
           </button>
 
           <span className="time-display">
@@ -1227,7 +1203,7 @@ const ProjectPage: React.FC = () => {
                     handleOpenTimelineMarkerDetails(marker);
                   }}
                 >
-                  <img src={resolveMarkerIcon(marker)} alt={marker.user} className="marker-icon" />
+                  {(() => { const MIcon = resolveMarkerIcon(marker); return <MIcon size={13} className="marker-icon" />; })()}
                 </div>
               ))}
               <div
@@ -1254,7 +1230,7 @@ const ProjectPage: React.FC = () => {
             onClick={() => { setMarkerTitle(''); setMarkerComment(''); setShowMarkerModal(true); }}
             title={t('Добавить маркер для {tab}', { tab: t(tabNames[activeTab]) })}
           >
-            <img src={AddMarkerIcon} alt="" className="tl-action-icon" />
+            <MapPinPlus size={15} className="tl-action-icon" />
           </button>
 
           <button
@@ -1301,7 +1277,7 @@ const ProjectPage: React.FC = () => {
                 color: tabColors[tabId]
               } : {}}
             >
-              <img src={iconMap[tabId]} alt="" className="tab-btn-icon" />
+              {(() => { const TIcon = iconMap[tabId]; return TIcon ? <TIcon size={16} className="tab-btn-icon" /> : null; })()}
               {t(tabNames[tabId])}
               {tabId !== 'manager' && (() => {
                 const count = (commentsByTab[tabId] || []).filter(c => !c.resolved).length;
@@ -1357,7 +1333,7 @@ const ProjectPage: React.FC = () => {
               <div className="sp-grid">
 
                 <div className="sp-section">
-                  <div className="sp-section-title">🎭 {t('Актёрский состав')}</div>
+                  <div className="sp-section-title">{t('Актёрский состав')}</div>
                   <div className="sp-fields">
                     <div className="sp-field sp-field--accent">
                       <label className="sp-label">{t('Главных актёров')}</label>
@@ -1380,7 +1356,7 @@ const ProjectPage: React.FC = () => {
                 </div>
 
                 <div className="sp-section">
-                  <div className="sp-section-title">📍 {t('Масштаб производства')}</div>
+                  <div className="sp-section-title">{t('Масштаб производства')}</div>
                   <div className="sp-fields">
                     <div className="sp-field sp-field--accent">
                       <label className="sp-label">{t('Количество локаций')}</label>
@@ -1411,7 +1387,7 @@ const ProjectPage: React.FC = () => {
                 </div>
 
                 <div className="sp-section">
-                  <div className="sp-section-title">🎨 {t('Реквизит и образы')}</div>
+                  <div className="sp-section-title">{t('Реквизит и образы')}</div>
                   <div className="sp-fields">
                     <div className="sp-field">
                       <label className="sp-label">{t('Единиц реквизита')}</label>
@@ -1431,7 +1407,7 @@ const ProjectPage: React.FC = () => {
                 </div>
 
                 <div className="sp-section">
-                  <div className="sp-section-title">💥 {t('Эффекты и трюки')}</div>
+                  <div className="sp-section-title">{t('Эффекты и трюки')}</div>
                   <div className="sp-fields">
                     <div className="sp-field">
                       <label className="sp-label">{t('VFX-кадров (цифровые эффекты)')}</label>
@@ -1453,7 +1429,7 @@ const ProjectPage: React.FC = () => {
                 </div>
 
                 <div className="sp-section">
-                  <div className="sp-section-title">🚗 {t('Транспорт и оборудование')}</div>
+                  <div className="sp-section-title">{t('Транспорт и оборудование')}</div>
                   <div className="sp-fields">
                     <div className="sp-field">
                       <label className="sp-label">{t('Транспортных средств')}</label>
@@ -1468,7 +1444,7 @@ const ProjectPage: React.FC = () => {
                 </div>
 
                 <div className="sp-section">
-                  <div className="sp-section-title">📷 {t('Камера и формат')}</div>
+                  <div className="sp-section-title">{t('Камера и формат')}</div>
                   <div className="sp-fields">
                     <div className="sp-field">
                       <label className="sp-label">{t('Формат съёмки')}</label>
@@ -1488,7 +1464,7 @@ const ProjectPage: React.FC = () => {
                 </div>
 
                 <div className="sp-section">
-                  <div className="sp-section-title">🎵 {t('Звук и музыка')}</div>
+                  <div className="sp-section-title">{t('Звук и музыка')}</div>
                   <div className="sp-fields">
                     <div className="sp-field">
                       <label className="sp-label">{t('Оригинальных треков')}</label>
@@ -1506,7 +1482,7 @@ const ProjectPage: React.FC = () => {
                 </div>
 
                 <div className="sp-section">
-                  <div className="sp-section-title">🎬 {t('Жанр и аудитория')}</div>
+                  <div className="sp-section-title">{t('Жанр и аудитория')}</div>
                   <div className="sp-fields">
                     <div className="sp-field">
                       <label className="sp-label">{t('Жанр')}</label>
@@ -1538,7 +1514,7 @@ const ProjectPage: React.FC = () => {
                 </div>
 
                 <div className="sp-section">
-                  <div className="sp-section-title">⚠️ {t('Риски и условия')}</div>
+                  <div className="sp-section-title">{t('Риски и условия')}</div>
                   <div className="sp-fields">
                     <div className="sp-field">
                       <label className="sp-label">{t('Погодозависимых дней')}</label>
@@ -1552,7 +1528,7 @@ const ProjectPage: React.FC = () => {
                 </div>
 
                 <div className="sp-section sp-section--wide">
-                  <div className="sp-section-title">📝 {t('Концепция')}</div>
+                  <div className="sp-section-title">{t('Концепция')}</div>
                   <div className="sp-fields">
                     <div className="sp-field sp-field--full">
                       <label className="sp-label">{t('Логлайн (1–2 предложения)')}</label>
@@ -1610,11 +1586,11 @@ const ProjectPage: React.FC = () => {
 
                 {storyboardGrid.locationNames.length === 0 ? (
                   <div className="storyboard-empty">
-                    <div className="storyboard-empty-icon">🎬</div>
+                    
                     <div className="storyboard-empty-title">{t('Раскадровка пуста')}</div>
                     <div className="storyboard-empty-hint">{t('Добавьте локации кнопкой выше или задайте количество локаций на вкладке Сценарий')}</div>
                     <button className="add-marker-btn" style={{ marginTop: 16 }} onClick={handleAddStoryboardRow}>
-                      <img src={AddMarkerIcon} alt="" className="add-marker-icon" />
+                      <MapPinPlus size={16} className="add-marker-icon" />
                       {t('Добавить первую локацию')}
                     </button>
                   </div>
@@ -1726,7 +1702,7 @@ const ProjectPage: React.FC = () => {
                   <div className="markers-description-list">
                     {bodyMarkers.filter((marker) => marker.tabId === 'costumes').length === 0 && (
                       <div className="body-markers-empty">
-                        <img src={CostumesIcon} alt="" className="empty-tab-icon" />
+                        <Shirt size={32} className="empty-tab-icon" />
                         <p>{t('Кликните на силуэт, чтобы добавить первый маркер')}</p>
                       </div>
                     )}
@@ -1787,7 +1763,7 @@ const ProjectPage: React.FC = () => {
                         <div className="marker-images">
                           {marker.images.length === 0 ? (
                             <button className="add-image-btn" onClick={() => handleAddBodyImage(marker.id)}>
-                              <img src={UploadIcon} alt={t('Загрузить')} />
+                              <Upload size={18} />
                               {t('Загрузить изображение')}
                             </button>
                           ) : (
@@ -1818,7 +1794,7 @@ const ProjectPage: React.FC = () => {
                       setShowBodyMarkerModal(true);
                     }}
                   >
-                    <img src={AddMarkerIcon} alt={t('Добавить')} />
+                    <MapPinPlus size={16} />
                     {t('Добавить описание маркера')}
                   </button>
                 </div>
@@ -1935,7 +1911,7 @@ const ProjectPage: React.FC = () => {
                             {comment.resolved ? t('Решено') : t('Не решено')}
                           </span>
                           <button className="reply-btn" onClick={() => openCommentModal('costumes')}>
-                            <img src={ReplyIcon} alt={t('Ответить')} />
+                            <Reply size={14} />
                             {t('Ответить')}
                           </button>
                         </div>
@@ -1943,7 +1919,7 @@ const ProjectPage: React.FC = () => {
                     ))}
                   </div>
                   <button className="add-comment-btn" onClick={() => openCommentModal('costumes')}>
-                    <img src={AddCommentIcon} alt={t('Добавить комментарий')} />
+                    <MessageSquarePlus size={16} />
                     {t('Добавить комментарий')}
                   </button>
                 </div>
@@ -1959,7 +1935,7 @@ const ProjectPage: React.FC = () => {
                   <div className="markers-description-list">
                     {bodyMarkers.filter((marker) => marker.tabId === 'makeup').length === 0 && (
                       <div className="body-markers-empty">
-                        <img src={MakeupIcon} alt="" className="empty-tab-icon" />
+                        <Sparkles size={32} className="empty-tab-icon" />
                         <p>{t('Кликните на лицо, чтобы добавить первую точку визажа')}</p>
                       </div>
                     )}
@@ -2020,7 +1996,7 @@ const ProjectPage: React.FC = () => {
                         <div className="marker-images">
                           {marker.images.length === 0 ? (
                             <button className="add-image-btn" onClick={() => handleAddBodyImage(marker.id)}>
-                              <img src={UploadIcon} alt={t('Загрузить')} />
+                              <Upload size={18} />
                               {t('Загрузить мокап')}
                             </button>
                           ) : (
@@ -2051,7 +2027,7 @@ const ProjectPage: React.FC = () => {
                       setShowBodyMarkerModal(true);
                     }}
                   >
-                    <img src={AddMarkerIcon} alt={t('Добавить')} />
+                    <MapPinPlus size={16} />
                     {t('Добавить описание визажа')}
                   </button>
                 </div>
@@ -2160,7 +2136,7 @@ const ProjectPage: React.FC = () => {
                             {comment.resolved ? t('Решено') : t('Не решено')}
                           </span>
                           <button className="reply-btn" onClick={() => openCommentModal('makeup')}>
-                            <img src={ReplyIcon} alt={t('Ответить')} />
+                            <Reply size={14} />
                             {t('Ответить')}
                           </button>
                         </div>
@@ -2168,7 +2144,7 @@ const ProjectPage: React.FC = () => {
                     ))}
                   </div>
                   <button className="add-comment-btn" onClick={() => openCommentModal('makeup')}>
-                    <img src={AddCommentIcon} alt={t('Добавить комментарий')} />
+                    <MessageSquarePlus size={16} />
                     {t('Добавить комментарий')}
                   </button>
                 </div>
@@ -2190,7 +2166,7 @@ const ProjectPage: React.FC = () => {
                         onClick={() => setSelectedMediaId(file.id)}
                       >
                         <div className="media-icon">
-                          <img src={file.type === 'audio' ? AudioIcon : VideoIcon} alt={file.type} />
+                          {file.type === 'audio' ? <Music size={18} /> : <Film size={18} />}
                         </div>
                         <div className="media-info">
                           <div className="media-name">{file.name}</div>
@@ -2200,14 +2176,14 @@ const ProjectPage: React.FC = () => {
                     ))}
                     {mediaFiles.length === 0 && (
                       <div className="empty-state-rich">
-                        <img src={VideoIcon} alt="" className="empty-state-icon" />
+                        <Film size={32} className="empty-state-icon" />
                         <div className="empty-state-text">{t('Медиафайлов пока нет')}</div>
                         <button className="add-marker-btn" style={{ marginTop: 8 }} onClick={() => setShowMediaModal(true)}>{t('Добавить файл')}</button>
                       </div>
                     )}
                   </div>
                   <button className="upload-btn" onClick={() => setShowMediaModal(true)}>
-                    <img src={UploadIcon} alt={t('Загрузить')} className="upload-icon" />
+                    <Upload size={20} className="upload-icon" />
                     {t('Загрузить медиа')}
                   </button>
                 </div>
@@ -2217,11 +2193,10 @@ const ProjectPage: React.FC = () => {
                     {selectedMedia ? (
                       <div className="media-preview-card">
                         <div className="media-preview-head">
-                          <img
-                            src={selectedMedia.type === 'audio' ? AudioIcon : VideoIcon}
-                            alt={selectedMedia.type}
-                            className="preview-icon"
-                          />
+                          {selectedMedia.type === 'audio'
+                            ? <Music size={18} className="preview-icon" />
+                            : <Film size={18} className="preview-icon" />
+                          }
                           <div className="media-preview-titles">
                             <div className="media-preview-name">{selectedMedia.name}</div>
                             <div className="media-preview-meta">
@@ -2245,7 +2220,7 @@ const ProjectPage: React.FC = () => {
                       </div>
                     ) : (
                       <div className="placeholder-video">
-                        <img src={PreviewIcon} alt={t('Предпросмотр')} className="preview-icon" />
+                        <Eye size={16} className="preview-icon" />
                         <div className="video-placeholder-text">{t('Выберите медиафайл для предпросмотра')}</div>
                       </div>
                     )}
@@ -2272,7 +2247,7 @@ const ProjectPage: React.FC = () => {
                             {comment.resolved ? t('Решено') : t('Не решено')}
                           </span>
                           <button className="reply-btn" onClick={() => openCommentModal('edit')}>
-                            <img src={ReplyIcon} alt={t('Ответить')} />
+                            <Reply size={14} />
                             {t('Ответить')}
                           </button>
                         </div>
@@ -2280,7 +2255,7 @@ const ProjectPage: React.FC = () => {
                     ))}
                   </div>
                   <button className="add-comment-btn" onClick={() => openCommentModal('edit')}>
-                    <img src={AddCommentIcon} alt={t('Добавить комментарий')} className="add-comment-icon" />
+                    <MessageSquarePlus size={16} className="add-comment-icon" />
                     {t('Добавить комментарий')}
                   </button>
                 </div>
@@ -2295,14 +2270,14 @@ const ProjectPage: React.FC = () => {
                   <div className="sound-markers-head">
                     <h3>{t('Звуковые метки')}</h3>
                     <button className="add-marker-btn" onClick={() => setShowMarkerModal(true)}>
-                      <img src={AddMarkerIcon} alt={t('Добавить')} className="add-marker-icon" />
+                      <MapPinPlus size={16} className="add-marker-icon" />
                       {t('Добавить метку')}
                     </button>
                   </div>
                   <p className="sound-hint">{t('Переместите курсор таймлайна на нужную позицию, затем нажмите «Добавить метку».')}</p>
                   {soundMarkers.length === 0 ? (
                     <div className="empty-state-rich">
-                      <img src={AudioIcon} alt="" className="empty-state-icon" />
+                      <Music size={32} className="empty-state-icon" />
                       <div className="empty-state-text">{t('Звуковых меток пока нет')}</div>
                       <button className="add-marker-btn" style={{ marginTop: 8 }} onClick={() => setShowMarkerModal(true)}>
                         {t('Добавить метку')}
@@ -2350,7 +2325,7 @@ const ProjectPage: React.FC = () => {
                             {comment.resolved ? t('Решено') : t('Не решено')}
                           </span>
                           <button className="reply-btn" onClick={() => openCommentModal('sound')}>
-                            <img src={ReplyIcon} alt={t('Ответить')} />
+                            <Reply size={14} />
                             {t('Ответить')}
                           </button>
                         </div>
@@ -2358,7 +2333,7 @@ const ProjectPage: React.FC = () => {
                     ))}
                   </div>
                   <button className="add-comment-btn" onClick={() => openCommentModal('sound')}>
-                    <img src={AddCommentIcon} alt={t('Добавить комментарий')} className="add-comment-icon" />
+                    <MessageSquarePlus size={16} className="add-comment-icon" />
                     {t('Добавить комментарий')}
                   </button>
                 </div>
@@ -2436,7 +2411,7 @@ const ProjectPage: React.FC = () => {
                       {healthByDept.map(({ dep, total, done, blocked, pct }) => (
                         <div key={dep} className={`manager-health-card${blocked > 0 ? ' manager-health-card--blocked' : ''}`}>
                           <div className="manager-health-card-head">
-                            <img src={iconMap[dep]} alt="" className="manager-health-icon" style={{ filter: `drop-shadow(0 0 3px ${tabColors[dep]})` }} />
+                            {(() => { const HIcon = iconMap[dep]; return HIcon ? <HIcon size={18} className="manager-health-icon" style={{ color: tabColors[dep] }} /> : null; })()}
                             <span className="manager-health-dept" style={{ color: tabColors[dep] }}>{deptNames[dep]}</span>
                             {blocked > 0 && <span className="manager-health-blocked-badge">⛔ {blocked}</span>}
                           </div>
@@ -2466,7 +2441,7 @@ const ProjectPage: React.FC = () => {
                   <div className="manager-task-head">
                     <div className="manager-section-title">{t('Задачи')} ({visibleTasks.length}/{totalTasks})</div>
                     <button className="add-marker-btn" onClick={handleOpenNewTask}>
-                      <img src={AddMarkerIcon} alt="" className="add-marker-icon" />
+                      <MapPinPlus size={16} className="add-marker-icon" />
                       {t('Новая задача')}
                     </button>
                   </div>
@@ -2493,7 +2468,7 @@ const ProjectPage: React.FC = () => {
 
                   {tasks.length === 0 ? (
                     <div className="manager-empty-state">
-                      <img src={ManagerIcon} alt="" style={{ width: 48, opacity: 0.3, marginBottom: 12 }} />
+                      <ClipboardList size={48} style={{ opacity: 0.3, marginBottom: 12 }} />
                       <div>{t('Задач пока нет')}</div>
                       <button className="add-marker-btn" onClick={handleOpenNewTask}>{t('Создать первую задачу')}</button>
                     </div>
@@ -2535,7 +2510,7 @@ const ProjectPage: React.FC = () => {
                               {deptNames[task.department] || task.department}
                             </span>
                             {task.assignee && <span className="manager-task-assignee">👤 {task.assignee}</span>}
-                            {task.sceneRef && <span className="manager-task-scene">🎬 {task.sceneRef}</span>}
+                            {task.sceneRef && <span className="manager-task-scene">{task.sceneRef}</span>}
                             <select
                               className={`manager-task-status-select manager-task-status--${task.status}`}
                               value={task.status}
@@ -2567,11 +2542,7 @@ const ProjectPage: React.FC = () => {
             onClick={() => setActiveTab(tab.id)}
             style={{ ['--tab-accent' as const]: tabColors[tab.id] } as React.CSSProperties}
           >
-            <img
-              src={tab.icon}
-              alt={mobileTabAriaNames[tab.id]}
-              className="project-mobile-tab-icon"
-            />
+            <tab.Icon size={20} className="project-mobile-tab-icon" />
             <span className="project-mobile-tab-label">{t(tab.label)}</span>
           </button>
         ))}
