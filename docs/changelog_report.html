@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8"/>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif;
+    font-size: 10pt;
+    color: #1a1a2e;
+    background: #fff;
+    line-height: 1.6;
+  }
+
+  /* ── Page layout ── */
+  .page {
+    max-width: 794px;
+    margin: 0 auto;
+    padding: 0;
+  }
+
+  /* ── Header / Letterhead ── */
+  .letterhead {
+    background: linear-gradient(135deg, #0f0f23 0%, #1a1a3e 60%, #16213e 100%);
+    padding: 36px 50px 28px;
+    position: relative;
+    overflow: hidden;
+  }
+  .letterhead::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, #ff391a, #ff6b35, #ff391a);
+  }
+  .letterhead-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .logo-block {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .logo-icon {
+    width: 52px;
+    height: 52px;
+    flex-shrink: 0;
+  }
+  .logo-text-block {
+    display: flex;
+    flex-direction: column;
+  }
+  .logo-title {
+    font-size: 22pt;
+    font-weight: 700;
+    color: #ffffff;
+    letter-spacing: -0.5px;
+    line-height: 1;
+  }
+  .logo-title span {
+    color: #ff391a;
+  }
+  .logo-subtitle {
+    font-size: 8pt;
+    color: rgba(255,255,255,0.5);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-top: 3px;
+  }
+  .doc-meta {
+    text-align: right;
+  }
+  .doc-meta-label {
+    font-size: 7.5pt;
+    color: rgba(255,255,255,0.4);
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+  }
+  .doc-meta-value {
+    font-size: 9pt;
+    color: rgba(255,255,255,0.85);
+    margin-top: 2px;
+  }
+  .doc-meta-date {
+    font-size: 11pt;
+    font-weight: 600;
+    color: #ff6b35;
+    margin-top: 6px;
+  }
+
+  /* ── Document title band ── */
+  .title-band {
+    background: #f7f7fb;
+    border-left: 4px solid #ff391a;
+    padding: 18px 50px;
+    border-bottom: 1px solid #e8e8f0;
+  }
+  .doc-title {
+    font-size: 16pt;
+    font-weight: 700;
+    color: #1a1a2e;
+  }
+  .doc-subtitle {
+    font-size: 9pt;
+    color: #666;
+    margin-top: 4px;
+  }
+
+  /* ── Body ── */
+  .body {
+    padding: 32px 50px 40px;
+  }
+
+  /* ── Section ── */
+  .section {
+    margin-bottom: 28px;
+  }
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+    padding-bottom: 6px;
+    border-bottom: 1.5px solid #e8e8f0;
+  }
+  .section-num {
+    width: 26px;
+    height: 26px;
+    background: #ff391a;
+    border-radius: 6px;
+    color: #fff;
+    font-size: 9pt;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .section-title {
+    font-size: 12pt;
+    font-weight: 700;
+    color: #1a1a2e;
+    letter-spacing: -0.2px;
+  }
+
+  /* ── Items ── */
+  .item-list {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    padding-left: 36px;
+  }
+  .item {
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+  }
+  .item-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #ff391a;
+    flex-shrink: 0;
+    margin-top: 5px;
+  }
+  .item-text {
+    font-size: 9.5pt;
+    color: #333;
+    line-height: 1.55;
+  }
+  .item-text strong {
+    color: #1a1a2e;
+    font-weight: 600;
+  }
+
+  /* ── Subsection ── */
+  .subsection {
+    margin-top: 12px;
+    margin-bottom: 4px;
+  }
+  .subsection-title {
+    font-size: 9pt;
+    font-weight: 700;
+    color: #1a1a2e;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    margin-bottom: 6px;
+    padding-left: 36px;
+  }
+
+  /* ── Version badge ── */
+  .version-row {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    margin-bottom: 8px;
+    padding-left: 36px;
+  }
+  .version-badge {
+    background: #1a1a2e;
+    color: #ff391a;
+    font-size: 8pt;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 4px;
+    letter-spacing: 0.5px;
+    flex-shrink: 0;
+  }
+  .version-title {
+    font-size: 9.5pt;
+    font-weight: 600;
+    color: #1a1a2e;
+  }
+
+  /* ── Stack table ── */
+  .stack-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    padding-left: 36px;
+  }
+  .stack-card {
+    background: #f7f7fb;
+    border: 1px solid #e8e8f0;
+    border-radius: 8px;
+    padding: 10px 14px;
+  }
+  .stack-card-label {
+    font-size: 7.5pt;
+    color: #999;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 4px;
+  }
+  .stack-card-value {
+    font-size: 9pt;
+    color: #1a1a2e;
+    font-weight: 500;
+  }
+
+  /* ── Divider ── */
+  .divider {
+    border: none;
+    border-top: 1px solid #e8e8f0;
+    margin: 24px 0;
+  }
+
+  /* ── Footer ── */
+  .footer {
+    background: #f7f7fb;
+    border-top: 1px solid #e8e8f0;
+    padding: 14px 50px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .footer-left {
+    font-size: 7.5pt;
+    color: #aaa;
+  }
+  .footer-right {
+    font-size: 7.5pt;
+    color: #aaa;
+    text-align: right;
+  }
+  .footer-accent {
+    color: #ff391a;
+    font-weight: 600;
+  }
+
+  /* ── Confidential stamp ── */
+  .stamp-row {
+    padding: 8px 50px 0;
+    display: flex;
+    justify-content: flex-end;
+  }
+  .stamp {
+    border: 1.5px solid #e8e8f0;
+    border-radius: 6px;
+    padding: 5px 14px;
+    font-size: 7.5pt;
+    color: #bbb;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- LETTERHEAD -->
+  <div class="letterhead">
+    <div class="letterhead-inner">
+      <div class="logo-block">
+        <!-- Logo SVG -->
+        <svg class="logo-icon" viewBox="0 0 52 52" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect width="52" height="52" rx="12" fill="#ff391a" opacity="0.15"/>
+          <rect x="1" y="1" width="50" height="50" rx="11" stroke="#ff391a" stroke-width="1.5" opacity="0.4"/>
+          <!-- Film clapper top -->
+          <rect x="10" y="8" width="32" height="7" rx="2" fill="#ff391a" opacity="0.9"/>
+          <!-- Clapper stripes -->
+          <rect x="14" y="8" width="3" height="7" fill="#1a1a2e" opacity="0.5"/>
+          <rect x="21" y="8" width="3" height="7" fill="#1a1a2e" opacity="0.5"/>
+          <rect x="28" y="8" width="3" height="7" fill="#1a1a2e" opacity="0.5"/>
+          <rect x="35" y="8" width="3" height="7" fill="#1a1a2e" opacity="0.5"/>
+          <!-- Clapper hinge line -->
+          <line x1="10" y1="15" x2="42" y2="15" stroke="#ff391a" stroke-width="1"/>
+          <!-- Film body -->
+          <rect x="10" y="17" width="32" height="22" rx="2" fill="none" stroke="rgba(255,255,255,0.25)" stroke-width="1.5"/>
+          <!-- Sync wave -->
+          <path d="M 16 28 Q 19 23 22 28 Q 25 33 28 28 Q 31 23 34 28 Q 36 31 38 28" stroke="#ff391a" stroke-width="2" stroke-linecap="round" fill="none"/>
+          <!-- Sprocket holes -->
+          <rect x="11" y="19" width="3" height="3" rx="1" fill="rgba(255,255,255,0.3)"/>
+          <rect x="11" y="25" width="3" height="3" rx="1" fill="rgba(255,255,255,0.3)"/>
+          <rect x="11" y="31" width="3" height="3" rx="1" fill="rgba(255,255,255,0.3)"/>
+          <rect x="38" y="19" width="3" height="3" rx="1" fill="rgba(255,255,255,0.3)"/>
+          <rect x="38" y="25" width="3" height="3" rx="1" fill="rgba(255,255,255,0.3)"/>
+          <rect x="38" y="31" width="3" height="3" rx="1" fill="rgba(255,255,255,0.3)"/>
+          <!-- Bottom text -->
+          <rect x="13" y="43" width="26" height="2" rx="1" fill="rgba(255,255,255,0.15)"/>
+        </svg>
+        <div class="logo-text-block">
+          <div class="logo-title">Sync<span>Hub</span></div>
+          <div class="logo-subtitle">AV Pipeline Platform</div>
+        </div>
+      </div>
+      <div class="doc-meta">
+        <div class="doc-meta-label">Документ</div>
+        <div class="doc-meta-value">Отчёт об обновлениях</div>
+        <div class="doc-meta-label" style="margin-top:8px">Версия</div>
+        <div class="doc-meta-value">4.0</div>
+        <div class="doc-meta-date">25 апреля 2026</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TITLE BAND -->
+  <div class="title-band">
+    <div class="doc-title">Отчёт об изменениях и обновлениях</div>
+    <div class="doc-subtitle">Полное описание всех реализованных функций, улучшений и исправлений платформы SyncHub AV Pipeline</div>
+  </div>
+
+  <!-- STAMP -->
+  <div class="stamp-row">
+    <div class="stamp">Версия для дипломной работы</div>
+  </div>
+
+  <!-- BODY -->
+  <div class="body">
+
+    <!-- 1. OVERVIEW -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-num">1</div>
+        <div class="section-title">Обзор проекта</div>
+      </div>
+      <div class="item-list">
+        <div class="item"><div class="item-dot"></div><div class="item-text">
+          <strong>SyncHub AV Pipeline</strong> — веб-платформа для координации работы съёмочной группы. Режиссёры, костюмеры, визажисты, монтажёры и звукорежиссёры работают в едином цифровом пространстве.
+        </div></div>
+        <div class="item"><div class="item-dot"></div><div class="item-text">
+          Проект выполнен как дипломная работа с полным циклом разработки: проектирование интерфейса, реализация REST API, клиентская логика, безопасность и адаптация под мобильные устройства.
+        </div></div>
+      </div>
+
+      <div class="subsection-title" style="margin-top:14px">Технический стек</div>
+      <div class="stack-grid">
+        <div class="stack-card">
+          <div class="stack-card-label">Клиент</div>
+          <div class="stack-card-value">React 18 · TypeScript · Vite 5</div>
+        </div>
+        <div class="stack-card">
+          <div class="stack-card-label">Сервер</div>
+          <div class="stack-card-value">Node.js · Express 4 · JSON-база</div>
+        </div>
+        <div class="stack-card">
+          <div class="stack-card-label">Безопасность</div>
+          <div class="stack-card-value">helmet · express-rate-limit · scrypt</div>
+        </div>
+        <div class="stack-card">
+          <div class="stack-card-label">Стили</div>
+          <div class="stack-card-value">CSS custom properties · без UI-фреймворков</div>
+        </div>
+      </div>
+    </div>
+
+    <hr class="divider"/>
+
+    <!-- 2. SECURITY -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-num">2</div>
+        <div class="section-title">Безопасность сервера (v4)</div>
+      </div>
+      <div class="item-list">
+        <div class="item"><div class="item-dot"></div><div class="item-text">
+          <strong>Хеширование паролей.</strong> Вместо хранения паролей в открытом виде применяется алгоритм <strong>scryptSync</strong> (Node.js crypto) со случайной солью 16 байт. Сравнение выполняется через <strong>timingSafeEqual</strong> для защиты от timing-атак.
+        </div></div>
+        <div class="item"><div class="item-dot"></div><div class="item-text">
+          <strong>Сессии с TTL.</strong> Каждая сессия при создании получает поле <strong>expiresAt</strong> (+30 дней). При каждом запросе проверяется срок действия. При старте сервера все истёкшие сессии автоматически удаляются.
+        </div></div>
+        <div class="item"><div class="item-dot"></div><div class="item-text">
+          <strong>HTTP-заголовки безопасности.</strong> Подключён пакет <strong>helmet</strong>: выставляются заголовки Content-Security-Policy, X-Frame-Options, X-XSS-Protection, Strict-Transport-Security и другие.
+        </div></div>
+        <div class="item"><div class="item-dot"></div><div class="item-text">
+          <strong>Защита от брутфорса.</strong> Маршруты аутентификации ограничены: не более <strong>20 попыток за 15 минут</strong> с одного IP. Общий API-лимит: 120 запросов в минуту.
+        </div></div>
+        <div class="item"><div class="item-dot"></div><div class="item-text">
+          <strong>Смена порта.</strong> Сервер переведён с порта 5000 на <strong>5001</strong>: на macOS порт 5000 занят системным сервисом AirPlay Receiver (возвращал HTTP 403, Server: AirTunes), что блокировало API.
+        </div></div>
+        <div class="item"><div class="item-dot"></div><div class="item-text">
+          <strong>Валидация входных данных.</strong> Никнейм при регистрации: только латиница, цифры и символ «_», длина от 3 до 30 символов. Пароль: минимум 8 символов + хотя бы одна цифра. Размер тела запроса ограничен 2 МБ.
+        </div></div>
+        <div class="item"><div class="item-dot"></div><div class="item-text">
+          <strong>CORS.</strong> Список разрешённых источников вынесен в переменную окружения ALLOWED_ORIGINS, проверяется явно при каждом запросе.
+        </div></div>
+      </div>
+    </div>
+
+    <hr class="divider"/>
+
+    <!-- 3. OFFLINE -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-num">3</div>
+        <div class="section-title">Офлайн-режим (v4)</div>
+      </div>
+      <div class="item-list">
+        <div class="item"><div class="item-dot"></div><div class="item-text">
+          <strong>Автоматическое определение сети.</strong> AuthContext различает сетевую ошибку (TypeError при fetch) и ошибку API (неверный пароль, 401). При недоступности сервера — офлайн-режим, при ошибке авторизации — сообщение об ошибке.
+        </div></div>
+        <div class="item"><div class="item-dot"></div><div class="item-text">
+          <strong>Локальный кеш.</strong> После успешного входа данные пользователя сохраняются в localStorage. При потере сети приложение автоматически использует кешированный профиль с токеном «local».
+        </div></div>
+        <div class="item"><div class="item-dot"></div><div class="item-text">
+          <strong>OfflineBanner.</strong> Новый компонент — фиксированный баннер внизу экрана с пульсирующей жёлтой точкой и текстом: «Офлайн-режим — изменения сохраняются локально». На мобиле располагается над нижней панелью навигации.
+        </div></div>
+        <div class="item"><div class="item-dot"></div><div class="item-text">
+          <strong>Корректный выход из системы.</strong> При офлайн-режиме logout не делает API-запрос (токен «local»), очищает localStorage и сбрасывает состояние.
+        </div></div>
+      </div>
+    </div>
+
+    <hr class="divider"/>
+
+    <!-- 4. VISUALIZATION -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-num">4</div>
+        <div class="section-title">Визуализация тела и лица (v4)</div>
+      </div>
+
+      <div class="subsection-title">Вкладка Визажист</div>
+      <div class="item-list">
+        <div class="item"><div class="item-dot"></div><div class="item-text">
+          <strong>Новая иллюстрация лица (face.svg).</strong> Специально созданный SVG-рисунок: овал головы, уши, брови, глаза с радужкой, мост носа с ноздрями, губы (верхняя с изгибом, нижняя), намёк на подбородок.
+        </div></div>
+        <div class="item"><div class="item-dot"></div><div class="item-text">
+          <strong>Зоны лица.</strong> Вертикальные метки справа от иллюстрации: Лоб / Глаза / Нос / Губы / Подбородок — на низком уровне прозрачности, не перегружают интерфейс.
+        </div></div>
+        <div class="item"><div class="item-dot"></div><div class="item-text">
+          <strong>Адаптация к теме.</strong> SVG использует <strong>currentColor</strong>; изображение адаптируется к тёмной и светлой теме через CSS-переменную <code>--icon-filter</code>.
+        </div></div>
+      </div>
+
+      <div class="subsection-title" style="margin-top:14px">Вкладка Костюмер</div>
+      <div class="item-list">
+        <div class="item"><div class="item-dot"></div><div class="item-text">
+          <strong>Пронумерованные маркеры.</strong> Маркеры теперь отображаются в виде цветных кругов с порядковым номером вместо безымянных квадратов. Каждый круг стилизован под цвет маркера через CSS-переменную <code>--mc</code>.
+        </div></div>
+        <div class="item"><div class="item-dot"></div><div class="item-text">
+          <strong>Зоны тела.</strong> Силуэт дополнен шестью текстовыми метками: Голова (4%) / Плечи (22%) / Торс (40%) / Бёдра (60%) / Ноги (78%) / Стопы (94%) — позиционированы абсолютно вдоль силуэта.
+        </div></div>
+        <div class="item"><div class="item-dot"></div><div class="item-text">
+          <strong>Карточки маркеров.</strong> Каждая карточка: цветная полоса слева, пронумерованный значок, ярлык зоны тела, имя персонажа, описание. При наведении — подсветка фона.
+        </div></div>
+        <div class="item"><div class="item-dot"></div><div class="item-text">
+          <strong>Пустое состояние.</strong> Когда маркеров нет — отображается иконка и поясняющий текст вместо пустого пространства.
+        </div></div>
+      </div>
+    </div>
+
+    <hr class="divider"/>
+
+    <!-- 5. UI -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-num">5</div>
+        <div class="section-title">Интерфейс и уведомления (v4)</div>
+      </div>
+      <div class="item-list">
+        <div class="item"><div class="item-dot"></div><div class="item-text">
+          <strong>Toast-уведомления.</strong> Полная переработка: анимация появления (slide справа + scale) и исчезновения (обратная). Кнопка закрытия «×» на каждом уведомлении. Разные таймеры: успех — 3 с, информация — 4 с, ошибка — 6 с.
+        </div></div>
+        <div class="item"><div class="item-dot"></div><div class="item-text">
+          <strong>Состояния кнопок.</strong> Задизейбленные кнопки: opacity 0.45, cursor not-allowed. Фокусные кольца через <code>focus-visible</code> для доступности. Спиннер загрузки внутри кнопок.
+        </div></div>
+        <div class="item"><div class="item-dot"></div><div class="item-text">
+          <strong>Tooltips маркеров.</strong> Позиционирование исправлено: <code>bottom: calc(100% + 8px)</code> вместо фиксированного top. Добавлена тень и рамка, ограничена максимальная ширина 180px.
+        </div></div>
+      </div>
+    </div>
+
+    <hr class="divider"/>
+
+    <!-- 6. MOBILE -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-num">6</div>
+        <div class="section-title">Мобильная версия (v1–v4)</div>
+      </div>
+      <div class="item-list">
+        <div class="item"><div class="item-dot"></div><div class="item-text">
+          <strong>Нижняя панель навигации.</strong> Заменяет боковую панель на мобиле. Порядок кнопок обновлён, активный экран подсвечивается акцентной линией в цвет раздела.
+        </div></div>
+        <div class="item"><div class="item-dot"></div><div class="item-text">
+          <strong>Вкладки проекта.</strong> На странице проекта — горизонтальная фиксированная полоса вкладок вверху экрана. Каждая вкладка имеет собственный цветовой акцент. Свернуть/развернуть панель можно только на странице проекта.
+        </div></div>
+        <div class="item"><div class="item-dot"></div><div class="item-text">
+          <strong>Монтажёр на мобиле.</strong> Блок предпросмотра видео отображается первым, затем медиатека — в соответствии с приоритетом использования.
+        </div></div>
+        <div class="item"><div class="item-dot"></div><div class="item-text">
+          <strong>Устранён горизонтальный скролл.</strong> Перераспределены блоки контента, упрощена структура страницы проекта на узких экранах.
+        </div></div>
+        <div class="item"><div class="item-dot"></div><div class="item-text">
+          <strong>Все страницы адаптированы:</strong> Dashboard, Profile, Settings, Help — полная мобильная адаптация с переработанными сетками и отступами.
+        </div></div>
+        <div class="item"><div class="item-dot"></div><div class="item-text">
+          <strong>Силуэты на мобиле.</strong> Иллюстрации тела и лица корректно масштабируются, зоны тела уменьшают шрифт до 9px, OfflineBanner располагается над навигационной панелью.
+        </div></div>
+      </div>
+    </div>
+
+    <hr class="divider"/>
+
+    <!-- 7. I18N -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-num">7</div>
+        <div class="section-title">Интернационализация (v2–v4)</div>
+      </div>
+      <div class="item-list">
+        <div class="item"><div class="item-dot"></div><div class="item-text">
+          <strong>Три языка интерфейса:</strong> Русский, English, 中文 (китайский). Переключатель в шапке и на странице настроек.
+        </div></div>
+        <div class="item"><div class="item-dot"></div><div class="item-text">
+          <strong>Охват переводов:</strong> все вкладки проекта, кнопки, ярлыки зон тела (Голова / Shoulders / 头部 и т.д.), подсказки, сообщения об ошибках, офлайн-баннер, пустые состояния.
+        </div></div>
+        <div class="item"><div class="item-dot"></div><div class="item-text">
+          <strong>Реализация через Context API</strong> (I18nContext). Смена языка мгновенная, без перезагрузки страницы.
+        </div></div>
+      </div>
+    </div>
+
+    <hr class="divider"/>
+
+    <!-- 8. PROFILE & SETTINGS -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-num">8</div>
+        <div class="section-title">Профиль, настройки и навигация (v2–v3)</div>
+      </div>
+      <div class="item-list">
+        <div class="item"><div class="item-dot"></div><div class="item-text">
+          <strong>Профиль пользователя.</strong> Редактирование имени, фамилии, никнейма, роли в производстве, аватара (эмодзи), даты рождения, пола. Смена пароля с подтверждением.
+        </div></div>
+        <div class="item"><div class="item-dot"></div><div class="item-text">
+          <strong>Настройки.</strong> Переключение тёмной/светлой темы, выбор языка интерфейса. Настройки сохраняются между сессиями.
+        </div></div>
+        <div class="item"><div class="item-dot"></div><div class="item-text">
+          <strong>Боковая панель (Sidebar).</strong> Логотип SyncHub, список проектов, аватар и имя пользователя внизу. Скрывается на мобильных устройствах.
+        </div></div>
+        <div class="item"><div class="item-dot"></div><div class="item-text">
+          <strong>Шапка (Header).</strong> Иконки быстрого переключения темы, языка, перехода в профиль. Поддержка скрытия на мобиле.
+        </div></div>
+        <div class="item"><div class="item-dot"></div><div class="item-text">
+          <strong>Hint-система.</strong> Всплывающие подсказки при первом взаимодействии с элементами интерфейса.
+        </div></div>
+        <div class="item"><div class="item-dot"></div><div class="item-text">
+          <strong>ErrorBoundary.</strong> Компонент-страховка: перехватывает ошибки React-рендера, показывает экран восстановления с кнопкой «Перезагрузить».
+        </div></div>
+      </div>
+    </div>
+
+    <hr class="divider"/>
+
+    <!-- 9. CHANGELOG -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-num">9</div>
+        <div class="section-title">История версий</div>
+      </div>
+
+      <div class="version-row">
+        <div class="version-badge">v4.0</div>
+        <div class="version-title">Безопасность, офлайн-режим, визуализация — 25 апреля 2026</div>
+      </div>
+      <div class="item-list" style="margin-bottom:12px">
+        <div class="item"><div class="item-dot"></div><div class="item-text">scrypt-хеширование паролей, TTL-сессии, helmet, rate limiting, порт 5001</div></div>
+        <div class="item"><div class="item-dot"></div><div class="item-text">Офлайн-режим с OfflineBanner и кешированием пользователя в localStorage</div></div>
+        <div class="item"><div class="item-dot"></div><div class="item-text">face.svg для Визажиста, зоны тела, пронумерованные маркеры, пустые состояния</div></div>
+        <div class="item"><div class="item-dot"></div><div class="item-text">Анимированные toast-уведомления с кнопкой закрытия</div></div>
+      </div>
+
+      <div class="version-row">
+        <div class="version-badge">v3.0</div>
+        <div class="version-title">Таймлайн, маркеры, доработка UI — март 2026</div>
+      </div>
+      <div class="item-list" style="margin-bottom:12px">
+        <div class="item"><div class="item-dot"></div><div class="item-text">Полный рефакторинг страницы проекта: визуальные маркеры таймлайна</div></div>
+        <div class="item"><div class="item-dot"></div><div class="item-text">Карточки маркеров с цветовыми метками для всех вкладок проекта</div></div>
+        <div class="item"><div class="item-dot"></div><div class="item-text">Доработка тёмной темы, расширение переводов i18n</div></div>
+      </div>
+
+      <div class="version-row">
+        <div class="version-badge">v2.0</div>
+        <div class="version-title">Мобильная версия, профиль, i18n — февраль 2026</div>
+      </div>
+      <div class="item-list" style="margin-bottom:12px">
+        <div class="item"><div class="item-dot"></div><div class="item-text">Нижняя мобильная панель навигации</div></div>
+        <div class="item"><div class="item-dot"></div><div class="item-text">Полный рефакторинг Profile и Settings с мобильной адаптацией</div></div>
+        <div class="item"><div class="item-dot"></div><div class="item-text">Добавлены English и 中文; ErrorBoundary; улучшенная обработка ошибок</div></div>
+      </div>
+
+      <div class="version-row">
+        <div class="version-badge">v1.0</div>
+        <div class="version-title">Силуэты, мобильный проект — февраль 2026</div>
+      </div>
+      <div class="item-list" style="margin-bottom:12px">
+        <div class="item"><div class="item-dot"></div><div class="item-text">Интерактивный силуэт для Костюмера и Визажиста с поддержкой нескольких персонажей</div></div>
+        <div class="item"><div class="item-dot"></div><div class="item-text">Горизонтальные вкладки проекта на мобиле; устранён горизонтальный скролл</div></div>
+      </div>
+
+      <div class="version-row">
+        <div class="version-badge">v0.1</div>
+        <div class="version-title">Базовая структура — январь 2026</div>
+      </div>
+      <div class="item-list">
+        <div class="item"><div class="item-dot"></div><div class="item-text">Express API + JSON-файловая база данных, базовая аутентификация</div></div>
+        <div class="item"><div class="item-dot"></div><div class="item-text">React-приложение: Login, Register, Dashboard, Project, Profile, Settings, Help</div></div>
+        <div class="item"><div class="item-dot"></div><div class="item-text">Sidebar с логотипом, Header с иконками, Hint-контекст</div></div>
+      </div>
+    </div>
+
+  </div><!-- /body -->
+
+  <!-- FOOTER -->
+  <div class="footer">
+    <div class="footer-left">
+      <strong class="footer-accent">SyncHub AV Pipeline</strong> · Дипломный проект<br>
+      github.com/Whytenko/SyncHub-AV-Pipeline
+    </div>
+    <div class="footer-right">
+      Составлено: 25 апреля 2026<br>
+      Автор: <strong class="footer-accent">Whytenko</strong>
+    </div>
+  </div>
+
+</div><!-- /page -->
+</body>
+</html>
