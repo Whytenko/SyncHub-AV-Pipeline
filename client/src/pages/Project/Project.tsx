@@ -30,13 +30,19 @@ import type {
   TaskPriority
 } from '../../types';
 
+import ScriptTab from './tabs/ScriptTab';
+import DirectorTab from './tabs/DirectorTab';
+import CostumesTab from './tabs/CostumesTab';
+import MakeupTab from './tabs/MakeupTab';
+import EditTab from './tabs/EditTab';
+import SoundTab from './tabs/SoundTab';
+import ManagerTab from './tabs/ManagerTab';
+
 // Импорт иконок
 import {
-  Play, Pause, Music, Film, Upload, MapPin, MapPinPlus,
-  MessageSquarePlus, ArrowLeft, Eye, Clapperboard, Sparkles,
-  ScrollText, Reply, Shirt, Zap, ClipboardList, Plus, Trash2,
-  ChevronRight, Palette, Clock, AlertCircle, LayoutGrid, List,
-  CalendarDays, User2,
+  Play, Pause, Music, MapPin, MapPinPlus,
+  ArrowLeft, Clapperboard, Sparkles,
+  ScrollText, Shirt, Zap, ClipboardList, Clock, CalendarDays,
   type LucideIcon
 } from 'lucide-react';
 
@@ -1406,1327 +1412,134 @@ const ProjectPage: React.FC = () => {
 
         <div className="tabs-content">
           {activeTab === 'script' && (
-            <div className="tab-content script-tab">
-              <input ref={scriptFileInputRef} type="file" accept=".pdf,.doc,.docx,.png,.jpg,.jpeg" style={{ display: 'none' }} onChange={handleScriptFileUpload} />
-
-              {/* Upload zone */}
-              <div
-                className={`script-upload-zone${scriptParams.scriptFile ? ' has-file' : ''}`}
-                onClick={() => !scriptParams.scriptFile && scriptFileInputRef.current?.click()}
-                onDragOver={(e) => e.preventDefault()}
-                onDrop={async (e) => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f) { const fakeEvent = { target: { files: [f], value: '' } } as unknown as React.ChangeEvent<HTMLInputElement>; await handleScriptFileUpload(fakeEvent); } }}
-              >
-                {scriptParams.scriptFile ? (
-                  <div className="script-file-info">
-                    <div className="script-file-icon">{scriptParams.scriptFile.type === 'PDF' ? '📕' : scriptParams.scriptFile.type === 'PNG' || scriptParams.scriptFile.type === 'JPG' || scriptParams.scriptFile.type === 'JPEG' ? '🖼' : '📄'}</div>
-                    <div className="script-file-details">
-                      <div className="script-file-name">{scriptParams.scriptFile.name}</div>
-                      <div className="script-file-meta">{scriptParams.scriptFile.type} · {scriptParams.scriptFile.size}</div>
-                    </div>
-                    {scriptParams.scriptFile.dataUrl && <img src={scriptParams.scriptFile.dataUrl} className="script-file-thumb" alt="" />}
-                    <div className="script-file-actions">
-                      <button className="script-file-btn" onClick={(e) => { e.stopPropagation(); scriptFileInputRef.current?.click(); }}>{t('Заменить')}</button>
-                      <button className="script-file-btn script-file-btn--danger" onClick={(e) => { e.stopPropagation(); handleRemoveScriptFile(); }}>{t('Удалить')}</button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="script-upload-prompt">
-                    <div className="script-upload-icon">📄</div>
-                    <div className="script-upload-title">{t('Загрузить файл сценария')}</div>
-                    <div className="script-upload-formats">PDF · Word (.docx) · PNG · JPG</div>
-                    <div className="script-upload-hint">{t('Перетащите файл или нажмите для выбора')}</div>
-                  </div>
-                )}
-              </div>
-
-              {/* Parameters */}
-              <div className="sp-grid">
-
-                <div className="sp-section">
-                  <div className="sp-section-title">{t('Актёрский состав')}</div>
-                  <div className="sp-fields">
-                    <div className="sp-field sp-field--accent">
-                      <label className="sp-label">{t('Главных актёров')}</label>
-                      <input type="number" min={0} max={500} className="sp-num" value={scriptParams.actorsCount} onChange={(e) => updateScriptParam('actorsCount', Math.max(0, parseInt(e.target.value) || 0))} />
-                      <span className="sp-hint">{t('→ Костюмер и Визажист')}</span>
-                    </div>
-                    <div className="sp-field">
-                      <label className="sp-label">{t('Массовка / экстра')}</label>
-                      <input type="number" min={0} max={10000} className="sp-num" value={scriptParams.extraActorsCount} onChange={(e) => updateScriptParam('extraActorsCount', Math.max(0, parseInt(e.target.value) || 0))} />
-                    </div>
-                    <div className="sp-field">
-                      <label className="sp-label">{t('Дети-актёры')}</label>
-                      <input type="number" min={0} max={200} className="sp-num" value={scriptParams.childActorsCount} onChange={(e) => updateScriptParam('childActorsCount', Math.max(0, parseInt(e.target.value) || 0))} />
-                    </div>
-                    <div className="sp-field">
-                      <label className="sp-label">{t('Животные')}</label>
-                      <input type="number" min={0} max={200} className="sp-num" value={scriptParams.animalsCount} onChange={(e) => updateScriptParam('animalsCount', Math.max(0, parseInt(e.target.value) || 0))} />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="sp-section">
-                  <div className="sp-section-title">{t('Масштаб производства')}</div>
-                  <div className="sp-fields">
-                    <div className="sp-field sp-field--accent">
-                      <label className="sp-label">{t('Количество локаций')}</label>
-                      <input type="number" min={0} max={200} className="sp-num" value={scriptParams.locationsCount} onChange={(e) => updateScriptParam('locationsCount', Math.max(0, parseInt(e.target.value) || 0))} />
-                      <span className="sp-hint">{t('→ Раскадровка Режиссёра')}</span>
-                    </div>
-                    <div className="sp-field">
-                      <label className="sp-label">{t('Наружных сцен')}</label>
-                      <input type="number" min={0} max={5000} className="sp-num" value={scriptParams.exteriorScenesCount} onChange={(e) => updateScriptParam('exteriorScenesCount', Math.max(0, parseInt(e.target.value) || 0))} />
-                    </div>
-                    <div className="sp-field">
-                      <label className="sp-label">{t('Внутренних сцен')}</label>
-                      <input type="number" min={0} max={5000} className="sp-num" value={scriptParams.interiorScenesCount} onChange={(e) => updateScriptParam('interiorScenesCount', Math.max(0, parseInt(e.target.value) || 0))} />
-                    </div>
-                    <div className="sp-field">
-                      <label className="sp-label">{t('Ночных сцен')}</label>
-                      <input type="number" min={0} max={5000} className="sp-num" value={scriptParams.nightScenesCount} onChange={(e) => updateScriptParam('nightScenesCount', Math.max(0, parseInt(e.target.value) || 0))} />
-                    </div>
-                    <div className="sp-field">
-                      <label className="sp-label">{t('Дней съёмок')}</label>
-                      <input type="number" min={0} max={1000} className="sp-num" value={scriptParams.shootingDaysCount} onChange={(e) => updateScriptParam('shootingDaysCount', Math.max(0, parseInt(e.target.value) || 0))} />
-                    </div>
-                    <div className="sp-field">
-                      <label className="sp-label">{t('Хронометраж (мин)')}</label>
-                      <input type="number" min={0} max={600} className="sp-num" value={scriptParams.totalDurationMin} onChange={(e) => updateScriptParam('totalDurationMin', Math.max(0, parseInt(e.target.value) || 0))} />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="sp-section">
-                  <div className="sp-section-title">{t('Реквизит и образы')}</div>
-                  <div className="sp-fields">
-                    <div className="sp-field">
-                      <label className="sp-label">{t('Единиц реквизита')}</label>
-                      <input type="number" min={0} max={10000} className="sp-num" value={scriptParams.propsCount} onChange={(e) => updateScriptParam('propsCount', Math.max(0, parseInt(e.target.value) || 0))} />
-                    </div>
-                    <div className="sp-field">
-                      <label className="sp-label">{t('Комплектов костюмов')}</label>
-                      <input type="number" min={0} max={2000} className="sp-num" value={scriptParams.costumeSetsCount} onChange={(e) => updateScriptParam('costumeSetsCount', Math.max(0, parseInt(e.target.value) || 0))} />
-                    </div>
-                    <div className="sp-field">
-                      <label className="sp-label">{t('Образов грима')}</label>
-                      <input type="number" min={0} max={2000} className="sp-num" value={scriptParams.makeupLooksCount} onChange={(e) => updateScriptParam('makeupLooksCount', Math.max(0, parseInt(e.target.value) || 0))} />
-                    </div>
-                    <div className="sp-field sp-field--check"><label className="sp-check"><input type="checkbox" checked={scriptParams.wigs} onChange={(e) => updateScriptParam('wigs', e.target.checked)} /><span>{t('Парики / накладные волосы')}</span></label></div>
-                    <div className="sp-field sp-field--check"><label className="sp-check"><input type="checkbox" checked={scriptParams.prosthetics} onChange={(e) => updateScriptParam('prosthetics', e.target.checked)} /><span>{t('Грим-протезы / трансформации')}</span></label></div>
-                  </div>
-                </div>
-
-                <div className="sp-section">
-                  <div className="sp-section-title">{t('Эффекты и трюки')}</div>
-                  <div className="sp-fields">
-                    <div className="sp-field">
-                      <label className="sp-label">{t('VFX-кадров (цифровые эффекты)')}</label>
-                      <input type="number" min={0} max={10000} className="sp-num" value={scriptParams.vfxShotsCount} onChange={(e) => updateScriptParam('vfxShotsCount', Math.max(0, parseInt(e.target.value) || 0))} />
-                    </div>
-                    <div className="sp-field">
-                      <label className="sp-label">{t('Реальных эффектов (пиро/огонь/вода)')}</label>
-                      <input type="number" min={0} max={1000} className="sp-num" value={scriptParams.practicalEffectsCount} onChange={(e) => updateScriptParam('practicalEffectsCount', Math.max(0, parseInt(e.target.value) || 0))} />
-                    </div>
-                    <div className="sp-field">
-                      <label className="sp-label">{t('Трюков (каскадёры)')}</label>
-                      <input type="number" min={0} max={500} className="sp-num" value={scriptParams.stuntsCount} onChange={(e) => updateScriptParam('stuntsCount', Math.max(0, parseInt(e.target.value) || 0))} />
-                    </div>
-                    <div className="sp-field sp-field--check"><label className="sp-check"><input type="checkbox" checked={scriptParams.weaponProps} onChange={(e) => updateScriptParam('weaponProps', e.target.checked)} /><span>{t('Оружие / имитация оружия')}</span></label></div>
-                    <div className="sp-field sp-field--check"><label className="sp-check"><input type="checkbox" checked={scriptParams.pyrotechnics} onChange={(e) => updateScriptParam('pyrotechnics', e.target.checked)} /><span>{t('Пиротехника')}</span></label></div>
-                    <div className="sp-field sp-field--check"><label className="sp-check"><input type="checkbox" checked={scriptParams.rainScenes} onChange={(e) => updateScriptParam('rainScenes', e.target.checked)} /><span>{t('Сцены с дождём')}</span></label></div>
-                    <div className="sp-field sp-field--check"><label className="sp-check"><input type="checkbox" checked={scriptParams.snowScenes} onChange={(e) => updateScriptParam('snowScenes', e.target.checked)} /><span>{t('Сцены со снегом')}</span></label></div>
-                  </div>
-                </div>
-
-                <div className="sp-section">
-                  <div className="sp-section-title">{t('Транспорт и оборудование')}</div>
-                  <div className="sp-fields">
-                    <div className="sp-field">
-                      <label className="sp-label">{t('Транспортных средств')}</label>
-                      <input type="number" min={0} max={1000} className="sp-num" value={scriptParams.vehiclesCount} onChange={(e) => updateScriptParam('vehiclesCount', Math.max(0, parseInt(e.target.value) || 0))} />
-                    </div>
-                    <div className="sp-field sp-field--check"><label className="sp-check"><input type="checkbox" checked={scriptParams.vehicleChases} onChange={(e) => updateScriptParam('vehicleChases', e.target.checked)} /><span>{t('Автомобильные погони')}</span></label></div>
-                    <div className="sp-field sp-field--check"><label className="sp-check"><input type="checkbox" checked={scriptParams.droneShots} onChange={(e) => updateScriptParam('droneShots', e.target.checked)} /><span>{t('Дрон-съёмка')}</span></label></div>
-                    <div className="sp-field sp-field--check"><label className="sp-check"><input type="checkbox" checked={scriptParams.underwaterShots} onChange={(e) => updateScriptParam('underwaterShots', e.target.checked)} /><span>{t('Подводные съёмки')}</span></label></div>
-                    <div className="sp-field sp-field--check"><label className="sp-check"><input type="checkbox" checked={scriptParams.aerialShots} onChange={(e) => updateScriptParam('aerialShots', e.target.checked)} /><span>{t('Авиасъёмка (вертолёт)')}</span></label></div>
-                    <div className="sp-field sp-field--check"><label className="sp-check"><input type="checkbox" checked={scriptParams.craneShots} onChange={(e) => updateScriptParam('craneShots', e.target.checked)} /><span>{t('Кран / рельсовые тележки')}</span></label></div>
-                  </div>
-                </div>
-
-                <div className="sp-section">
-                  <div className="sp-section-title">{t('Камера и формат')}</div>
-                  <div className="sp-fields">
-                    <div className="sp-field">
-                      <label className="sp-label">{t('Формат съёмки')}</label>
-                      <select className="sp-select" value={scriptParams.productionFormat} onChange={(e) => updateScriptParam('productionFormat', e.target.value)}>
-                        {['4K','6K','8K','HD 1080p','Film 35mm','Film 16mm','Цифровой RAW'].map(v => <option key={v}>{v}</option>)}
-                      </select>
-                    </div>
-                    <div className="sp-field">
-                      <label className="sp-label">{t('Соотношение сторон')}</label>
-                      <select className="sp-select" value={scriptParams.aspectRatio} onChange={(e) => updateScriptParam('aspectRatio', e.target.value)}>
-                        {['16:9','2.35:1','1.85:1','4:3','2.39:1','1:1'].map(v => <option key={v}>{v}</option>)}
-                      </select>
-                    </div>
-                    <div className="sp-field sp-field--check"><label className="sp-check"><input type="checkbox" checked={scriptParams.handheldStyle} onChange={(e) => updateScriptParam('handheldStyle', e.target.checked)} /><span>{t('Ручная камера')}</span></label></div>
-                    <div className="sp-field sp-field--check"><label className="sp-check"><input type="checkbox" checked={scriptParams.steadicam} onChange={(e) => updateScriptParam('steadicam', e.target.checked)} /><span>{t('Стедикам')}</span></label></div>
-                  </div>
-                </div>
-
-                <div className="sp-section">
-                  <div className="sp-section-title">{t('Звук и музыка')}</div>
-                  <div className="sp-fields">
-                    <div className="sp-field">
-                      <label className="sp-label">{t('Оригинальных треков')}</label>
-                      <input type="number" min={0} max={500} className="sp-num" value={scriptParams.originalMusicTracks} onChange={(e) => updateScriptParam('originalMusicTracks', Math.max(0, parseInt(e.target.value) || 0))} />
-                    </div>
-                    <div className="sp-field">
-                      <label className="sp-label">{t('Жанр музыки')}</label>
-                      <input type="text" className="sp-text" value={scriptParams.musicGenre} placeholder={t('Оркестр, Электроника...')}
-                        onChange={(e) => setScriptParamsDraft(prev => ({ ...prev, musicGenre: e.target.value }))}
-                        onBlur={(e) => updateScriptParam('musicGenre', e.target.value)} />
-                    </div>
-                    <div className="sp-field sp-field--check"><label className="sp-check"><input type="checkbox" checked={scriptParams.voiceOverPresent} onChange={(e) => updateScriptParam('voiceOverPresent', e.target.checked)} /><span>{t('Закадровый голос (VO)')}</span></label></div>
-                    <div className="sp-field sp-field--check"><label className="sp-check"><input type="checkbox" checked={scriptParams.silentScenes} onChange={(e) => updateScriptParam('silentScenes', e.target.checked)} /><span>{t('Сцены без диалогов')}</span></label></div>
-                  </div>
-                </div>
-
-                <div className="sp-section">
-                  <div className="sp-section-title">{t('Жанр и аудитория')}</div>
-                  <div className="sp-fields">
-                    <div className="sp-field">
-                      <label className="sp-label">{t('Жанр')}</label>
-                      <select className="sp-select" value={scriptParams.genre} onChange={(e) => updateScriptParam('genre', e.target.value)}>
-                        <option value="">{t('Выбрать...')}</option>
-                        {['Драма','Комедия','Триллер','Экшн','Мелодрама','Ужасы','Фантастика','Фэнтези','Документальный','Анимация','Биографический','Музыкальный','Криминал','Вестерн','Исторический'].map(v => <option key={v}>{v}</option>)}
-                      </select>
-                    </div>
-                    <div className="sp-field">
-                      <label className="sp-label">{t('Возрастной рейтинг')}</label>
-                      <select className="sp-select" value={scriptParams.ageRating} onChange={(e) => updateScriptParam('ageRating', e.target.value)}>
-                        {['0+','6+','12+','16+','18+'].map(v => <option key={v}>{v}</option>)}
-                      </select>
-                    </div>
-                    <div className="sp-field">
-                      <label className="sp-label">{t('Целевая аудитория')}</label>
-                      <input type="text" className="sp-text" value={scriptParams.targetAudience} placeholder={t('18–35, семейная...')}
-                        onChange={(e) => setScriptParamsDraft(prev => ({ ...prev, targetAudience: e.target.value }))}
-                        onBlur={(e) => updateScriptParam('targetAudience', e.target.value)} />
-                    </div>
-                    <div className="sp-field">
-                      <label className="sp-label">{t('Язык диалогов')}</label>
-                      <select className="sp-select" value={scriptParams.dialogLanguage} onChange={(e) => updateScriptParam('dialogLanguage', e.target.value)}>
-                        {['Русский','Английский','Китайский','Французский','Немецкий','Испанский','Несколько языков'].map(v => <option key={v}>{v}</option>)}
-                      </select>
-                    </div>
-                    <div className="sp-field sp-field--check"><label className="sp-check"><input type="checkbox" checked={scriptParams.subtitlesNeeded} onChange={(e) => updateScriptParam('subtitlesNeeded', e.target.checked)} /><span>{t('Необходимы субтитры')}</span></label></div>
-                  </div>
-                </div>
-
-                <div className="sp-section">
-                  <div className="sp-section-title">{t('Риски и условия')}</div>
-                  <div className="sp-fields">
-                    <div className="sp-field">
-                      <label className="sp-label">{t('Погодозависимых дней')}</label>
-                      <input type="number" min={0} max={365} className="sp-num" value={scriptParams.weatherDependentDays} onChange={(e) => updateScriptParam('weatherDependentDays', Math.max(0, parseInt(e.target.value) || 0))} />
-                    </div>
-                    <div className="sp-field sp-field--check"><label className="sp-check"><input type="checkbox" checked={scriptParams.hazardousConditions} onChange={(e) => updateScriptParam('hazardousConditions', e.target.checked)} /><span>{t('Опасные условия (огонь, высота, вода)')}</span></label></div>
-                    <div className="sp-field sp-field--check"><label className="sp-check"><input type="checkbox" checked={scriptParams.internationalShoot} onChange={(e) => updateScriptParam('internationalShoot', e.target.checked)} /><span>{t('Международные съёмки')}</span></label></div>
-                    <div className="sp-field sp-field--check"><label className="sp-check"><input type="checkbox" checked={scriptParams.remoteLocations} onChange={(e) => updateScriptParam('remoteLocations', e.target.checked)} /><span>{t('Труднодоступные локации')}</span></label></div>
-                    <div className="sp-field sp-field--check"><label className="sp-check"><input type="checkbox" checked={scriptParams.militaryEquipment} onChange={(e) => updateScriptParam('militaryEquipment', e.target.checked)} /><span>{t('Военная техника / спецсредства')}</span></label></div>
-                  </div>
-                </div>
-
-                <div className="sp-section sp-section--wide">
-                  <div className="sp-section-title">{t('Концепция')}</div>
-                  <div className="sp-fields">
-                    <div className="sp-field sp-field--full">
-                      <label className="sp-label">{t('Логлайн (1–2 предложения)')}</label>
-                      <textarea className="sp-textarea" value={scriptParams.logline} placeholder={t('Краткое описание сюжета...')} rows={3}
-                        onChange={(e) => setScriptParamsDraft(prev => ({ ...prev, logline: e.target.value }))}
-                        onBlur={(e) => updateScriptParam('logline', e.target.value)} />
-                    </div>
-                    <div className="sp-field">
-                      <label className="sp-label">{t('Уровень бюджета')}</label>
-                      <select className="sp-select" value={scriptParams.budgetTier} onChange={(e) => updateScriptParam('budgetTier', e.target.value)}>
-                        <option value="micro">{t('Микро (< 1 млн)')}</option>
-                        <option value="low">{t('Малый (1–10 млн)')}</option>
-                        <option value="mid">{t('Средний (10–100 млн)')}</option>
-                        <option value="high">{t('Высокий (> 100 млн)')}</option>
-                        <option value="blockbuster">{t('Блокбастер (500+ млн)')}</option>
-                      </select>
-                    </div>
-                    <div className="sp-field">
-                      <label className="sp-label">{t('Цветовая гамма')}</label>
-                      <select className="sp-select" value={scriptParams.colorGrading} onChange={(e) => updateScriptParam('colorGrading', e.target.value)}>
-                        {['Нейтральная','Тёплая','Холодная','Монохром','Высококонтрастная','Пастельная','Мрачная / тёмная'].map(v => <option key={v}>{v}</option>)}
-                      </select>
-                    </div>
-                  </div>
-                </div>
-
-              </div>
-            </div>
+            <ScriptTab
+              t={t}
+              scriptParams={scriptParams}
+              scriptFileInputRef={scriptFileInputRef}
+              handleScriptFileUpload={handleScriptFileUpload}
+              handleRemoveScriptFile={handleRemoveScriptFile}
+              updateScriptParam={updateScriptParam}
+              setScriptParamsDraft={setScriptParamsDraft}
+            />
           )}
 
           {activeTab === 'director' && (
-            <div className="tab-content director-tab">
-
-              {/* STORYBOARD — main work area */}
-              <div className="storyboard-section">
-                <div className="storyboard-toolbar">
-                  <div className="storyboard-toolbar-left">
-                    <h3>{t('Раскадровка')}</h3>
-                    {storyboardGrid.locationNames.length > 0 && (
-                      <span className="storyboard-dims">{storyboardGrid.locationNames.length} × {storyboardGrid.columnCount}</span>
-                    )}
-                  </div>
-                  <div className="storyboard-toolbar-right">
-                    <div className="storyboard-rows-ctrl">
-                      <button className="storyboard-ctrl-btn" onClick={handleAddStoryboardRow}>+ {t('Локация')}</button>
-                      <button className="storyboard-ctrl-btn storyboard-ctrl-btn--minus" onClick={handleRemoveStoryboardRow} disabled={storyboardGrid.locationNames.length === 0}>− {t('Строку')}</button>
-                    </div>
-                    <div className="storyboard-cols-ctrl">
-                      <button className="storyboard-ctrl-btn storyboard-ctrl-btn--minus" onClick={handleRemoveStoryboardColumn} disabled={storyboardGrid.columnCount <= 1}>−</button>
-                      <span className="storyboard-col-count">{storyboardGrid.columnCount} {t('кадров')}</span>
-                      <button className="storyboard-ctrl-btn" onClick={handleAddStoryboardColumn}>+</button>
-                    </div>
-                  </div>
-                </div>
-
-                {storyboardGrid.locationNames.length === 0 ? (
-                  <div className="storyboard-empty">
-                    
-                    <div className="storyboard-empty-title">{t('Раскадровка пуста')}</div>
-                    <div className="storyboard-empty-hint">{t('Добавьте локации кнопкой выше или задайте количество локаций на вкладке Сценарий')}</div>
-                    <button className="add-marker-btn" style={{ marginTop: 16 }} onClick={handleAddStoryboardRow}>
-                      <MapPinPlus size={16} className="add-marker-icon" />
-                      {t('Добавить первую локацию')}
-                    </button>
-                  </div>
-                ) : (
-                  <div className="storyboard-table-wrap">
-                    <table className="storyboard-table">
-                      <thead>
-                        <tr>
-                          <th className="storyboard-th-loc">{t('Локация')}</th>
-                          {Array.from({ length: storyboardGrid.columnCount }, (_, ci) => (
-                            <th key={ci} className="storyboard-th-shot">{t('Кадр')} {ci + 1}</th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {storyboardGrid.locationNames.map((locName, ri) => (
-                          <tr key={ri}>
-                            <td className="storyboard-row-label">
-                              <input
-                                className="storyboard-loc-input"
-                                value={locName}
-                                placeholder={`${t('Локация')} ${ri + 1}`}
-                                onChange={(e) => renameStoryboardRow(ri, e.target.value)}
-                                onBlur={() => saveStoryboardGrid(storyboardGrid)}
-                              />
-                            </td>
-                            {Array.from({ length: storyboardGrid.columnCount }, (_, ci) => {
-                              const key = `${ri}_${ci}`;
-                              const cell = storyboardGrid.cells[key];
-                              return (
-                                <td key={ci} className={`storyboard-cell${cell?.imageUrl || cell?.description ? ' storyboard-cell--filled' : ''}`} onClick={() => openCellEditor(ri, ci)}>
-                                  {cell?.imageUrl
-                                    ? <img src={cell.imageUrl} alt="" className="storyboard-cell-img" />
-                                    : <div className="storyboard-cell-add">+</div>}
-                                  {cell?.shotType && <div className="storyboard-cell-type">{cell.shotType}</div>}
-                                  {cell?.description && <div className="storyboard-cell-desc">{cell.description}</div>}
-                                  {cell?.duration != null && cell.duration > 0 && <div className="storyboard-cell-dur">{cell.duration}с</div>}
-                                </td>
-                              );
-                            })}
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                    {(() => {
-                      const allCells = Object.values(storyboardGrid.cells);
-                      const totalSec = allCells.reduce((s, c) => s + (c.duration || 0), 0);
-                      const filled = allCells.filter(c => c.duration && c.duration > 0).length;
-                      const totalCells = storyboardGrid.locationNames.length * storyboardGrid.columnCount;
-                      const overload = totalSec > timelineDuration;
-                      if (filled === 0) return null;
-                      return (
-                        <div className={`storyboard-timing-bar${overload ? ' storyboard-timing-bar--over' : ''}`}>
-                          <span className="storyboard-timing-label">{t('Хронометраж')}:</span>
-                          <span className="storyboard-timing-total" style={{ color: overload ? 'var(--error)' : tabColors.director }}>
-                            {Math.floor(totalSec / 60)}:{String(totalSec % 60).padStart(2, '0')}
-                          </span>
-                          <span className="storyboard-timing-sep">/</span>
-                          <span className="storyboard-timing-max">{Math.floor(timelineDuration / 60)}:{String(timelineDuration % 60).padStart(2, '0')}</span>
-                          {overload && <span className="storyboard-timing-warn">⚠ {t('Превышение')}</span>}
-                          <span className="storyboard-timing-coverage">{filled}/{totalCells} {t('кадров размечено')}</span>
-                        </div>
-                      );
-                    })()}
-                  </div>
-                )}
-              </div>
-
-              {/* Secondary: timeline + notes */}
-              <div className="director-secondary-row">
-                <div className="director-secondary-card">
-                  <div className="director-secondary-title">{t('Параметры таймлайна')}</div>
-                  <div className="timeline-duration-form">
-                    <input
-                      className="form-input timeline-duration-input"
-                      placeholder={t('Например 240 или 4:00')}
-                      value={timelineDurationInput}
-                      onChange={(e) => setTimelineDurationInput(e.target.value)}
-                    />
-                    <button className="save-notes-btn save-timeline-btn" onClick={handleSaveTimelineDuration}>
-                      {t('Применить')}
-                    </button>
-                  </div>
-                </div>
-
-                <div className="director-secondary-card director-secondary-card--notes">
-                  <div className="director-secondary-title">{t('Заметки режиссёра')}</div>
-                  <textarea
-                    className="director-notes-editor"
-                    placeholder={t('Ваши заметки и идеи по съемке...')}
-                    rows={5}
-                    value={directorNotes}
-                    onChange={(e) => setDirectorNotes(e.target.value)}
-                  />
-                  <div className="notes-actions">
-                    <button className="save-notes-btn" onClick={handleSaveNotes}>{t('Сохранить')}</button>
-                    <button className="share-notes-btn" onClick={handleShareNotes}>{t('Поделиться')}</button>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <DirectorTab
+              t={t}
+              storyboardGrid={storyboardGrid}
+              timelineDuration={timelineDuration}
+              timelineDurationInput={timelineDurationInput}
+              setTimelineDurationInput={setTimelineDurationInput}
+              handleSaveTimelineDuration={handleSaveTimelineDuration}
+              handleAddStoryboardRow={handleAddStoryboardRow}
+              handleRemoveStoryboardRow={handleRemoveStoryboardRow}
+              handleAddStoryboardColumn={handleAddStoryboardColumn}
+              handleRemoveStoryboardColumn={handleRemoveStoryboardColumn}
+              renameStoryboardRow={renameStoryboardRow}
+              saveStoryboardGrid={saveStoryboardGrid}
+              openCellEditor={openCellEditor}
+              directorNotes={directorNotes}
+              setDirectorNotes={setDirectorNotes}
+              handleSaveNotes={handleSaveNotes}
+              handleShareNotes={handleShareNotes}
+            />
           )}
 
-          {activeTab === 'costumes' && (() => {
-            const selectedOutfit = costumeOutfits.find(o => o.id === selectedOutfitId) ?? costumeOutfits[0] ?? null;
-            const activeOutfitId = selectedOutfit?.id ?? null;
+          {activeTab === 'costumes' && (
+            <CostumesTab
+              t={t}
+              costumeOutfits={costumeOutfits}
+              setCostumeOutfits={setCostumeOutfits}
+              selectedOutfitId={selectedOutfitId}
+              setSelectedOutfitId={setSelectedOutfitId}
+              setOutfitDraft={setOutfitDraft}
+              setOutfitEditId={setOutfitEditId}
+              setShowOutfitModal={setShowOutfitModal}
+              setGarmentDraft={setGarmentDraft}
+              setGarmentEditId={setGarmentEditId}
+              setGarmentTargetOutfitId={setGarmentTargetOutfitId}
+              setShowGarmentModal={setShowGarmentModal}
+              handleOutfitStatusChange={handleOutfitStatusChange}
+              handleDeleteOutfit={handleDeleteOutfit}
+              handleDeleteGarment={handleDeleteGarment}
+              saveCostumeOutfits={saveCostumeOutfits}
+              handleOutfitRefImage={handleOutfitRefImage}
+            />
+          )}
 
-            const GARMENT_LABELS: Record<string, string> = {
-              top: 'Верх', bottom: 'Низ', outerwear: 'Верхняя одежда',
-              shoes: 'Обувь', accessories: 'Аксессуары', headwear: 'Головной убор', underwear: 'Бельё'
-            };
-            const GARMENT_ICONS: Record<string, string> = {
-              top: '👕', bottom: '👖', outerwear: '🧥',
-              shoes: '👟', accessories: '💍', headwear: '🎩', underwear: '🩲'
-            };
-            const ACQ_LABELS: Record<string, string> = {
-              owned: 'Есть', rented: 'Аренда', to_buy: 'Купить', to_make: 'Сшить'
-            };
-            const ACQ_COLORS: Record<string, string> = {
-              owned: '#22c55e', rented: '#2196F3', to_buy: '#FF9800', to_make: '#9C27B0'
-            };
-            const STATUS_LABELS: Record<string, string> = {
-              todo: 'Не начато', in_progress: 'В работе', ready: 'Готово', approved: 'Утверждено'
-            };
-            const STATUS_COLORS: Record<string, string> = {
-              todo: '#6b7280', in_progress: '#2196F3', ready: '#FF9800', approved: '#22c55e'
-            };
-
-            const totalPrice = selectedOutfit
-              ? selectedOutfit.garments.reduce((s, g) => s + (g.price || 0), 0)
-              : 0;
-
-            return (
-              <div className="tab-content costumes-tab">
-                <div className="craft-layout">
-                  {/* Left panel — outfits list */}
-                  <div className="craft-sidebar">
-                    <div className="craft-sidebar-head">
-                      <span className="craft-sidebar-title">{t('Образы')}</span>
-                      <button className="craft-add-btn" onClick={() => {
-                        setOutfitDraft({ name: '', characterName: '', sceneRefs: '', outfitNotes: '', status: 'todo' });
-                        setOutfitEditId(null);
-                        setShowOutfitModal(true);
-                      }}>
-                        <Plus size={14} /> {t('Добавить')}
-                      </button>
-                    </div>
-
-                    {costumeOutfits.length === 0 && (
-                      <div className="craft-empty">
-                        <Shirt size={28} style={{ opacity: 0.3 }} />
-                        <p>{t('Добавьте первый образ')}</p>
-                      </div>
-                    )}
-
-                    <div className="craft-list">
-                      {costumeOutfits.map(outfit => (
-                        <div
-                          key={outfit.id}
-                          className={`craft-list-item${activeOutfitId === outfit.id ? ' craft-list-item--active' : ''}`}
-                          onClick={() => setSelectedOutfitId(outfit.id)}
-                        >
-                          <div className="craft-list-item-dot" style={{ background: STATUS_COLORS[outfit.status] }} />
-                          <div className="craft-list-item-body">
-                            <div className="craft-list-item-name">{outfit.name}</div>
-                            <div className="craft-list-item-meta">
-                              {outfit.characterName && <span><User2 size={11} /> {outfit.characterName}</span>}
-                              {outfit.sceneRefs && <span>{outfit.sceneRefs}</span>}
-                              {outfit.garments.length > 0 && <span>{outfit.garments.length} эл.</span>}
-                            </div>
-                          </div>
-                          <ChevronRight size={14} className="craft-list-item-arrow" />
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Right panel — outfit detail */}
-                  <div className="craft-detail">
-                    {!selectedOutfit ? (
-                      <div className="craft-detail-empty">
-                        <Shirt size={48} style={{ opacity: 0.15, marginBottom: 16 }} />
-                        <p>{t('Выберите или создайте образ костюма')}</p>
-                        <button className="craft-add-btn craft-add-btn--lg" onClick={() => {
-                          setOutfitDraft({ name: '', characterName: '', sceneRefs: '', outfitNotes: '', status: 'todo' });
-                          setOutfitEditId(null);
-                          setShowOutfitModal(true);
-                        }}>
-                          <Plus size={16} /> {t('Создать образ')}
-                        </button>
-                      </div>
-                    ) : (
-                      <>
-                        {/* Detail header */}
-                        <div className="craft-detail-header">
-                          <div className="craft-detail-title-row">
-                            <h3 className="craft-detail-title">{selectedOutfit.name}</h3>
-                            <div className="craft-detail-actions">
-                              <select
-                                className="craft-status-select"
-                                value={selectedOutfit.status}
-                                style={{ borderColor: STATUS_COLORS[selectedOutfit.status], color: STATUS_COLORS[selectedOutfit.status] }}
-                                onChange={e => handleOutfitStatusChange(selectedOutfit.id, e.target.value as LookStatus)}
-                              >
-                                {Object.entries(STATUS_LABELS).map(([k, v]) => (
-                                  <option key={k} value={k}>{v}</option>
-                                ))}
-                              </select>
-                              <button className="craft-icon-btn" title={t('Редактировать')} onClick={() => {
-                                setOutfitDraft({ name: selectedOutfit.name, characterName: selectedOutfit.characterName, sceneRefs: selectedOutfit.sceneRefs, outfitNotes: selectedOutfit.outfitNotes, status: selectedOutfit.status });
-                                setOutfitEditId(selectedOutfit.id);
-                                setShowOutfitModal(true);
-                              }}>✏️</button>
-                              <button className="craft-icon-btn craft-icon-btn--danger" title={t('Удалить образ')} onClick={() => handleDeleteOutfit(selectedOutfit.id)}>
-                                <Trash2 size={14} />
-                              </button>
-                            </div>
-                          </div>
-                          <div className="craft-detail-meta">
-                            {selectedOutfit.characterName && (
-                              <span className="craft-meta-chip"><User2 size={12} /> {selectedOutfit.characterName}</span>
-                            )}
-                            {selectedOutfit.sceneRefs && (
-                              <span className="craft-meta-chip">{selectedOutfit.sceneRefs}</span>
-                            )}
-                            {totalPrice > 0 && (
-                              <span className="craft-meta-chip craft-meta-chip--price">
-                                💰 {totalPrice.toLocaleString('ru-RU')} ₽
-                              </span>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Garments table */}
-                        <div className="craft-section">
-                          <div className="craft-section-head">
-                            <span className="craft-section-title"><Shirt size={14} /> {t('Гардероб')}</span>
-                            <button className="craft-add-btn" onClick={() => {
-                              setGarmentDraft({ category: 'top', name: '', colorHex: '#333333', material: '', brand: '', acquisition: 'to_buy', price: 0, notes: '' });
-                              setGarmentEditId(null);
-                              setGarmentTargetOutfitId(selectedOutfit.id);
-                              setShowGarmentModal(true);
-                            }}>
-                              <Plus size={12} /> {t('Добавить')}
-                            </button>
-                          </div>
-                          {selectedOutfit.garments.length === 0 ? (
-                            <div className="craft-table-empty">{t('Добавьте элементы гардероба')}</div>
-                          ) : (
-                            <div className="craft-table craft-table--costumes">
-                              <div className="craft-table-head">
-                                <span>{t('Элемент')}</span>
-                                <span>{t('Цвет / материал')}</span>
-                                <span>{t('Статус')}</span>
-                                <span>{t('Цена')}</span>
-                                <span></span>
-                              </div>
-                              {selectedOutfit.garments.map(g => (
-                                <div key={g.id} className="craft-table-row">
-                                  <span className="craft-garment-name">
-                                    <span className="craft-garment-icon">{GARMENT_ICONS[g.category] || '🧴'}</span>
-                                    <span>{g.name || GARMENT_LABELS[g.category]}</span>
-                                  </span>
-                                  <span className="craft-color-cell">
-                                    <span className="craft-color-swatch" style={{ background: g.colorHex }} />
-                                    <span className="craft-material">{g.material || '—'}</span>
-                                  </span>
-                                  <span>
-                                    <span className="craft-acq-badge" style={{ color: ACQ_COLORS[g.acquisition], borderColor: ACQ_COLORS[g.acquisition] }}>
-                                      {ACQ_LABELS[g.acquisition]}
-                                    </span>
-                                  </span>
-                                  <span className="craft-price">
-                                    {g.price > 0 ? `${g.price.toLocaleString('ru-RU')} ₽` : '—'}
-                                  </span>
-                                  <span className="craft-row-actions">
-                                    <button className="craft-icon-btn" onClick={() => {
-                                      setGarmentDraft({ category: g.category, name: g.name, colorHex: g.colorHex, material: g.material, brand: g.brand, acquisition: g.acquisition, price: g.price, notes: g.notes });
-                                      setGarmentEditId(g.id);
-                                      setGarmentTargetOutfitId(selectedOutfit.id);
-                                      setShowGarmentModal(true);
-                                    }}>✏️</button>
-                                    <button className="craft-icon-btn craft-icon-btn--danger" onClick={() => handleDeleteGarment(selectedOutfit.id, g.id)}>
-                                      <Trash2 size={12} />
-                                    </button>
-                                  </span>
-                                </div>
-                              ))}
-                              {totalPrice > 0 && (
-                                <div className="craft-table-total">
-                                  <span>{t('Итого')}:</span>
-                                  <span className="craft-table-total-price">{totalPrice.toLocaleString('ru-RU')} ₽</span>
-                                </div>
-                              )}
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Color strip */}
-                        {selectedOutfit.garments.some(g => g.colorHex) && (
-                          <div className="craft-section">
-                            <div className="craft-section-title"><Palette size={14} /> {t('Цветовая палитра образа')}</div>
-                            <div className="craft-color-strip">
-                              {selectedOutfit.garments.filter(g => g.colorHex).map(g => (
-                                <div
-                                  key={g.id}
-                                  className="craft-strip-swatch"
-                                  style={{ background: g.colorHex }}
-                                  title={`${GARMENT_LABELS[g.category]}: ${g.colorHex}`}
-                                />
-                              ))}
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Notes */}
-                        <div className="craft-section">
-                          <div className="craft-section-title"><ScrollText size={14} /> {t('Заметки к образу')}</div>
-                          <textarea
-                            className="craft-notes-input"
-                            placeholder={t('Примерка 15 мая, пиджак взять у костюмера...')}
-                            value={selectedOutfit.outfitNotes}
-                            rows={3}
-                            onChange={e => {
-                              const updated = costumeOutfits.map(o => o.id === selectedOutfit.id ? { ...o, outfitNotes: e.target.value } : o);
-                              setCostumeOutfits(updated);
-                            }}
-                            onBlur={async () => { await saveCostumeOutfits(costumeOutfits); }}
-                          />
-                        </div>
-
-                        {/* Reference image */}
-                        <div className="craft-section">
-                          <div className="craft-section-title"><Upload size={14} /> {t('Референс')}</div>
-                          {selectedOutfit.referenceImage ? (
-                            <div className="craft-ref-img-wrap">
-                              <img src={selectedOutfit.referenceImage} alt="reference" className="craft-ref-img" />
-                              <button className="craft-ref-remove" onClick={async () => {
-                                const updated = costumeOutfits.map(o => o.id === selectedOutfit.id ? { ...o, referenceImage: '' } : o);
-                                await saveCostumeOutfits(updated);
-                              }}>✕</button>
-                            </div>
-                          ) : (
-                            <button className="craft-upload-btn" onClick={() => handleOutfitRefImage(selectedOutfit.id)}>
-                              <Upload size={16} /> {t('Загрузить фото')}
-                            </button>
-                          )}
-                        </div>
-                      </>
-                    )}
-                  </div>
-                </div>
-              </div>
-            );
-          })()}
-
-          {activeTab === 'makeup' && (() => {
-            const selectedLook = makeupLooks.find(l => l.id === selectedLookId) ?? makeupLooks[0] ?? null;
-            const activeLookId = selectedLook?.id ?? null;
-
-            const ZONE_LABELS: Record<string, string> = {
-              skin: 'Кожа', eyes: 'Глаза', brows: 'Брови', lips: 'Губы',
-              cheeks: 'Скулы', contour: 'Контур', neck: 'Шея', other: 'Другое'
-            };
-            const STATUS_LABELS: Record<string, string> = {
-              todo: 'Не начато', in_progress: 'В работе', ready: 'Готово', approved: 'Утверждено'
-            };
-            const STATUS_COLORS: Record<string, string> = {
-              todo: '#6b7280', in_progress: '#2196F3', ready: '#FF9800', approved: '#22c55e'
-            };
-
-            return (
-              <div className="tab-content makeup-tab">
-                <div className="craft-layout">
-                  {/* Left panel — list of looks */}
-                  <div className="craft-sidebar">
-                    <div className="craft-sidebar-head">
-                      <span className="craft-sidebar-title">{t('Образы')}</span>
-                      <button className="craft-add-btn" onClick={() => {
-                        setLookDraft({ name: '', characterName: '', sceneRefs: '', applyTimeMin: 30, skinNotes: '', status: 'todo' });
-                        setLookEditId(null);
-                        setShowLookModal(true);
-                      }}>
-                        <Plus size={14} /> {t('Добавить')}
-                      </button>
-                    </div>
-
-                    {makeupLooks.length === 0 && (
-                      <div className="craft-empty">
-                        <Sparkles size={28} style={{ opacity: 0.3 }} />
-                        <p>{t('Добавьте первый образ')}</p>
-                      </div>
-                    )}
-
-                    <div className="craft-list">
-                      {makeupLooks.map(look => (
-                        <div
-                          key={look.id}
-                          className={`craft-list-item${activeLookId === look.id ? ' craft-list-item--active' : ''}`}
-                          onClick={() => setSelectedLookId(look.id)}
-                        >
-                          <div className="craft-list-item-dot" style={{ background: STATUS_COLORS[look.status] }} />
-                          <div className="craft-list-item-body">
-                            <div className="craft-list-item-name">{look.name}</div>
-                            <div className="craft-list-item-meta">
-                              {look.characterName && <span><User2 size={11} /> {look.characterName}</span>}
-                              {look.sceneRefs && <span>{look.sceneRefs}</span>}
-                            </div>
-                          </div>
-                          <ChevronRight size={14} className="craft-list-item-arrow" />
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Right panel — selected look detail */}
-                  <div className="craft-detail">
-                    {!selectedLook ? (
-                      <div className="craft-detail-empty">
-                        <Sparkles size={48} style={{ opacity: 0.15, marginBottom: 16 }} />
-                        <p>{t('Выберите или создайте образ визажа')}</p>
-                        <button className="craft-add-btn craft-add-btn--lg" onClick={() => {
-                          setLookDraft({ name: '', characterName: '', sceneRefs: '', applyTimeMin: 30, skinNotes: '', status: 'todo' });
-                          setLookEditId(null);
-                          setShowLookModal(true);
-                        }}>
-                          <Plus size={16} /> {t('Создать образ')}
-                        </button>
-                      </div>
-                    ) : (
-                      <>
-                        {/* Detail header */}
-                        <div className="craft-detail-header">
-                          <div className="craft-detail-title-row">
-                            <h3 className="craft-detail-title">{selectedLook.name}</h3>
-                            <div className="craft-detail-actions">
-                              <select
-                                className="craft-status-select"
-                                value={selectedLook.status}
-                                style={{ borderColor: STATUS_COLORS[selectedLook.status], color: STATUS_COLORS[selectedLook.status] }}
-                                onChange={e => handleLookStatusChange(selectedLook.id, e.target.value as LookStatus)}
-                              >
-                                {Object.entries(STATUS_LABELS).map(([k, v]) => (
-                                  <option key={k} value={k}>{v}</option>
-                                ))}
-                              </select>
-                              <button className="craft-icon-btn" title={t('Редактировать')} onClick={() => {
-                                setLookDraft({ name: selectedLook.name, characterName: selectedLook.characterName, sceneRefs: selectedLook.sceneRefs, applyTimeMin: selectedLook.applyTimeMin, skinNotes: selectedLook.skinNotes, status: selectedLook.status });
-                                setLookEditId(selectedLook.id);
-                                setShowLookModal(true);
-                              }}>✏️</button>
-                              <button className="craft-icon-btn craft-icon-btn--danger" title={t('Удалить образ')} onClick={() => handleDeleteLook(selectedLook.id)}>
-                                <Trash2 size={14} />
-                              </button>
-                            </div>
-                          </div>
-                          <div className="craft-detail-meta">
-                            {selectedLook.characterName && (
-                              <span className="craft-meta-chip"><User2 size={12} /> {selectedLook.characterName}</span>
-                            )}
-                            {selectedLook.sceneRefs && (
-                              <span className="craft-meta-chip">{selectedLook.sceneRefs}</span>
-                            )}
-                            {selectedLook.applyTimeMin > 0 && (
-                              <span className="craft-meta-chip"><Clock size={12} /> {selectedLook.applyTimeMin} мин</span>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Products table */}
-                        <div className="craft-section">
-                          <div className="craft-section-head">
-                            <span className="craft-section-title"><Palette size={14} /> {t('Продукты')}</span>
-                            <button className="craft-add-btn" onClick={() => {
-                              setProductDraft({ zone: 'skin', productName: '', colorHex: '#F5D5C0', technique: '' });
-                              setProductEditId(null);
-                              setProductTargetLookId(selectedLook.id);
-                              setShowProductModal(true);
-                            }}>
-                              <Plus size={12} /> {t('Добавить')}
-                            </button>
-                          </div>
-                          {selectedLook.products.length === 0 ? (
-                            <div className="craft-table-empty">{t('Добавьте продукты для этого образа')}</div>
-                          ) : (
-                            <div className="craft-table">
-                              <div className="craft-table-head">
-                                <span>{t('Зона')}</span>
-                                <span>{t('Продукт')}</span>
-                                <span>{t('Цвет')}</span>
-                                <span>{t('Техника')}</span>
-                                <span></span>
-                              </div>
-                              {selectedLook.products.map(p => (
-                                <div key={p.id} className="craft-table-row">
-                                  <span className="craft-zone-badge">{ZONE_LABELS[p.zone] || p.zone}</span>
-                                  <span className="craft-product-name">{p.productName}</span>
-                                  <span className="craft-color-cell">
-                                    <span className="craft-color-swatch" style={{ background: p.colorHex }} />
-                                    <span className="craft-color-hex">{p.colorHex}</span>
-                                  </span>
-                                  <span className="craft-technique">{p.technique || '—'}</span>
-                                  <span className="craft-row-actions">
-                                    <button className="craft-icon-btn" onClick={() => {
-                                      setProductDraft({ zone: p.zone, productName: p.productName, colorHex: p.colorHex, technique: p.technique });
-                                      setProductEditId(p.id);
-                                      setProductTargetLookId(selectedLook.id);
-                                      setShowProductModal(true);
-                                    }}>✏️</button>
-                                    <button className="craft-icon-btn craft-icon-btn--danger" onClick={() => handleDeleteProduct(selectedLook.id, p.id)}>
-                                      <Trash2 size={12} />
-                                    </button>
-                                  </span>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Skin notes */}
-                        <div className="craft-section">
-                          <div className="craft-section-title"><AlertCircle size={14} /> {t('Особенности кожи / аллергии')}</div>
-                          <textarea
-                            className="craft-notes-input"
-                            placeholder={t('Нет аллергий, тип кожи — комбинированная...')}
-                            value={selectedLook.skinNotes}
-                            rows={3}
-                            onChange={async e => {
-                              const updated = makeupLooks.map(l => l.id === selectedLook.id ? { ...l, skinNotes: e.target.value } : l);
-                              setMakeupLooks(updated);
-                            }}
-                            onBlur={async () => {
-                              await saveMakeupLooks(makeupLooks);
-                            }}
-                          />
-                        </div>
-
-                        {/* Reference image */}
-                        <div className="craft-section">
-                          <div className="craft-section-title"><Upload size={14} /> {t('Референс')}</div>
-                          {selectedLook.referenceImage ? (
-                            <div className="craft-ref-img-wrap">
-                              <img src={selectedLook.referenceImage} alt="reference" className="craft-ref-img" />
-                              <button className="craft-ref-remove" onClick={async () => {
-                                const updated = makeupLooks.map(l => l.id === selectedLook.id ? { ...l, referenceImage: '' } : l);
-                                await saveMakeupLooks(updated);
-                              }}>✕</button>
-                            </div>
-                          ) : (
-                            <button className="craft-upload-btn" onClick={() => handleLookRefImage(selectedLook.id)}>
-                              <Upload size={16} /> {t('Загрузить фото')}
-                            </button>
-                          )}
-                        </div>
-                      </>
-                    )}
-                  </div>
-                </div>
-              </div>
-            );
-          })()}
+          {activeTab === 'makeup' && (
+            <MakeupTab
+              t={t}
+              makeupLooks={makeupLooks}
+              setMakeupLooks={setMakeupLooks}
+              selectedLookId={selectedLookId}
+              setSelectedLookId={setSelectedLookId}
+              setLookDraft={setLookDraft}
+              setLookEditId={setLookEditId}
+              setShowLookModal={setShowLookModal}
+              setProductDraft={setProductDraft}
+              setProductEditId={setProductEditId}
+              setProductTargetLookId={setProductTargetLookId}
+              setShowProductModal={setShowProductModal}
+              handleLookStatusChange={handleLookStatusChange}
+              handleDeleteLook={handleDeleteLook}
+              handleDeleteProduct={handleDeleteProduct}
+              saveMakeupLooks={saveMakeupLooks}
+              handleLookRefImage={handleLookRefImage}
+            />
+          )}
 
           {activeTab === 'edit' && (
-            <div className="tab-content edit-tab">
-              <div className="columns-container">
-                <div className="column media-column">
-                  <h3>{t('Медиатека')}</h3>
-                  <div className="media-list">
-                    {mediaFiles.map((file) => (
-                      <button
-                        key={file.id}
-                        type="button"
-                        className={`media-item ${selectedMedia?.id === file.id ? 'active' : ''}`}
-                        onClick={() => setSelectedMediaId(file.id)}
-                      >
-                        <div className="media-icon">
-                          {file.type === 'audio' ? <Music size={18} /> : <Film size={18} />}
-                        </div>
-                        <div className="media-info">
-                          <div className="media-name">{file.name}</div>
-                          <div className="media-duration">{file.duration} • {file.size}</div>
-                        </div>
-                      </button>
-                    ))}
-                    {mediaFiles.length === 0 && (
-                      <div className="empty-state-rich">
-                        <Film size={32} className="empty-state-icon" />
-                        <div className="empty-state-text">{t('Медиафайлов пока нет')}</div>
-                        <button className="add-marker-btn" style={{ marginTop: 8 }} onClick={() => setShowMediaModal(true)}>{t('Добавить файл')}</button>
-                      </div>
-                    )}
-                  </div>
-                  <button className="upload-btn" onClick={() => setShowMediaModal(true)}>
-                    <Upload size={20} className="upload-icon" />
-                    {t('Загрузить медиа')}
-                  </button>
-                </div>
-
-                <div className="column preview-column">
-                  <div className="video-preview">
-                    {selectedMedia ? (
-                      <div className="media-preview-card">
-                        <div className="media-preview-head">
-                          {selectedMedia.type === 'audio'
-                            ? <Music size={18} className="preview-icon" />
-                            : <Film size={18} className="preview-icon" />
-                          }
-                          <div className="media-preview-titles">
-                            <div className="media-preview-name">{selectedMedia.name}</div>
-                            <div className="media-preview-meta">
-                              {t('Тип: {type} • {duration} • {size}', {
-                                type: selectedMedia.type,
-                                duration: selectedMedia.duration,
-                                size: selectedMedia.size
-                              })}
-                            </div>
-                          </div>
-                        </div>
-                        <div className="media-preview-progress">
-                          <div
-                            className="media-preview-progress-bar"
-                            style={{ width: `${Math.min(100, (currentTime / Math.max(timelineDuration, 1)) * 100)}%` }}
-                          />
-                        </div>
-                        <div className="media-preview-time">
-                          {formatTime(currentTime)} / {formatTime(timelineDuration)}
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="placeholder-video">
-                        <Eye size={16} className="preview-icon" />
-                        <div className="video-placeholder-text">{t('Выберите медиафайл для предпросмотра')}</div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                <div className="column comments-column">
-                  <h3>{t('Комментарии к монтажу')}</h3>
-                <div className="comments-list">
-                  {commentsByTab.edit.length === 0 && (
-                    <div className="empty-state">{t('Комментариев пока нет.')}</div>
-                  )}
-                  {commentsByTab.edit.map((comment) => (
-                      <div key={comment.id} className="comment-card">
-                        <div className="comment-header">
-                          <div className="user-badge" style={{ backgroundColor: '#FF391A' }}>
-                            {comment.user}
-                          </div>
-                          <div className="comment-time">{comment.timestamp}</div>
-                        </div>
-                        <div className="comment-text">{comment.text}</div>
-                        <div className="comment-footer">
-                          <span className="timestamp" onClick={() => handleToggleResolved(comment.id)}>
-                            {comment.resolved ? t('Решено') : t('Не решено')}
-                          </span>
-                          <button className="reply-btn" onClick={() => openCommentModal('edit')}>
-                            <Reply size={14} />
-                            {t('Ответить')}
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                  <button className="add-comment-btn" onClick={() => openCommentModal('edit')}>
-                    <MessageSquarePlus size={16} className="add-comment-icon" />
-                    {t('Добавить комментарий')}
-                  </button>
-                </div>
-              </div>
-            </div>
+            <EditTab
+              t={t}
+              mediaFiles={mediaFiles}
+              selectedMedia={selectedMedia}
+              setSelectedMediaId={setSelectedMediaId}
+              openMediaModal={() => setShowMediaModal(true)}
+              currentTime={currentTime}
+              timelineDuration={timelineDuration}
+              commentsByTabEdit={commentsByTab.edit}
+              handleToggleResolved={handleToggleResolved}
+              openCommentModal={openCommentModal}
+              documents={documents}
+              setPreviewDocument={setPreviewDocument}
+              openDocModal={() => setShowDocModal(true)}
+            />
           )}
 
           {activeTab === 'sound' && (
-            <div className="tab-content sound-tab">
-              <div className="sound-layout">
-                <div className="sound-markers-col">
-                  <div className="sound-markers-head">
-                    <h3>{t('Звуковые метки')}</h3>
-                    <button className="add-marker-btn" onClick={() => setShowMarkerModal(true)}>
-                      <MapPinPlus size={16} className="add-marker-icon" />
-                      {t('Добавить метку')}
-                    </button>
-                  </div>
-                  <p className="sound-hint">{t('Переместите курсор таймлайна на нужную позицию, затем нажмите «Добавить метку».')}</p>
-                  {soundMarkers.length === 0 ? (
-                    <div className="empty-state-rich">
-                      <Music size={32} className="empty-state-icon" />
-                      <div className="empty-state-text">{t('Звуковых меток пока нет')}</div>
-                      <button className="add-marker-btn" style={{ marginTop: 8 }} onClick={() => setShowMarkerModal(true)}>
-                        {t('Добавить метку')}
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="sound-markers-list">
-                      {soundMarkers.map((marker) => (
-                        <div
-                          key={marker.id}
-                          className="sound-marker-row"
-                          onClick={() => handleOpenTimelineMarkerDetails(marker)}
-                        >
-                          <div className="sound-marker-time" style={{ color: tabColors.sound }}>
-                            {formatTime(marker.time)}
-                          </div>
-                          <div className="sound-marker-info">
-                            <div className="sound-marker-title">{marker.title}</div>
-                            {marker.comment && <div className="sound-marker-desc">{marker.comment}</div>}
-                          </div>
-                          <div className="sound-marker-dot" style={{ background: tabColors.sound }} />
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                <div className="column comments-column">
-                  <h3>{t('Комментарии к звуку')}</h3>
-                  <div className="comments-list">
-                    {commentsByTab.sound.length === 0 && (
-                      <div className="empty-state">{t('Комментариев пока нет.')}</div>
-                    )}
-                    {commentsByTab.sound.map((comment) => (
-                      <div key={comment.id} className="comment-card">
-                        <div className="comment-header">
-                          <div className="user-badge" style={{ backgroundColor: tabColors.sound }}>
-                            {comment.user}
-                          </div>
-                          <div className="comment-time">{comment.timestamp}</div>
-                        </div>
-                        <div className="comment-text">{comment.text}</div>
-                        <div className="comment-footer">
-                          <span className="timestamp" onClick={() => handleToggleResolved(comment.id)}>
-                            {comment.resolved ? t('Решено') : t('Не решено')}
-                          </span>
-                          <button className="reply-btn" onClick={() => openCommentModal('sound')}>
-                            <Reply size={14} />
-                            {t('Ответить')}
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                  <button className="add-comment-btn" onClick={() => openCommentModal('sound')}>
-                    <MessageSquarePlus size={16} className="add-comment-icon" />
-                    {t('Добавить комментарий')}
-                  </button>
-                </div>
-              </div>
-            </div>
+            <SoundTab
+              t={t}
+              soundMarkers={soundMarkers}
+              commentsByTabSound={commentsByTab.sound}
+              handleToggleResolved={handleToggleResolved}
+              openCommentModal={openCommentModal}
+              openMarkerModal={() => setShowMarkerModal(true)}
+              handleOpenTimelineMarkerDetails={handleOpenTimelineMarkerDetails}
+            />
           )}
 
-          {activeTab === 'manager' && (() => {
-            const TASK_STATUS_ORDER: TaskStatus[] = ['todo', 'in_progress', 'review', 'approved', 'changes', 'blocked'];
-            const taskStatusLabel: Record<TaskStatus, string> = {
-              todo: t('К выполнению'),
-              in_progress: t('В работе'),
-              review: t('На проверке'),
-              approved: t('Утверждено'),
-              changes: t('Правки'),
-              blocked: t('Заблокировано')
-            };
-            const taskStatusColor: Record<TaskStatus, string> = {
-              todo: '#6b7280',
-              in_progress: '#2196F3',
-              review: '#9C27B0',
-              approved: '#22c55e',
-              changes: '#FF9800',
-              blocked: '#FF391A'
-            };
-            const priorityLabel: Record<TaskPriority, string> = {
-              low: t('Низкий'),
-              medium: t('Средний'),
-              high: t('Высокий'),
-              critical: t('Критический')
-            };
-            const priorityColor: Record<TaskPriority, string> = {
-              low: '#6b7280',
-              medium: '#2196F3',
-              high: '#FF9800',
-              critical: '#FF391A'
-            };
-            const deptNames: Partial<Record<TabType, string>> = {
-              script: t('Сценарий'),
-              director: t('Режиссёр'),
-              costumes: t('Костюмы'),
-              makeup: t('Визаж'),
-              edit: t('Монтаж'),
-              sound: t('Звук')
-            };
-
-            const totalTasks = tasks.length;
-            const byStatus = TASK_STATUS_ORDER.reduce<Record<string, number>>((acc, s) => {
-              acc[s] = tasks.filter(t => t.status === s).length;
-              return acc;
-            }, {});
-
-            const visibleTasks = tasks.filter(task => {
-              if (taskFilterStatus !== 'all' && task.status !== taskFilterStatus) return false;
-              if (taskFilterDept !== 'all' && task.department !== taskFilterDept) return false;
-              return true;
-            });
-
-            const deptTabs: TabType[] = ['script', 'director', 'costumes', 'makeup', 'edit', 'sound'];
-            const healthByDept = deptTabs.map(dep => {
-              const depTasks = tasks.filter(t => t.department === dep);
-              const done = depTasks.filter(t => t.status === 'approved').length;
-              const blocked = depTasks.filter(t => t.status === 'blocked').length;
-              const pct = depTasks.length > 0 ? Math.round((done / depTasks.length) * 100) : 0;
-              return { dep, total: depTasks.length, done, blocked, pct };
-            });
-
-            const isDueSoon = (dueDate?: string) => {
-              if (!dueDate) return false;
-              const days = Math.ceil((new Date(dueDate).getTime() - Date.now()) / 86400000);
-              return days >= 0 && days <= 3;
-            };
-            const isOverdue = (dueDate?: string) => {
-              if (!dueDate) return false;
-              return new Date(dueDate).getTime() < Date.now();
-            };
-            const formatDue = (dueDate?: string) => {
-              if (!dueDate) return null;
-              const d = new Date(dueDate);
-              return d.toLocaleDateString('ru-RU', { day:'numeric', month:'short' });
-            };
-
-            // ── Task card (shared between list and kanban) ──────────────────
-            const renderTaskCard = (task: Task, compact = false) => (
-              <div
-                key={task.id}
-                className={`manager-task-card${task.status === 'blocked' ? ' manager-task-card--blocked' : ''}${dragTaskId === task.id ? ' manager-task-card--dragging' : ''}`}
-                draggable
-                onDragStart={() => setDragTaskId(task.id)}
-                onDragEnd={() => { setDragTaskId(null); setKanbanDragOver(null); }}
-                onDragOver={e => e.preventDefault()}
-                onDrop={async () => {
-                  if (!dragTaskId || dragTaskId === task.id) return;
-                  const from = tasks.findIndex(t => t.id === dragTaskId);
-                  const to = tasks.findIndex(t => t.id === task.id);
-                  if (from === -1 || to === -1) return;
-                  const reordered = [...tasks];
-                  const [moved] = reordered.splice(from, 1);
-                  reordered.splice(to, 0, moved);
-                  await saveTasks(reordered);
-                  setDragTaskId(null);
-                }}
-              >
-                <div className="manager-task-card-top">
-                  <span className="manager-task-priority-dot" style={{ background: priorityColor[task.priority] }} title={priorityLabel[task.priority]} />
-                  <span className="manager-task-title">{task.title}</span>
-                  {!compact && (
-                    <div className="manager-task-actions">
-                      <button className="edit-marker-btn" onClick={() => handleOpenEditTask(task)} title={t('Редактировать')}>✏️</button>
-                      <button className="edit-marker-btn" style={{ color: 'var(--error)' }} onClick={() => handleDeleteTask(task.id)} title={t('Удалить')}>🗑</button>
-                    </div>
-                  )}
-                  {compact && (
-                    <button className="craft-icon-btn" style={{ marginLeft:'auto' }} onClick={() => handleOpenEditTask(task)}>✏️</button>
-                  )}
-                </div>
-                {!compact && task.description && <div className="manager-task-desc">{task.description}</div>}
-                <div className="manager-task-meta">
-                  <span className="manager-task-dept" style={{ color: tabColors[task.department] || '#888' }}>
-                    {deptNames[task.department] || task.department}
-                  </span>
-                  {task.assignee && <span className="manager-task-assignee"><User2 size={11} /> {task.assignee}</span>}
-                  {task.dueDate && (
-                    <span className={`manager-task-due${isOverdue(task.dueDate) ? ' manager-task-due--overdue' : isDueSoon(task.dueDate) ? ' manager-task-due--soon' : ''}`}>
-                      <CalendarDays size={11} /> {formatDue(task.dueDate)}
-                    </span>
-                  )}
-                  {!compact && (
-                    <select
-                      className={`manager-task-status-select manager-task-status--${task.status}`}
-                      value={task.status}
-                      onClick={e => e.stopPropagation()}
-                      onChange={e => handleTaskStatusChange(task.id, e.target.value as TaskStatus)}
-                      style={{ borderColor: taskStatusColor[task.status], color: taskStatusColor[task.status] }}
-                    >
-                      {TASK_STATUS_ORDER.map(s => (
-                        <option key={s} value={s}>{taskStatusLabel[s]}</option>
-                      ))}
-                    </select>
-                  )}
-                </div>
-              </div>
-            );
-
-            return (
-              <div className="tab-content manager-tab">
-                <div className="manager-layout">
-                  {/* Health dashboard */}
-                  <div className="manager-health-section">
-                    <div className="manager-section-title">{t('Здоровье проекта')}</div>
-                    <div className="manager-health-grid">
-                      {healthByDept.map(({ dep, total, done, blocked, pct }) => (
-                        <div key={dep} className={`manager-health-card${blocked > 0 ? ' manager-health-card--blocked' : ''}`}>
-                          <div className="manager-health-card-head">
-                            {(() => { const HIcon = iconMap[dep]; return HIcon ? <HIcon size={18} className="manager-health-icon" style={{ color: tabColors[dep] }} /> : null; })()}
-                            <span className="manager-health-dept" style={{ color: tabColors[dep] }}>{deptNames[dep]}</span>
-                            {blocked > 0 && <span className="manager-health-blocked-badge">⛔ {blocked}</span>}
-                          </div>
-                          <div className="manager-health-bar-wrap">
-                            <div className="manager-health-bar" style={{ width: `${pct}%`, background: blocked > 0 ? '#FF391A' : tabColors[dep] }} />
-                          </div>
-                          <div className="manager-health-stats">
-                            <span>{done}/{total} {t('готово')}</span>
-                            <span>{pct}%</span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Status summary */}
-                  <div className="manager-status-row">
-                    {TASK_STATUS_ORDER.map(s => (
-                      <div key={s} className="manager-status-pill" style={{ borderColor: taskStatusColor[s] }}>
-                        <span className="manager-status-count" style={{ color: taskStatusColor[s] }}>{byStatus[s] || 0}</span>
-                        <span className="manager-status-name">{taskStatusLabel[s]}</span>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Task board header */}
-                  <div className="manager-task-head">
-                    <div className="manager-section-title">{t('Задачи')} ({visibleTasks.length}/{totalTasks})</div>
-                    <div className="manager-view-toggle">
-                      <button
-                        className={`manager-view-btn${managerView === 'list' ? ' manager-view-btn--active' : ''}`}
-                        onClick={() => setManagerView('list')}
-                        title={t('Список')}
-                      >
-                        <List size={15} />
-                      </button>
-                      <button
-                        className={`manager-view-btn${managerView === 'kanban' ? ' manager-view-btn--active' : ''}`}
-                        onClick={() => setManagerView('kanban')}
-                        title={t('Канбан')}
-                      >
-                        <LayoutGrid size={15} />
-                      </button>
-                    </div>
-                    <button className="add-marker-btn" onClick={handleOpenNewTask}>
-                      <MapPinPlus size={16} className="add-marker-icon" />
-                      {t('Новая задача')}
-                    </button>
-                  </div>
-
-                  {/* Filters */}
-                  <div className="manager-filters">
-                    <div className="manager-filter-group">
-                      <button className={`manager-filter-chip${taskFilterStatus === 'all' ? ' manager-filter-chip--active' : ''}`} onClick={() => setTaskFilterStatus('all')}>{t('Все')}</button>
-                      {TASK_STATUS_ORDER.map(s => (
-                        <button key={s} className={`manager-filter-chip${taskFilterStatus === s ? ' manager-filter-chip--active' : ''}`} style={taskFilterStatus === s ? { borderColor: taskStatusColor[s], color: taskStatusColor[s] } : {}} onClick={() => setTaskFilterStatus(taskFilterStatus === s ? 'all' : s)}>
-                          {taskStatusLabel[s]} {byStatus[s] > 0 && <span className="manager-filter-count">{byStatus[s]}</span>}
-                        </button>
-                      ))}
-                    </div>
-                    <div className="manager-filter-group">
-                      <button className={`manager-filter-chip${taskFilterDept === 'all' ? ' manager-filter-chip--active' : ''}`} onClick={() => setTaskFilterDept('all')}>{t('Все отделы')}</button>
-                      {(Object.keys(deptNames) as TabType[]).map(dep => (
-                        <button key={dep} className={`manager-filter-chip${taskFilterDept === dep ? ' manager-filter-chip--active' : ''}`} style={taskFilterDept === dep ? { borderColor: tabColors[dep], color: tabColors[dep] } : {}} onClick={() => setTaskFilterDept(taskFilterDept === dep ? 'all' : dep)}>
-                          {deptNames[dep]}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {tasks.length === 0 ? (
-                    <div className="manager-empty-state">
-                      <ClipboardList size={48} style={{ opacity: 0.3, marginBottom: 12 }} />
-                      <div>{t('Задач пока нет')}</div>
-                      <button className="add-marker-btn" onClick={handleOpenNewTask}>{t('Создать первую задачу')}</button>
-                    </div>
-                  ) : managerView === 'kanban' ? (
-                    /* ── KANBAN BOARD ── */
-                    <div className="kanban-board">
-                      {TASK_STATUS_ORDER.map(colStatus => {
-                        const colTasks = tasks.filter(t =>
-                          t.status === colStatus &&
-                          (taskFilterDept === 'all' || t.department === taskFilterDept)
-                        );
-                        const isDropTarget = kanbanDragOver === colStatus;
-                        return (
-                          <div
-                            key={colStatus}
-                            className={`kanban-column${isDropTarget ? ' kanban-column--drop-target' : ''}`}
-                            onDragOver={e => { e.preventDefault(); setKanbanDragOver(colStatus); }}
-                            onDragLeave={() => setKanbanDragOver(null)}
-                            onDrop={async () => {
-                              if (!dragTaskId) return;
-                              const task = tasks.find(t => t.id === dragTaskId);
-                              if (task && task.status !== colStatus) {
-                                await handleTaskStatusChange(dragTaskId, colStatus);
-                              }
-                              setDragTaskId(null);
-                              setKanbanDragOver(null);
-                            }}
-                          >
-                            <div className="kanban-col-head" style={{ borderTopColor: taskStatusColor[colStatus] }}>
-                              <span className="kanban-col-title" style={{ color: taskStatusColor[colStatus] }}>{taskStatusLabel[colStatus]}</span>
-                              <span className="kanban-col-count">{colTasks.length}</span>
-                            </div>
-                            <div className="kanban-col-cards">
-                              {colTasks.map(task => renderTaskCard(task, true))}
-                              {colTasks.length === 0 && (
-                                <div className="kanban-col-empty">{t('Нет задач')}</div>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  ) : visibleTasks.length === 0 ? (
-                    <div className="empty-state">{t('Нет задач по выбранным фильтрам')}</div>
-                  ) : (
-                    /* ── LIST VIEW ── */
-                    <div className="manager-task-list">
-                      {visibleTasks.map(task => renderTaskCard(task, false))}
-                    </div>
-                  )}
-                </div>
-              </div>
-            );
-          })()}
+          {activeTab === 'manager' && (
+            <ManagerTab
+              t={t}
+              tasks={tasks}
+              taskFilterStatus={taskFilterStatus}
+              setTaskFilterStatus={setTaskFilterStatus}
+              taskFilterDept={taskFilterDept}
+              setTaskFilterDept={setTaskFilterDept}
+              managerView={managerView}
+              setManagerView={setManagerView}
+              dragTaskId={dragTaskId}
+              setDragTaskId={setDragTaskId}
+              kanbanDragOver={kanbanDragOver}
+              setKanbanDragOver={setKanbanDragOver}
+              handleOpenNewTask={handleOpenNewTask}
+              handleOpenEditTask={handleOpenEditTask}
+              handleDeleteTask={handleDeleteTask}
+              handleTaskStatusChange={handleTaskStatusChange}
+              saveTasks={saveTasks}
+            />
+          )}
         </div>
       </div>
 
