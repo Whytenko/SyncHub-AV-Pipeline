@@ -6,6 +6,9 @@
   "scripts": {
     "start": "node index.js",
     "dev": "nodemon index.js",
+    "migrate": "node scripts/migrate.js",
+    "seed": "node scripts/seed.js",
+    "db:setup": "npm run migrate && npm run seed",
     "lint": "node --check index.js",
     "test": "node --test ./test/**/*.test.js"
   },
@@ -18,9 +21,11 @@
   "author": "Whytenko",
   "license": "ISC",
   "dependencies": {
+    "dotenv": "^17.4.2",
     "express": "^4.18.0",
     "express-rate-limit": "^8.4.0",
     "helmet": "^8.1.0",
-    "nodemon": "^3.0.0"
+    "nodemon": "^3.0.0",
+    "pg": "^8.21.0"
   }
 }
