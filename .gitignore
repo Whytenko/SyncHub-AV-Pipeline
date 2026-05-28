@@ -8,10 +8,19 @@ server/.env
 server/public/uploads/*
 !server/public/uploads/.gitkeep
 server/node_modules/
+server/data/db.backup.json
 
 # Logs
 *.log
 logs/
 
 # macOS Finder icon
+Icon?
 [Ii]con$'\r'
+
+# Course/diploma documents (not part of the codebase)
+docs/
+Каршакова/
+Курсовая_*/
+Отчёт_по_практике_*.txt
+Курсовая_Работа_*.txt
