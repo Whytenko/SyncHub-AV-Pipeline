@@ -5,6 +5,10 @@ require('dotenv').config();
 const express = require('express');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
+const crypto = require('crypto');
 const pool = require('./src/pool');
 const {
   nowISO, createId, hashPassword, verifyPassword,
@@ -21,6 +25,41 @@ const PORT = process.env.PORT || 5001;
 
 const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || 'http://localhost:5173,http://localhost:3000').split(',');
 
+// ─── Upload storage ────────────────────────────────────────────────────────────
+const UPLOAD_DIR = path.join(__dirname, 'public', 'uploads');
+fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+
+const ALLOWED_MIME = new Set([
+  'video/mp4', 'video/webm', 'video/quicktime', 'video/x-msvideo',
+  'video/x-matroska', 'video/ogg',
+  'audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/aac',
+  'audio/x-m4a', 'audio/mp4', 'audio/flac', 'audio/webm'
+]);
+
+const multerStorage = multer.diskStorage({
+  destination: (req, _file, cb) => {
+    const dir = path.join(UPLOAD_DIR, req.params.id || 'tmp');
+    fs.mkdirSync(dir, { recursive: true });
+    cb(null, dir);
+  },
+  filename: (_req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    cb(null, `${Date.now()}_${crypto.randomUUID()}${ext}`);
+  }
+});
+
+const upload = multer({
+  storage: multerStorage,
+  limits: { fileSize: 2 * 1024 * 1024 * 1024 }, // 2 GB
+  fileFilter: (_req, file, cb) => {
+    if (ALLOWED_MIME.has(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error(`Формат не поддерживается: ${file.mimetype}`));
+    }
+  }
+});
+
 // ─── Security ──────────────────────────────────────────────────────────────────
 app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
 
@@ -36,6 +75,18 @@ app.use((req, res, next) => {
   if (req.method === 'OPTIONS') return res.sendStatus(204);
   next();
 });
+
+// ─── Static file serving (uploads) ────────────────────────────────────────────
+app.use('/uploads', express.static(UPLOAD_DIR, {
+  setHeaders: (res, filePath) => {
+    const ext = path.extname(filePath).toLowerCase();
+    const videoExts = ['.mp4', '.webm', '.mov', '.avi', '.mkv', '.ogv'];
+    const audioExts = ['.mp3', '.wav', '.ogg', '.aac', '.m4a', '.flac'];
+    if (videoExts.includes(ext)) res.setHeader('Content-Type', `video/${ext.slice(1) === 'mov' ? 'quicktime' : ext.slice(1)}`);
+    else if (audioExts.includes(ext)) res.setHeader('Content-Type', `audio/${ext.slice(1) === 'm4a' ? 'mp4' : ext.slice(1)}`);
+    res.setHeader('Accept-Ranges', 'bytes');
+  }
+}));
 
 // ─── Body parsing ──────────────────────────────────────────────────────────────
 app.use(express.json({ limit: '10mb' }));
@@ -463,6 +514,88 @@ app.get('/api/projects/:id/export', authRequired, async (req, res) => {
   } catch (err) {
     console.error('[EXPORT ERROR]', err.message);
     res.status(500).json({ success: false, message: 'Ошибка экспорта' });
+  }
+});
+
+// ─── Media: upload ─────────────────────────────────────────────────────────────
+app.post('/api/projects/:id/media/upload', authRequired, (req, res, next) => {
+  upload.single('file')(req, res, (err) => {
+    if (err instanceof multer.MulterError) {
+      return res.status(400).json({ success: false, message: `Ошибка загрузки: ${err.message}` });
+    }
+    if (err) {
+      return res.status(400).json({ success: false, message: err.message });
+    }
+    next();
+  });
+}, async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ success: false, message: 'Файл не получен' });
+
+    const { rows: [row] } = await pool.query('SELECT * FROM projects WHERE id = $1', [req.params.id]);
+    if (!row) return res.status(404).json({ success: false, message: 'Проект не найден' });
+    if (!(row.members || []).includes(req.user.id))
+      return res.status(403).json({ success: false, message: 'Недостаточно прав доступа' });
+
+    const mimeType = req.file.mimetype;
+    const type = mimeType.startsWith('video/') ? 'video' : 'audio';
+    const sizeBytes = req.file.size;
+    const sizeMB = sizeBytes < 1024 * 1024
+      ? `${(sizeBytes / 1024).toFixed(0)} KB`
+      : `${(sizeBytes / (1024 * 1024)).toFixed(1)} MB`;
+
+    const mediaFile = {
+      id: Date.now(),
+      name: req.file.originalname,
+      type,
+      duration: req.body.duration || '—',
+      size: sizeMB,
+      url: `/uploads/${req.params.id}/${req.file.filename}`
+    };
+
+    const existingFiles = row.media_files || [];
+    const updatedFiles = [...existingFiles, mediaFile];
+
+    const { rows: [updated] } = await pool.query(
+      'UPDATE projects SET media_files = $1, updated_at = NOW() WHERE id = $2 RETURNING *',
+      [JSON.stringify(updatedFiles), req.params.id]
+    );
+
+    res.json({ success: true, mediaFile, project: mapProject(updated) });
+  } catch (err) {
+    console.error('[UPLOAD MEDIA ERROR]', err.message);
+    res.status(500).json({ success: false, message: 'Ошибка сохранения файла' });
+  }
+});
+
+// ─── Media: delete ─────────────────────────────────────────────────────────────
+app.delete('/api/projects/:id/media/:mediaId', authRequired, async (req, res) => {
+  try {
+    const { rows: [row] } = await pool.query('SELECT * FROM projects WHERE id = $1', [req.params.id]);
+    if (!row) return res.status(404).json({ success: false, message: 'Проект не найден' });
+    if (!(row.members || []).includes(req.user.id))
+      return res.status(403).json({ success: false, message: 'Недостаточно прав доступа' });
+
+    const mediaId = Number(req.params.mediaId);
+    const existing = row.media_files || [];
+    const target = existing.find(f => f.id === mediaId);
+
+    // Delete file from disk
+    if (target?.url) {
+      const filePath = path.join(__dirname, 'public', target.url);
+      fs.rm(filePath, { force: true }, () => {});
+    }
+
+    const updatedFiles = existing.filter(f => f.id !== mediaId);
+    const { rows: [updated] } = await pool.query(
+      'UPDATE projects SET media_files = $1, updated_at = NOW() WHERE id = $2 RETURNING *',
+      [JSON.stringify(updatedFiles), req.params.id]
+    );
+
+    res.json({ success: true, project: mapProject(updated) });
+  } catch (err) {
+    console.error('[DELETE MEDIA ERROR]', err.message);
+    res.status(500).json({ success: false, message: 'Ошибка удаления файла' });
   }
 });
 

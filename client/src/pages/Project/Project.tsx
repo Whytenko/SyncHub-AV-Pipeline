@@ -17,7 +17,7 @@ import type {
   CostumeOutfit,
   GarmentCategory,
   GarmentAcquisition,
-  MediaFile,
+
   Project,
   ProjectComment,
   ProjectMarker,
@@ -230,8 +230,6 @@ const ProjectPage: React.FC = () => {
   const [showShotModal, setShowShotModal] = useState(false);
   const [shotDraft, setShotDraft] = useState({ time: '', title: '', description: '' });
   const [shotLocationId] = useState<number | null>(null);
-  const [showMediaModal, setShowMediaModal] = useState(false);
-  const [mediaDraft, setMediaDraft] = useState({ name: '', type: 'video', duration: '', size: '' });
   const [showDocModal, setShowDocModal] = useState(false);
   const [docDraft, setDocDraft] = useState({ name: '', size: '', uploadedBy: '' });
   const [previewDocument, setPreviewDocument] = useState<DocumentFile | null>(null);
@@ -415,7 +413,6 @@ const ProjectPage: React.FC = () => {
         setCellEditorOpen(false);
         setShowBodyMarkerModal(false);
         setShowProjectSettings(false);
-        setShowMediaModal(false);
         setShowDocModal(false);
       }
       if ((e.ctrlKey || e.metaKey) && e.key === 's' && !isInput) {
@@ -1117,22 +1114,30 @@ const ProjectPage: React.FC = () => {
     showToast(wasEditing ? t('Маркер обновлен') : t('Маркер добавлен'), 'success');
   };
 
-  const handleAddMedia = async () => {
-    if (!mediaDraft.name.trim()) {
-      showToast(t('Введите название файла'), 'error');
-      return;
+  const handleUploadMedia = async (file: File, duration: string) => {
+    if (!project) return;
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('duration', duration);
+      const result = await projectsApi.uploadMedia(project.id, formData);
+      if (result.project) setProject(result.project);
+      showToast(t('Файл загружен'), 'success');
+    } catch {
+      showToast(t('Ошибка загрузки файла'), 'error');
     }
-    const newMedia: MediaFile = {
-      id: mediaFiles.length + 1,
-      name: mediaDraft.name.trim(),
-      type: mediaDraft.type as MediaFile['type'],
-      duration: mediaDraft.duration || '0:00',
-      size: mediaDraft.size || '—'
-    };
-    setMediaDraft({ name: '', type: 'video', duration: '', size: '' });
-    setShowMediaModal(false);
-    await saveProject({ mediaFiles: [...mediaFiles, newMedia] });
-    showToast(t('Медиафайл добавлен'), 'success');
+  };
+
+  const handleDeleteMedia = async (mediaId: number) => {
+    if (!project) return;
+    try {
+      const result = await projectsApi.deleteMedia(project.id, mediaId);
+      if (result.project) setProject(result.project);
+      if (selectedMediaId === mediaId) setSelectedMediaId(null);
+      showToast(t('Файл удалён'), 'success');
+    } catch {
+      showToast(t('Ошибка удаления файла'), 'error');
+    }
   };
 
   const handleAddDocument = async () => {
@@ -1492,11 +1497,12 @@ const ProjectPage: React.FC = () => {
           {activeTab === 'edit' && (
             <EditTab
               t={t}
+              projectId={project?.id ?? ''}
               mediaFiles={mediaFiles}
               selectedMedia={selectedMedia}
               setSelectedMediaId={setSelectedMediaId}
-              openMediaModal={() => setShowMediaModal(true)}
               currentTime={currentTime}
+              setCurrentTime={setCurrentTime}
               timelineDuration={timelineDuration}
               commentsByTabEdit={commentsByTab.edit}
               handleToggleResolved={handleToggleResolved}
@@ -1504,6 +1510,8 @@ const ProjectPage: React.FC = () => {
               documents={documents}
               setPreviewDocument={setPreviewDocument}
               openDocModal={() => setShowDocModal(true)}
+              onUploadMedia={handleUploadMedia}
+              onDeleteMedia={handleDeleteMedia}
             />
           )}
 
@@ -2117,49 +2125,7 @@ const ProjectPage: React.FC = () => {
         />
       </Modal>
 
-      <Modal
-        title={t('Добавить медиа')}
-        isOpen={showMediaModal}
-        onClose={() => setShowMediaModal(false)}
-        actions={
-          <>
-            <button className="secondary-btn" onClick={() => setShowMediaModal(false)}>
-              {t('Отмена')}
-            </button>
-            <button className="primary-btn" onClick={handleAddMedia}>
-              {t('Добавить')}
-            </button>
-          </>
-        }
-      >
-        <input
-          className="form-input"
-          placeholder={t('Название файла')}
-          value={mediaDraft.name}
-          onChange={(e) => setMediaDraft({ ...mediaDraft, name: e.target.value })}
-        />
-        <select
-          className="form-input"
-          value={mediaDraft.type}
-          onChange={(e) => setMediaDraft({ ...mediaDraft, type: e.target.value })}
-        >
-          <option value="video">{t('Видео')}</option>
-          <option value="audio">{t('Аудио')}</option>
-          <option value="other">{t('Другое')}</option>
-        </select>
-        <input
-          className="form-input"
-          placeholder={t('Длительность (например 1:45)')}
-          value={mediaDraft.duration}
-          onChange={(e) => setMediaDraft({ ...mediaDraft, duration: e.target.value })}
-        />
-        <input
-          className="form-input"
-          placeholder={t('Размер файла (например 120 MB)')}
-          value={mediaDraft.size}
-          onChange={(e) => setMediaDraft({ ...mediaDraft, size: e.target.value })}
-        />
-      </Modal>
+      {/* Media upload is handled directly in EditTab via file input */}
 
       <Modal
         title={t('Добавить документ')}

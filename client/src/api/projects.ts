@@ -133,5 +133,19 @@ export const projectsApi = {
       }
       return { success: true, exportedAt: new Date().toISOString(), project };
     }
+  },
+
+  async uploadMedia(projectId: string, formData: FormData) {
+    return apiRequest<{ success: boolean; mediaFile: import('../types').MediaFile; project: Project }>(
+      `/api/projects/${projectId}/media/upload`,
+      { method: 'POST', body: formData }
+    );
+  },
+
+  async deleteMedia(projectId: string, mediaId: number) {
+    return apiRequest<{ success: boolean; project: Project }>(
+      `/api/projects/${projectId}/media/${mediaId}`,
+      { method: 'DELETE' }
+    );
   }
 };

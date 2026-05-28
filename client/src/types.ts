@@ -153,6 +153,7 @@ export interface MediaFile {
   type: 'audio' | 'video' | 'other';
   duration: string;
   size: string;
+  url?: string;
 }
 
 export interface DocumentFile {

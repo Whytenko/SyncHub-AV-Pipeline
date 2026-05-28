@@ -4503,3 +4503,65 @@ tr:last-child .storyboard-row-label {
     grid-template-columns: repeat(2, minmax(140px, 1fr));
   }
 }
+
+/* ── Media player ─────────────────────────────────────────────────────────── */
+.media-item-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: background 0.15s;
+  margin-bottom: 4px;
+}
+.media-item-row:hover { background: var(--surface-elevated); }
+.media-item-row.active {
+  background: var(--surface-elevated);
+  border-color: #FF391A44;
+}
+.media-item-row .media-info { flex: 1; min-width: 0; }
+.media-item-row .media-name { font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.media-item-row .media-duration { font-size: 11px; color: var(--text-secondary); margin-top: 2px; }
+.media-delete-btn {
+  background: none; border: none; cursor: pointer; padding: 4px; border-radius: 4px;
+  color: var(--text-secondary); opacity: 0; transition: opacity 0.15s, color 0.15s;
+}
+.media-item-row:hover .media-delete-btn { opacity: 1; }
+.media-delete-btn:hover { color: var(--error); }
+
+.media-upload-progress {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px; color: var(--text-secondary); font-size: 13px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.media-upload-spinner { animation: spin 0.8s linear infinite; }
+
+/* Video player */
+.video-player-wrap {
+  display: flex; flex-direction: column; gap: 8px; height: 100%;
+}
+.video-player-el {
+  width: 100%; border-radius: 10px;
+  background: #000; max-height: 360px;
+  outline: none;
+}
+.video-player-meta {
+  display: flex; justify-content: space-between; align-items: center;
+  font-size: 12px; color: var(--text-secondary); padding: 0 2px;
+}
+.video-player-name { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 70%; }
+.video-player-time { white-space: nowrap; }
+
+/* Audio player */
+.audio-player-wrap {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 16px; padding: 32px 16px; height: 100%;
+}
+.audio-player-icon { color: var(--text-secondary); }
+.audio-player-name {
+  font-size: 14px; font-weight: 500; text-align: center;
+  max-width: 100%; overflow: hidden; text-overflow: ellipsis;
+}
+.audio-player-el { width: 100%; }
