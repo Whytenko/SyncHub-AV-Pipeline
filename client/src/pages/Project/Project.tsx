@@ -230,8 +230,6 @@ const ProjectPage: React.FC = () => {
   const [showShotModal, setShowShotModal] = useState(false);
   const [shotDraft, setShotDraft] = useState({ time: '', title: '', description: '' });
   const [shotLocationId] = useState<number | null>(null);
-  const [showDocModal, setShowDocModal] = useState(false);
-  const [docDraft, setDocDraft] = useState({ name: '', size: '', uploadedBy: '' });
   const [previewDocument, setPreviewDocument] = useState<DocumentFile | null>(null);
   const [selectedMediaId, setSelectedMediaId] = useState<number | null>(null);
   const [showBodyMarkerModal, setShowBodyMarkerModal] = useState(false);
@@ -413,7 +411,6 @@ const ProjectPage: React.FC = () => {
         setCellEditorOpen(false);
         setShowBodyMarkerModal(false);
         setShowProjectSettings(false);
-        setShowDocModal(false);
       }
       if ((e.ctrlKey || e.metaKey) && e.key === 's' && !isInput) {
         e.preventDefault();
@@ -1140,23 +1137,28 @@ const ProjectPage: React.FC = () => {
     }
   };
 
-  const handleAddDocument = async () => {
-    if (!docDraft.name.trim()) {
-      showToast(t('Введите название документа'), 'error');
-      return;
+  const handleUploadDocument = async (file: File) => {
+    if (!project) return;
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const result = await projectsApi.uploadDocument(project.id, formData);
+      if (result.project) setProject(result.project);
+      showToast(t('Документ загружен'), 'success');
+    } catch {
+      showToast(t('Ошибка загрузки документа'), 'error');
     }
-    const newDoc = {
-      id: documents.length + 1,
-      name: docDraft.name.trim(),
-      size: docDraft.size || '—',
-      uploadedBy: docDraft.uploadedBy || t('Вы'),
-      uploadedAt: new Intl.DateTimeFormat(locale).format(new Date()),
-      type: 'script'
-    };
-    setDocDraft({ name: '', size: '', uploadedBy: '' });
-    setShowDocModal(false);
-    await saveProject({ documents: [...documents, newDoc] });
-    showToast(t('Документ добавлен'), 'success');
+  };
+
+  const handleDeleteDocument = async (docId: number) => {
+    if (!project) return;
+    try {
+      const result = await projectsApi.deleteDocument(project.id, docId);
+      if (result.project) setProject(result.project);
+      showToast(t('Документ удалён'), 'success');
+    } catch {
+      showToast(t('Ошибка удаления документа'), 'error');
+    }
   };
 
   const handlePrintReport = () => {
@@ -1509,9 +1511,11 @@ const ProjectPage: React.FC = () => {
               openCommentModal={openCommentModal}
               documents={documents}
               setPreviewDocument={setPreviewDocument}
-              openDocModal={() => setShowDocModal(true)}
+              openDocModal={() => {}}
               onUploadMedia={handleUploadMedia}
               onDeleteMedia={handleDeleteMedia}
+              onUploadDocument={handleUploadDocument}
+              onDeleteDocument={handleDeleteDocument}
             />
           )}
 
@@ -2127,72 +2131,66 @@ const ProjectPage: React.FC = () => {
 
       {/* Media upload is handled directly in EditTab via file input */}
 
+      {/* Document upload is handled directly in EditTab via file input */}
+
       <Modal
-        title={t('Добавить документ')}
-        isOpen={showDocModal}
-        onClose={() => setShowDocModal(false)}
+        title={previewDocument?.name ?? t('Просмотр документа')}
+        isOpen={Boolean(previewDocument)}
+        onClose={() => setPreviewDocument(null)}
         actions={
           <>
-            <button className="secondary-btn" onClick={() => setShowDocModal(false)}>
-              {t('Отмена')}
-            </button>
-            <button className="primary-btn" onClick={handleAddDocument}>
-              {t('Добавить')}
+            {previewDocument?.url && (
+              <a
+                className="secondary-btn"
+                href={`${import.meta.env.VITE_API_URL || 'http://localhost:5001'}${previewDocument.url}`}
+                download={previewDocument.name}
+                style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6 }}
+              >
+                ⬇ {t('Скачать')}
+              </a>
+            )}
+            <button className="primary-btn" onClick={() => setPreviewDocument(null)}>
+              {t('Закрыть')}
             </button>
           </>
         }
       >
-        <input
-          className="form-input"
-          placeholder={t('Название документа')}
-          value={docDraft.name}
-          onChange={(e) => setDocDraft({ ...docDraft, name: e.target.value })}
-        />
-        <input
-          className="form-input"
-          placeholder={t('Размер')}
-          value={docDraft.size}
-          onChange={(e) => setDocDraft({ ...docDraft, size: e.target.value })}
-        />
-        <input
-          className="form-input"
-          placeholder={t('Загрузил')}
-          value={docDraft.uploadedBy}
-          onChange={(e) => setDocDraft({ ...docDraft, uploadedBy: e.target.value })}
-        />
-      </Modal>
+        {previewDocument && (() => {
+          const src = previewDocument.url
+            ? `${import.meta.env.VITE_API_URL || 'http://localhost:5001'}${previewDocument.url}`
+            : null;
+          const type = previewDocument.type?.toLowerCase();
+          const isImage = ['png', 'jpg', 'jpeg', 'gif', 'webp'].includes(type ?? '');
+          const isPdf = type === 'pdf';
 
-      <Modal
-        title={t('Просмотр документа')}
-        isOpen={Boolean(previewDocument)}
-        onClose={() => setPreviewDocument(null)}
-        actions={
-          <button className="primary-btn" onClick={() => setPreviewDocument(null)}>
-            {t('Закрыть')}
-          </button>
-        }
-      >
-        {previewDocument && (
-          <div className="timeline-marker-details">
-            <div className="timeline-marker-row">
-              <span className="timeline-marker-label">{t('Название')}</span>
-              <span className="timeline-marker-value">{previewDocument.name}</span>
+          return (
+            <div className="doc-preview-wrap">
+              <div className="doc-preview-meta">
+                <span>📁 {previewDocument.size}</span>
+                <span>👤 {previewDocument.uploadedBy}</span>
+                <span>📅 {previewDocument.uploadedAt}</span>
+              </div>
+              {src && isImage && (
+                <img src={src} alt={previewDocument.name} className="doc-preview-image" />
+              )}
+              {src && isPdf && (
+                <iframe src={src} className="doc-preview-pdf" title={previewDocument.name} />
+              )}
+              {src && !isImage && !isPdf && (
+                <div className="doc-preview-nopreview">
+                  <div style={{ fontSize: 48, marginBottom: 12 }}>📄</div>
+                  <div>{t('Предпросмотр недоступен для этого формата')}</div>
+                  <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginTop: 4 }}>{previewDocument.name}</div>
+                </div>
+              )}
+              {!src && (
+                <div className="doc-preview-nopreview">
+                  <div>{t('Файл добавлен вручную — URL недоступен')}</div>
+                </div>
+              )}
             </div>
-            <div className="timeline-marker-row">
-              <span className="timeline-marker-label">{t('Размер')}</span>
-              <span className="timeline-marker-value">{previewDocument.size}</span>
-            </div>
-            <div className="timeline-marker-row">
-              <span className="timeline-marker-label">{t('Загрузил')}</span>
-              <span className="timeline-marker-value">{previewDocument.uploadedBy}</span>
-            </div>
-            <div className="timeline-marker-row">
-              <span className="timeline-marker-label">{t('Дата')}</span>
-              <span className="timeline-marker-value">{previewDocument.uploadedAt}</span>
-            </div>
-            <div className="form-helper">{t('Предпросмотр содержимого документа появится здесь.')}</div>
-          </div>
-        )}
+          );
+        })()}
       </Modal>
 
       <Modal

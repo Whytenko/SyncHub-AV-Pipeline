@@ -163,6 +163,7 @@ export interface DocumentFile {
   uploadedBy: string;
   uploadedAt: string;
   type: string;
+  url?: string;
 }
 
 export interface ScriptFile {

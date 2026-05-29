@@ -147,5 +147,19 @@ export const projectsApi = {
       `/api/projects/${projectId}/media/${mediaId}`,
       { method: 'DELETE' }
     );
+  },
+
+  async uploadDocument(projectId: string, formData: FormData) {
+    return apiRequest<{ success: boolean; document: import('../types').DocumentFile; project: Project }>(
+      `/api/projects/${projectId}/documents/upload`,
+      { method: 'POST', body: formData }
+    );
+  },
+
+  async deleteDocument(projectId: string, docId: number) {
+    return apiRequest<{ success: boolean; project: Project }>(
+      `/api/projects/${projectId}/documents/${docId}`,
+      { method: 'DELETE' }
+    );
   }
 };

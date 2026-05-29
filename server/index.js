@@ -9,6 +9,8 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
+const swaggerUi = require('swagger-ui-express');
+const swaggerDefinition = require('./src/swagger');
 const pool = require('./src/pool');
 const {
   nowISO, createId, hashPassword, verifyPassword,
@@ -53,6 +55,48 @@ const upload = multer({
   limits: { fileSize: 2 * 1024 * 1024 * 1024 }, // 2 GB
   fileFilter: (_req, file, cb) => {
     if (ALLOWED_MIME.has(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error(`Формат не поддерживается: ${file.mimetype}`));
+    }
+  }
+});
+
+// ─── Multer for documents ──────────────────────────────────────────────────────
+const ALLOWED_DOC_MIME = new Set([
+  'application/pdf',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.ms-excel',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'application/vnd.ms-powerpoint',
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  'text/plain',
+  'image/png', 'image/jpeg', 'image/gif', 'image/webp'
+]);
+
+const DOC_EXT_TO_TYPE = {
+  '.pdf': 'pdf', '.doc': 'doc', '.docx': 'docx',
+  '.xls': 'xls', '.xlsx': 'xlsx', '.ppt': 'ppt', '.pptx': 'pptx',
+  '.txt': 'txt', '.png': 'png', '.jpg': 'jpg', '.jpeg': 'jpg',
+  '.gif': 'gif', '.webp': 'webp'
+};
+
+const uploadDoc = multer({
+  storage: multer.diskStorage({
+    destination: (req, _file, cb) => {
+      const dir = path.join(UPLOAD_DIR, req.params.id || 'tmp', 'docs');
+      fs.mkdirSync(dir, { recursive: true });
+      cb(null, dir);
+    },
+    filename: (_req, file, cb) => {
+      const ext = path.extname(file.originalname).toLowerCase();
+      cb(null, `${Date.now()}_${crypto.randomUUID()}${ext}`);
+    }
+  }),
+  limits: { fileSize: 100 * 1024 * 1024 }, // 100 MB
+  fileFilter: (_req, file, cb) => {
+    if (ALLOWED_DOC_MIME.has(file.mimetype)) {
       cb(null, true);
     } else {
       cb(new Error(`Формат не поддерживается: ${file.mimetype}`));
@@ -598,6 +642,92 @@ app.delete('/api/projects/:id/media/:mediaId', authRequired, async (req, res) =>
     res.status(500).json({ success: false, message: 'Ошибка удаления файла' });
   }
 });
+
+// ─── Documents: upload ────────────────────────────────────────────────────────
+app.post('/api/projects/:id/documents/upload', authRequired, (req, res, next) => {
+  uploadDoc.single('file')(req, res, (err) => {
+    if (err instanceof multer.MulterError) {
+      return res.status(400).json({ success: false, message: `Ошибка загрузки: ${err.message}` });
+    }
+    if (err) return res.status(400).json({ success: false, message: err.message });
+    next();
+  });
+}, async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ success: false, message: 'Файл не получен' });
+
+    const { rows: [row] } = await pool.query('SELECT * FROM projects WHERE id = $1', [req.params.id]);
+    if (!row) return res.status(404).json({ success: false, message: 'Проект не найден' });
+    if (!(row.members || []).includes(req.user.id))
+      return res.status(403).json({ success: false, message: 'Недостаточно прав доступа' });
+
+    const ext = path.extname(req.file.originalname).toLowerCase();
+    const docType = DOC_EXT_TO_TYPE[ext] || 'other';
+    const sizeBytes = req.file.size;
+    const sizeFmt = sizeBytes < 1024 * 1024
+      ? `${(sizeBytes / 1024).toFixed(0)} KB`
+      : `${(sizeBytes / (1024 * 1024)).toFixed(1)} MB`;
+
+    const document = {
+      id: Date.now(),
+      name: req.file.originalname,
+      size: sizeFmt,
+      type: docType,
+      uploadedBy: req.user.nickname,
+      uploadedAt: new Date().toLocaleDateString('ru-RU'),
+      url: `/uploads/${req.params.id}/docs/${req.file.filename}`
+    };
+
+    const existingDocs = row.documents || [];
+    const updatedDocs = [...existingDocs, document];
+
+    const { rows: [updated] } = await pool.query(
+      'UPDATE projects SET documents = $1, updated_at = NOW() WHERE id = $2 RETURNING *',
+      [JSON.stringify(updatedDocs), req.params.id]
+    );
+
+    res.json({ success: true, document, project: mapProject(updated) });
+  } catch (err) {
+    console.error('[UPLOAD DOC ERROR]', err.message);
+    res.status(500).json({ success: false, message: 'Ошибка сохранения документа' });
+  }
+});
+
+// ─── Documents: delete ─────────────────────────────────────────────────────────
+app.delete('/api/projects/:id/documents/:docId', authRequired, async (req, res) => {
+  try {
+    const { rows: [row] } = await pool.query('SELECT * FROM projects WHERE id = $1', [req.params.id]);
+    if (!row) return res.status(404).json({ success: false, message: 'Проект не найден' });
+    if (!(row.members || []).includes(req.user.id))
+      return res.status(403).json({ success: false, message: 'Недостаточно прав доступа' });
+
+    const docId = Number(req.params.docId);
+    const existing = row.documents || [];
+    const target = existing.find(d => d.id === docId);
+
+    if (target?.url) {
+      const filePath = path.join(__dirname, 'public', target.url);
+      fs.rm(filePath, { force: true }, () => {});
+    }
+
+    const updatedDocs = existing.filter(d => d.id !== docId);
+    const { rows: [updated] } = await pool.query(
+      'UPDATE projects SET documents = $1, updated_at = NOW() WHERE id = $2 RETURNING *',
+      [JSON.stringify(updatedDocs), req.params.id]
+    );
+
+    res.json({ success: true, project: mapProject(updated) });
+  } catch (err) {
+    console.error('[DELETE DOC ERROR]', err.message);
+    res.status(500).json({ success: false, message: 'Ошибка удаления документа' });
+  }
+});
+
+// ─── Swagger UI ────────────────────────────────────────────────────────────────
+app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerDefinition, {
+  customSiteTitle: 'SyncHub API Docs',
+  swaggerOptions: { persistAuthorization: true }
+}));
 
 // ─── 404 / Error handlers ──────────────────────────────────────────────────────
 app.use((req, res) => {
