@@ -724,6 +724,7 @@ app.delete('/api/projects/:id/documents/:docId', authRequired, async (req, res) 
 });
 
 // ─── Swagger UI ────────────────────────────────────────────────────────────────
+app.get('/api/docs', (req, res) => res.redirect('/api/docs/'));
 app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerDefinition, {
   customSiteTitle: 'SyncHub API Docs',
   swaggerOptions: { persistAuthorization: true }
