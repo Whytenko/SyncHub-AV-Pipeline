@@ -1,6 +1,10 @@
 import React from 'react';
-import { Plus, Trash2, ChevronRight, Palette, Clock, AlertCircle, Upload, User2, Sparkles } from 'lucide-react';
-import type { MakeupLook, MakeupZone, LookStatus } from '../../../types';
+import { Plus, Trash2, ChevronRight, Palette, Clock, AlertCircle, Upload, User2, Sparkles, Pencil as Pencil2 } from 'lucide-react';
+import type { MakeupLook, MakeupZone, LookStatus, ProjectMarker, Task, TaskStatus, ProjectComment, TabType, Scene } from '../../../types';
+import TabMarkersPanel from '../components/TabMarkersPanel';
+import TabTasksPanel from '../components/TabTasksPanel';
+import TabCommentsPanel from '../components/TabCommentsPanel';
+import ReadOnlyBanner from '../components/ReadOnlyBanner';
 
 type LookDraft = { name: string; characterName: string; sceneRefs: string; applyTimeMin: number; skinNotes: string; status: LookStatus };
 type ProductDraft = { zone: MakeupZone; productName: string; colorHex: string; technique: string };
@@ -23,6 +27,18 @@ export interface MakeupTabProps {
   handleDeleteProduct: (lookId: number, productId: number) => void;
   saveMakeupLooks: (looks: MakeupLook[]) => Promise<void>;
   handleLookRefImage: (id: number) => void;
+  canEdit: boolean;
+  userRole?: string;
+  markers: ProjectMarker[];
+  onDeleteMarker: (id: number) => void;
+  onMarkerSeek: (time: number) => void;
+  onAddMarker?: () => void;
+  deptTasks: Task[];
+  onTaskStatusChange: (id: string, status: TaskStatus) => Promise<void>;
+  tabComments: ProjectComment[];
+  onToggleResolved: (id: number) => void;
+  onAddComment: (tabId: TabType) => void;
+  scenes: Scene[];
 }
 
 const ZONE_LABELS: Record<string, string> = {
@@ -41,13 +57,18 @@ const MakeupTab: React.FC<MakeupTabProps> = ({
   setLookDraft, setLookEditId, setShowLookModal,
   setProductDraft, setProductEditId, setProductTargetLookId, setShowProductModal,
   handleLookStatusChange, handleDeleteLook, handleDeleteProduct,
-  saveMakeupLooks, handleLookRefImage
+  saveMakeupLooks, handleLookRefImage,
+  canEdit, userRole, markers, onDeleteMarker, onMarkerSeek, onAddMarker,
+  deptTasks, onTaskStatusChange,
+  tabComments, onToggleResolved, onAddComment,
+  scenes
 }) => {
   const selectedLook = makeupLooks.find(l => l.id === selectedLookId) ?? makeupLooks[0] ?? null;
   const activeLookId = selectedLook?.id ?? null;
 
   return (
     <div className="tab-content makeup-tab">
+      {!canEdit && <ReadOnlyBanner t={t} role={userRole} />}
       <div className="craft-layout">
         {/* Left panel — list of looks */}
         <div className="craft-sidebar">
@@ -125,7 +146,7 @@ const MakeupTab: React.FC<MakeupTabProps> = ({
                       setLookDraft({ name: selectedLook.name, characterName: selectedLook.characterName, sceneRefs: selectedLook.sceneRefs, applyTimeMin: selectedLook.applyTimeMin, skinNotes: selectedLook.skinNotes, status: selectedLook.status });
                       setLookEditId(selectedLook.id);
                       setShowLookModal(true);
-                    }}>✏️</button>
+                    }}><Pencil2 size={14} /></button>
                     <button className="craft-icon-btn craft-icon-btn--danger" title={t('Удалить образ')} onClick={() => handleDeleteLook(selectedLook.id)}>
                       <Trash2 size={14} />
                     </button>
@@ -141,6 +162,18 @@ const MakeupTab: React.FC<MakeupTabProps> = ({
                   {selectedLook.applyTimeMin > 0 && (
                     <span className="craft-meta-chip"><Clock size={12} /> {selectedLook.applyTimeMin} мин</span>
                   )}
+                  {scenes.length > 0 && selectedLook.characterName && (() => {
+                    const matching = scenes.filter(s =>
+                      s.characters.some(c => c.toLowerCase().includes(selectedLook.characterName.toLowerCase()))
+                    );
+                    if (!matching.length) return null;
+                    return (
+                      <div className="craft-scene-refs">
+                        <span className="craft-scene-refs-label">Сцены:</span>
+                        {matching.map(sc => <span key={sc.id} className="craft-scene-badge">Сц.{sc.number}</span>)}
+                      </div>
+                    );
+                  })()}
                 </div>
               </div>
 
@@ -183,7 +216,7 @@ const MakeupTab: React.FC<MakeupTabProps> = ({
                             setProductEditId(p.id);
                             setProductTargetLookId(selectedLook.id);
                             setShowProductModal(true);
-                          }}>✏️</button>
+                          }}><Pencil2 size={14} /></button>
                           <button className="craft-icon-btn craft-icon-btn--danger" onClick={() => handleDeleteProduct(selectedLook.id, p.id)}>
                             <Trash2 size={12} />
                           </button>
@@ -233,6 +266,12 @@ const MakeupTab: React.FC<MakeupTabProps> = ({
           )}
         </div>
       </div>
+      <TabCommentsPanel t={t} comments={tabComments} tabId="makeup" canEdit={canEdit} onToggleResolved={onToggleResolved} onAddComment={onAddComment} />
+      <TabTasksPanel t={t} tasks={deptTasks} canEdit={canEdit} onStatusChange={onTaskStatusChange} />
+      <TabMarkersPanel
+        t={t} markers={markers} tabId="makeup"
+        canEdit={canEdit} onDelete={onDeleteMarker} onSeek={onMarkerSeek} onAddMarker={onAddMarker}
+      />
     </div>
   );
 };

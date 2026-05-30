@@ -233,10 +233,62 @@ export interface StoryboardCell {
   duration?: number;
 }
 
+export interface StoryboardFrame {
+  shotType: string;
+  description: string;
+  imageUrl: string;
+  duration?: number;
+}
+
 export interface StoryboardGrid {
   locationNames: string[];
   columnCount: number;
   cells: Record<string, StoryboardCell>;
+}
+
+// ── Pipeline: Production stages ───────────────────────────────────────────────
+export type ProductionStage =
+  | 'development'     // Разработка: сценарист работает над сценами
+  | 'pre_production'  // Пре-продакшн: раскадровка, образы, подготовка
+  | 'production'      // Съёмки: по календарю съёмочного плана
+  | 'post_production' // Пост-продакшн: монтаж, звук, цвет
+  | 'delivery';       // Сдача: финальная версия утверждена
+
+// Scene — созданная сценаристом, живёт через все вкладки
+export type SceneStatus = 'draft' | 'locked' | 'shot' | 'edited' | 'approved';
+
+export interface Scene {
+  id: string;
+  number: number;               // Сц. 1, Сц. 2...
+  title: string;                // "ИНТ. КВАРТИРА АЛЕКСА — ДЕНЬ"
+  location: string;             // название локации
+  interiorExterior: 'INT' | 'EXT';
+  dayNight: 'DAY' | 'NIGHT';
+  characters: string[];         // имена персонажей
+  description: string;          // краткое описание действия
+  estimatedMinutes: number;     // расчётное время съёмки
+  pageCount: number;            // страниц сценария
+  status: SceneStatus;
+  shootingDayId?: string;       // назначена ли на день съёмок
+  storyboardRef?: string;       // legacy: ключ в storyboardGrid.cells
+  storyboardFrameCount?: number; // кол-во кадров раскадровки (0 = не задано)
+  frames?: StoryboardFrame[];   // кадры раскадровки, привязанные к сцене
+}
+
+// Shooting day — создаётся менеджером, объединяет сцены
+export type ShootingDayStatus = 'planned' | 'shooting' | 'wrapped' | 'postponed';
+
+export interface ShootingDay {
+  id: string;
+  dayNumber: number;            // Съёмочный день №1, №2...
+  date: string;                 // YYYY-MM-DD
+  callTime: string;             // 08:00
+  wrapTime: string;             // 19:00
+  location: string;             // адрес/название
+  sceneIds: string[];           // id сцен в этот день
+  status: ShootingDayStatus;
+  notes: string;
+  totalMinutes: number;         // авто-сумма estimatedMinutes сцен
 }
 
 export interface Project {
@@ -263,6 +315,10 @@ export interface Project {
   tasks?: Task[];
   makeupLooks?: MakeupLook[];
   costumeOutfits?: CostumeOutfit[];
+  // Pipeline
+  productionStage?: ProductionStage;
+  scenes?: Scene[];
+  shootingDays?: ShootingDay[];
 }
 
 export interface ProjectSummary {

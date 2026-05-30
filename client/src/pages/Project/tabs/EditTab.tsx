@@ -1,6 +1,9 @@
 import React, { useRef, useState, useCallback } from 'react';
 import { Music, Film, Upload, Eye, MessageSquarePlus, Reply, Trash2, Loader, FileText } from 'lucide-react';
-import type { MediaFile, DocumentFile, ProjectComment, TabType } from '../../../types';
+import type { MediaFile, DocumentFile, ProjectComment, TabType, ProjectMarker, Task, TaskStatus, Scene } from '../../../types';
+import TabMarkersPanel from '../components/TabMarkersPanel';
+import TabTasksPanel from '../components/TabTasksPanel';
+import ReadOnlyBanner from '../components/ReadOnlyBanner';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
 const tabColorEdit = '#FF391A';
@@ -27,9 +30,9 @@ const getDurationFromFile = (file: File): Promise<string> =>
   });
 
 const DOC_ICONS: Record<string, string> = {
-  pdf: '📕', doc: '📝', docx: '📝', xls: '📊', xlsx: '📊',
-  ppt: '📋', pptx: '📋', txt: '📄', png: '🖼', jpg: '🖼',
-  jpeg: '🖼', gif: '🖼', webp: '🖼', other: '📎'
+  pdf: 'PDF', doc: 'DOC', docx: 'DOC', xls: 'XLS', xlsx: 'XLS',
+  ppt: 'PPT', pptx: 'PPT', txt: 'TXT', png: 'PNG', jpg: 'JPG',
+  jpeg: 'JPG', gif: 'GIF', webp: 'WEB', other: 'FILE'
 };
 
 
@@ -52,6 +55,16 @@ export interface EditTabProps {
   onDeleteMedia: (mediaId: number) => Promise<void>;
   onUploadDocument: (file: File) => Promise<void>;
   onDeleteDocument: (docId: number) => Promise<void>;
+  canEdit: boolean;
+  userRole?: string;
+  markers: ProjectMarker[];
+  onDeleteMarker: (id: number) => void;
+  onMarkerSeek: (time: number) => void;
+  onAddMarker?: () => void;
+  deptTasks: Task[];
+  onTaskStatusChange: (id: string, status: TaskStatus) => Promise<void>;
+  scenes: Scene[];
+  onSceneStatusChange: (sceneId: string, status: 'edited' | 'approved') => Promise<void>;
 }
 
 const EditTab: React.FC<EditTabProps> = ({
@@ -60,7 +73,10 @@ const EditTab: React.FC<EditTabProps> = ({
   commentsByTabEdit, handleToggleResolved, openCommentModal,
   documents, setPreviewDocument,
   onUploadMedia, onDeleteMedia,
-  onUploadDocument, onDeleteDocument
+  onUploadDocument, onDeleteDocument,
+  canEdit, userRole, markers, onDeleteMarker, onMarkerSeek, onAddMarker,
+  deptTasks, onTaskStatusChange,
+  scenes, onSceneStatusChange
 }) => {
   const mediaInputRef = useRef<HTMLInputElement>(null);
   const docInputRef = useRef<HTMLInputElement>(null);
@@ -98,6 +114,7 @@ const EditTab: React.FC<EditTabProps> = ({
 
   return (
     <div className="tab-content edit-tab">
+      {!canEdit && <ReadOnlyBanner t={t} role={userRole} />}
       <input ref={mediaInputRef} type="file"
         accept="video/mp4,video/webm,video/quicktime,video/x-msvideo,audio/mpeg,audio/wav,audio/ogg,audio/aac,audio/mp4,audio/flac"
         style={{ display: 'none' }} onChange={handleMediaChange} />
@@ -240,6 +257,42 @@ const EditTab: React.FC<EditTabProps> = ({
           </button>
         </div>
       </div>
+      {/* Scene progress for post-production */}
+      {scenes.some(s => s.status === 'shot' || s.status === 'edited' || s.status === 'approved') && (
+        <div className="edit-scenes-panel">
+          <div className="edit-scenes-title">Прогресс монтажа</div>
+          <div className="edit-scenes-list">
+            {scenes.filter(s => s.status === 'shot' || s.status === 'edited' || s.status === 'approved')
+              .sort((a, b) => a.number - b.number)
+              .map(scene => (
+              <div key={scene.id} className="edit-scene-row">
+                <span className="scene-number-sm">Сц.{scene.number}</span>
+                <span className="edit-scene-title">{scene.title}</span>
+                {canEdit && (
+                  <div className="edit-scene-actions">
+                    {scene.status === 'shot' && (
+                      <button className="edit-scene-btn" onClick={() => onSceneStatusChange(scene.id, 'edited')}>
+                        ✂️ Смонтировать
+                      </button>
+                    )}
+                    {scene.status === 'edited' && (
+                      <button className="edit-scene-btn edit-scene-btn--approve" onClick={() => onSceneStatusChange(scene.id, 'approved')}>
+                        ✓ Утвердить
+                      </button>
+                    )}
+                    {scene.status === 'approved' && <span style={{ color: '#22c55e', fontSize: 12 }}>✓ Утверждено</span>}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+      <TabTasksPanel t={t} tasks={deptTasks} canEdit={canEdit} onStatusChange={onTaskStatusChange} />
+      <TabMarkersPanel
+        t={t} markers={markers} tabId="edit"
+        canEdit={canEdit} onDelete={onDeleteMarker} onSeek={onMarkerSeek} onAddMarker={onAddMarker}
+      />
     </div>
   );
 };

@@ -15,6 +15,65 @@
   z-index: 100;
   width: 100%;
   box-sizing: border-box;
+  transition: height 0.2s ease;
+  overflow: hidden;
+}
+
+/* ── Collapsed strip ── */
+.sync-hub-header--collapsed {
+  height: 32px;
+  padding: 0 16px;
+}
+
+.header-collapsed-strip {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  gap: 10px;
+  height: 100%;
+}
+
+.header-collapsed-back {
+  height: 22px !important;
+  min-width: 22px !important;
+  max-width: 22px !important;
+  padding: 0 !important;
+  border-radius: 6px !important;
+  flex-shrink: 0;
+}
+
+.header-collapsed-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+  letter-spacing: 0.01em;
+}
+
+/* ── Collapse toggle button (shown in both states) ── */
+.header-collapse-btn {
+  background: transparent;
+  border: 1px solid var(--border-muted);
+  color: var(--text-muted);
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  padding: 0;
+  margin-left: 4px;
+}
+.header-collapse-btn:hover {
+  background: var(--surface-hover);
+  border-color: var(--border-strong);
+  color: var(--text-primary);
 }
 
 /* ЛЕВАЯ ЧАСТЬ - Навигация */

@@ -3,20 +3,26 @@ import { useParams } from 'react-router-dom';
 import Header from '../Header/Header';
 import './Project.css';
 import { projectsApi } from '../../api/projects';
+import { usersApi } from '../../api/users';
 import { useToast } from '../../context/ToastContext';
 import { useI18n } from '../../context/I18nContext';
+import { useAuth } from '../../context/AuthContext';
 import Modal from '../../components/Modal';
 import type {
   BodyMarker,
   BodySilhouette,
   DocumentFile,
-  Location,
   LookStatus,
   MakeupLook,
   MakeupZone,
   CostumeOutfit,
   GarmentCategory,
   GarmentAcquisition,
+  UserSummary,
+  Scene,
+  ShootingDay,
+  ProductionStage,
+  SceneStatus,
 
   Project,
   ProjectComment,
@@ -30,6 +36,8 @@ import type {
   TaskPriority
 } from '../../types';
 
+import ProductionStageBar from './components/ProductionStageBar';
+
 import ScriptTab from './tabs/ScriptTab';
 import DirectorTab from './tabs/DirectorTab';
 import CostumesTab from './tabs/CostumesTab';
@@ -40,7 +48,7 @@ import ManagerTab from './tabs/ManagerTab';
 
 // Импорт иконок
 import {
-  Play, Pause, Music, MapPin, MapPinPlus,
+  Play, Pause, Music, MapPin, MapPinPlus, FileText,
   ArrowLeft, Clapperboard, Sparkles,
   ScrollText, Shirt, Zap, ClipboardList, Clock, CalendarDays,
   type LucideIcon
@@ -55,6 +63,9 @@ const tabColors: Record<TabType, string> = {
   sound: '#06b6d4',
   manager: '#22c55e'
 };
+
+// Reserved for future per-dept role restriction (replace canEditTab body when ready)
+// const ROLE_TO_TAB: Partial<Record<string, TabType>> = { 'Режиссёр': 'director', ... };
 
 const tabNames: Record<TabType, string> = {
   script: 'Сценарий',
@@ -113,15 +124,7 @@ const parseTimeInput = (value: string) => {
   return Number(value);
 };
 
-const sanitizeScriptHtml = (html: string) =>
-  html
-    // Remove hidden bidi-control chars that can flip typing direction.
-    .replace(/[\u200E\u200F\u202A-\u202E\u2066-\u2069]/g, '')
-    // Strip rtl/auto dir attributes from pasted rich text.
-    .replace(/\sdir=(['"]?)(rtl|auto)\1/gi, ' dir="ltr"')
-    // Normalize inline direction styles.
-    .replace(/direction\s*:\s*rtl\s*;?/gi, 'direction:ltr;')
-    .replace(/unicode-bidi\s*:\s*[^;"']+\s*;?/gi, '');
+
 
 const defaultScriptParams: ScriptParams = {
   scriptFile: null,
@@ -200,6 +203,7 @@ const ProjectPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const { showToast } = useToast();
   const { t, language } = useI18n();
+  const { user } = useAuth();
 
   const [project, setProject] = useState<Project | null>(null);
   const [loading, setLoading] = useState(true);
@@ -208,10 +212,7 @@ const ProjectPage: React.FC = () => {
   const [currentTime, setCurrentTime] = useState(0);
   const [activeTab, setActiveTab] = useState<TabType>('edit');
   const [showAllMarkers, setShowAllMarkers] = useState(true);
-  const [, setScriptText] = useState('');
-  const [initialScriptHtml, setInitialScriptHtml] = useState('');
   const [directorNotes, setDirectorNotes] = useState('');
-  const editorRef = useRef<HTMLDivElement>(null);
   const timelineBarRef = useRef<HTMLDivElement>(null);
 
   const [showMarkerModal, setShowMarkerModal] = useState(false);
@@ -225,11 +226,6 @@ const ProjectPage: React.FC = () => {
   const [showCommentModal, setShowCommentModal] = useState(false);
   const [commentTab, setCommentTab] = useState<TabType>('edit');
   const [commentText, setCommentText] = useState('');
-  const [showLocationModal, setShowLocationModal] = useState(false);
-  const [locationDraft, setLocationDraft] = useState({ name: '', description: '' });
-  const [showShotModal, setShowShotModal] = useState(false);
-  const [shotDraft, setShotDraft] = useState({ time: '', title: '', description: '' });
-  const [shotLocationId] = useState<number | null>(null);
   const [previewDocument, setPreviewDocument] = useState<DocumentFile | null>(null);
   const [selectedMediaId, setSelectedMediaId] = useState<number | null>(null);
   const [showBodyMarkerModal, setShowBodyMarkerModal] = useState(false);
@@ -254,8 +250,19 @@ const ProjectPage: React.FC = () => {
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
   const [savedAt, setSavedAt] = useState<Date | null>(null);
 
+  // Member management
+  const [memberSearch, setMemberSearch] = useState('');
+  const [memberSearchResults, setMemberSearchResults] = useState<UserSummary[]>([]);
+  const [memberSearchBusy, setMemberSearchBusy] = useState(false);
+
   // Tasks
   const [tasks, setTasks] = useState<Task[]>([]);
+
+  // Pipeline state
+  const [scenes, setScenes] = useState<Scene[]>([]);
+  const [shootingDays, setShootingDays] = useState<ShootingDay[]>([]);
+  const [productionStage, setProductionStage] = useState<ProductionStage>('development');
+
   const [taskFilterStatus, setTaskFilterStatus] = useState<TaskStatus | 'all'>('all');
   const [taskFilterDept, setTaskFilterDept] = useState<TabType | 'all'>('all');
   const [dragTaskId, setDragTaskId] = useState<string | null>(null);
@@ -297,16 +304,15 @@ const ProjectPage: React.FC = () => {
     category: 'top', name: '', colorHex: '#333333', material: '', brand: '', acquisition: 'to_buy', price: 0, notes: ''
   });
 
+  // Audio
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
   // Script params
   const scriptFileInputRef = useRef<HTMLInputElement>(null);
   const [scriptParams, setScriptParamsDraft] = useState<ScriptParams>(defaultScriptParams);
 
-  // Storyboard grid
+  // Storyboard grid (legacy — kept for backward compat with project data)
   const [storyboardGrid, setStoryboardGridLocal] = useState<StoryboardGrid>(defaultStoryboardGrid);
-  const [cellEditorOpen, setCellEditorOpen] = useState(false);
-  const [cellEditorRow, setCellEditorRow] = useState(0);
-  const [cellEditorCol, setCellEditorCol] = useState(0);
-  const [cellEditorDraft, setCellEditorDraft] = useState<StoryboardCell>({ description: '', imageUrl: '', shotType: '' });
 
   const normalizeProjectData = (rawProject: Project): Project => {
     const silhouettes = normalizeSilhouettes((rawProject as any).bodySilhouettes);
@@ -341,11 +347,8 @@ const ProjectPage: React.FC = () => {
       setLoading(true);
       try {
         const response = await projectsApi.get(id);
-        const normalizedScript = sanitizeScriptHtml(response.project.scriptText || '');
         const normalizedProject = normalizeProjectData(response.project);
         setProject(normalizedProject);
-        setScriptText(normalizedScript);
-        setInitialScriptHtml(normalizedScript);
         setDirectorNotes(normalizedProject.directorNotes || '');
         setTimelineDurationInput(formatTime(normalizedProject.timelineDuration));
         setProjectDraft({
@@ -364,13 +367,6 @@ const ProjectPage: React.FC = () => {
   }, [id, showToast, t]);
 
   useEffect(() => {
-    if (!editorRef.current) return;
-    if (editorRef.current.innerHTML !== initialScriptHtml) {
-      editorRef.current.innerHTML = initialScriptHtml;
-    }
-  }, [initialScriptHtml, project?.id]);
-
-  useEffect(() => {
     if (!project) return;
     setScriptParamsDraft(project.scriptParams
       ? { ...defaultScriptParams, ...(project.scriptParams as ScriptParams) }
@@ -381,6 +377,9 @@ const ProjectPage: React.FC = () => {
     setTasks(Array.isArray(project.tasks) ? project.tasks : []);
     setMakeupLooks(Array.isArray((project as any).makeupLooks) ? (project as any).makeupLooks : []);
     setCostumeOutfits(Array.isArray((project as any).costumeOutfits) ? (project as any).costumeOutfits : []);
+    setScenes(Array.isArray(project.scenes) ? project.scenes : []);
+    setShootingDays(Array.isArray(project.shootingDays) ? project.shootingDays : []);
+    setProductionStage((project.productionStage as ProductionStage) || 'development');
   }, [project?.id]);
 
   useEffect(() => {
@@ -408,7 +407,6 @@ const ProjectPage: React.FC = () => {
         setShowTaskModal(false);
         setShowMarkerModal(false);
         setShowCommentModal(false);
-        setCellEditorOpen(false);
         setShowBodyMarkerModal(false);
         setShowProjectSettings(false);
       }
@@ -454,6 +452,40 @@ const ProjectPage: React.FC = () => {
   const timelineDuration = normalizeTimelineDuration(project?.timelineDuration);
   const locale = language === 'en' ? 'en-US' : language === 'zh' ? 'zh-CN' : 'ru-RU';
   const selectedMedia = mediaFiles.find((file) => file.id === selectedMediaId) || null;
+  const selectedAudioFile = mediaFiles.find(f => f.type === 'audio' && f.url) || null;
+
+  const isOwner = !!user && project?.ownerId === user.id;
+  const isMember = isOwner || (!!user && Array.isArray(project?.members) &&
+    project.members.some((m) =>
+      typeof m === 'string' ? m === user!.id : (m as UserSummary).id === user!.id
+    ));
+
+  // ── Role-based gate ───────────────────────────────────────────────────────
+  // During 'development' with no locked scene: only Сценарист edits the
+  // script tab, only Менеджер edits the manager tab — everyone else reads.
+  const userRole = user?.role || '';
+  const isScriptwriterRole = (r: string) =>
+    /сценарист|script|writer/i.test(r);
+  const isManagerRole = (r: string) =>
+    /менеджер|manager|producer|продюсер/i.test(r);
+
+  const hasLockedScene = scenes.some(
+    s => s.status === 'locked' || s.status === 'shot' || s.status === 'approved'
+  );
+
+  const canEditTab = (tabId: TabType): boolean => {
+    if (!user || !isMember) return false;
+    if (isOwner) return true;
+
+    // Hard gate: development stage, no scene locked yet
+    if (productionStage === 'development' && !hasLockedScene) {
+      if (tabId === 'script')  return isScriptwriterRole(userRole);
+      if (tabId === 'manager') return isManagerRole(userRole);
+      return false; // director, costumes, makeup, edit, sound — read-only
+    }
+
+    return true;
+  };
 
   useEffect(() => {
     if (mediaFiles.length === 0) {
@@ -520,7 +552,16 @@ const ProjectPage: React.FC = () => {
     return iconMap[marker.icon] || MapPin;
   };
 
-  const handlePlayPause = () => setIsPlaying((prev) => !prev);
+  const handlePlayPause = () => {
+    if (!audioRef.current) return;
+    if (isPlaying) {
+      audioRef.current.pause();
+      setIsPlaying(false);
+    } else {
+      audioRef.current.play().catch(() => {});
+      setIsPlaying(true);
+    }
+  };
 
   const handleCreateMarker = async () => {
     if (!project) return;
@@ -535,7 +576,7 @@ const ProjectPage: React.FC = () => {
       color: tabColors[activeTab],
       title,
       comment: markerComment.trim(),
-      user: t('Вы'),
+      user: user?.nickname || user?.firstName || t('Вы'),
       icon: activeTab,
       tabId: activeTab
     };
@@ -545,6 +586,12 @@ const ProjectPage: React.FC = () => {
     setShowMarkerModal(false);
     await saveProject({ markers: updatedMarkers });
     showToast(t('Маркер добавлен'), 'success');
+  };
+
+  const handleDeleteMarker = async (markerId: number) => {
+    const updatedMarkers = markers.filter((m) => m.id !== markerId);
+    await saveProject({ markers: updatedMarkers });
+    showToast(t('Маркер удалён'), 'success');
   };
 
   const handleTimelineClick = (time: number) => {
@@ -674,13 +721,6 @@ const ProjectPage: React.FC = () => {
 
   const handleRemoveScriptFile = async () => {
     await updateScriptParam('scriptFile', null);
-  };
-
-  // ── Storyboard grid ──────────────────────────────────────────────────────────
-
-  const saveStoryboardGrid = async (grid: StoryboardGrid) => {
-    setStoryboardGridLocal(grid);
-    await saveProject({ storyboardGrid: grid } as Partial<Project>);
   };
 
   const saveTasks = async (newTasks: Task[]) => {
@@ -849,89 +889,28 @@ const ProjectPage: React.FC = () => {
     await saveTasks(tasks.filter(t => t.id !== taskId));
   };
 
+  const handleQuickAddTask = async (title: string, dept: TabType, priority: TaskPriority) => {
+    const now = new Date().toISOString();
+    const newTask: Task = {
+      id: `task_${Date.now()}`,
+      title,
+      description: '',
+      status: 'todo',
+      priority,
+      department: dept,
+      assignee: '',
+      sceneRef: '',
+      dueDate: '',
+      createdAt: now,
+      updatedAt: now
+    };
+    await saveTasks([...tasks, newTask]);
+    showToast(t('Задача добавлена'), 'success');
+  };
+
   const handleTaskStatusChange = async (taskId: string, newStatus: TaskStatus) => {
     const now = new Date().toISOString();
     await saveTasks(tasks.map(t => t.id === taskId ? { ...t, status: newStatus, updatedAt: now } : t));
-  };
-
-  const handleAddStoryboardRow = async () => {
-    const newGrid = {
-      ...storyboardGrid,
-      locationNames: [...storyboardGrid.locationNames, `${t('Локация')} ${storyboardGrid.locationNames.length + 1}`]
-    };
-    await saveStoryboardGrid(newGrid);
-    setScriptParamsDraft(prev => ({ ...prev, locationsCount: newGrid.locationNames.length }));
-    await saveProject({ scriptParams: { ...scriptParams, locationsCount: newGrid.locationNames.length } } as Partial<Project>);
-  };
-
-  const handleRemoveStoryboardRow = async () => {
-    if (storyboardGrid.locationNames.length === 0) return;
-    const newLen = storyboardGrid.locationNames.length - 1;
-    const newNames = storyboardGrid.locationNames.slice(0, newLen);
-    const newCells: Record<string, StoryboardCell> = {};
-    Object.entries(storyboardGrid.cells).forEach(([k, v]) => {
-      if (parseInt(k.split('_')[0]) < newLen) newCells[k] = v;
-    });
-    const newGrid = { ...storyboardGrid, locationNames: newNames, cells: newCells };
-    setStoryboardGridLocal(newGrid);
-    setScriptParamsDraft(prev => ({ ...prev, locationsCount: newLen }));
-    await saveProject({ storyboardGrid: newGrid, scriptParams: { ...scriptParams, locationsCount: newLen } } as Partial<Project>);
-  };
-
-  const handleAddStoryboardColumn = async () => {
-    await saveStoryboardGrid({ ...storyboardGrid, columnCount: storyboardGrid.columnCount + 1 });
-  };
-
-  const handleRemoveStoryboardColumn = async () => {
-    if (storyboardGrid.columnCount <= 1) return;
-    const newCount = storyboardGrid.columnCount - 1;
-    const newCells: Record<string, StoryboardCell> = {};
-    Object.entries(storyboardGrid.cells).forEach(([k, v]) => {
-      if (parseInt(k.split('_')[1]) < newCount) newCells[k] = v;
-    });
-    await saveStoryboardGrid({ ...storyboardGrid, columnCount: newCount, cells: newCells });
-  };
-
-  const renameStoryboardRow = (rowIdx: number, name: string) => {
-    const newNames = [...storyboardGrid.locationNames];
-    newNames[rowIdx] = name;
-    setStoryboardGridLocal({ ...storyboardGrid, locationNames: newNames });
-  };
-
-  const openCellEditor = (rowIdx: number, colIdx: number) => {
-    const key = `${rowIdx}_${colIdx}`;
-    const existing = storyboardGrid.cells[key] ?? { description: '', imageUrl: '', shotType: '' };
-    setCellEditorRow(rowIdx);
-    setCellEditorCol(colIdx);
-    setCellEditorDraft({ ...existing });
-    setCellEditorOpen(true);
-  };
-
-  const handleSaveCell = async () => {
-    const key = `${cellEditorRow}_${cellEditorCol}`;
-    const newCells = { ...storyboardGrid.cells, [key]: { ...cellEditorDraft } };
-    setCellEditorOpen(false);
-    await saveStoryboardGrid({ ...storyboardGrid, cells: newCells });
-  };
-
-  const handleDeleteCell = async () => {
-    const key = `${cellEditorRow}_${cellEditorCol}`;
-    const newCells = { ...storyboardGrid.cells };
-    delete newCells[key];
-    setCellEditorOpen(false);
-    await saveStoryboardGrid({ ...storyboardGrid, cells: newCells });
-  };
-
-  const handleCellImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    try {
-      const dataUrl = await compressImage(file);
-      setCellEditorDraft(prev => ({ ...prev, imageUrl: dataUrl }));
-    } catch {
-      showToast(t('Не удалось загрузить изображение'), 'error');
-    }
-    e.target.value = '';
   };
 
   const handleAddComment = async () => {
@@ -942,7 +921,7 @@ const ProjectPage: React.FC = () => {
     const newComment: ProjectComment = {
       id: comments.length + 1,
       tabId: commentTab,
-      user: t('Вы'),
+      user: user?.nickname || user?.firstName || t('Вы'),
       text: commentText.trim(),
       timestamp: new Date().toLocaleString(locale),
       resolved: false
@@ -964,52 +943,6 @@ const ProjectPage: React.FC = () => {
       comment.id === commentId ? { ...comment, resolved: !comment.resolved } : comment
     );
     await saveProject({ comments: updated });
-  };
-
-  const handleAddLocation = async () => {
-    if (!locationDraft.name.trim()) {
-      showToast(t('Введите название локации'), 'error');
-      return;
-    }
-    const newLocation: Location = {
-      id: locations.length + 1,
-      name: locationDraft.name.trim(),
-      description: locationDraft.description.trim(),
-      shots: []
-    };
-    setLocationDraft({ name: '', description: '' });
-    setShowLocationModal(false);
-    await saveProject({ locations: [...locations, newLocation] });
-    showToast(t('Локация добавлена'), 'success');
-  };
-
-  const handleAddShot = async () => {
-    if (!shotLocationId) return;
-    if (!shotDraft.title.trim()) {
-      showToast(t('Введите название кадра'), 'error');
-      return;
-    }
-    const locationIndex = locations.findIndex((location) => location.id === shotLocationId);
-    if (locationIndex === -1) return;
-    const parsedTime = parseTimeInput(shotDraft.time);
-    const rawTime = Number.isNaN(parsedTime) ? currentTime : parsedTime;
-    const time = Math.max(0, Math.min(timelineDuration, Math.floor(rawTime)));
-    const updatedLocations = [...locations];
-    const newShot = {
-      id: Date.now(),
-      time,
-      title: shotDraft.title.trim(),
-      description: shotDraft.description.trim(),
-      image: ''
-    };
-    updatedLocations[locationIndex] = {
-      ...updatedLocations[locationIndex],
-      shots: [...updatedLocations[locationIndex].shots, newShot]
-    };
-    setShotDraft({ time: '', title: '', description: '' });
-    setShowShotModal(false);
-    await saveProject({ locations: updatedLocations });
-    showToast(t('Кадр добавлен'), 'success');
   };
 
   const handleSaveNotes = async () => {
@@ -1183,6 +1116,72 @@ const ProjectPage: React.FC = () => {
     }
   };
 
+  // ── Pipeline handlers ────────────────────────────────────────────────────────
+
+  const saveScenes = async (nextScenes: Scene[]) => {
+    setScenes(nextScenes);
+    await saveProject({ scenes: nextScenes } as Partial<Project>);
+  };
+
+  const saveShootingDays = async (nextDays: ShootingDay[]) => {
+    setShootingDays(nextDays);
+    await saveProject({ shootingDays: nextDays } as Partial<Project>);
+  };
+
+  const handleAdvanceStage = async (next: ProductionStage) => {
+    setProductionStage(next);
+    await saveProject({ productionStage: next } as Partial<Project>);
+    showToast(t('Фаза производства обновлена'), 'success');
+  };
+
+  const handleRetreatStage = async (prev: ProductionStage) => {
+    setProductionStage(prev);
+    await saveProject({ productionStage: prev } as Partial<Project>);
+    showToast(t('Фаза производства возвращена назад'), 'info');
+  };
+
+  const handleSceneStatusChange = async (sceneId: string, status: SceneStatus) => {
+    await saveScenes(scenes.map(s => s.id === sceneId ? { ...s, status } : s));
+  };
+
+  const handleMemberSearch = async (q: string) => {
+    setMemberSearch(q);
+    if (q.trim().length < 2) { setMemberSearchResults([]); return; }
+    setMemberSearchBusy(true);
+    try {
+      const res = await usersApi.search(q);
+      const existingIds = new Set((project?.members || []).map(m =>
+        typeof m === 'string' ? m : (m as UserSummary).id
+      ));
+      setMemberSearchResults((res.users || []).filter(u => !existingIds.has(u.id)));
+    } catch { setMemberSearchResults([]); }
+    finally { setMemberSearchBusy(false); }
+  };
+
+  const handleAddMember = async (userId: string) => {
+    if (!project) return;
+    try {
+      const res = await projectsApi.addMember(project.id, userId);
+      setProject(normalizeProjectData(res.project));
+      setMemberSearch('');
+      setMemberSearchResults([]);
+      showToast(t('Участник добавлен'), 'success');
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : t('Ошибка добавления'), 'error');
+    }
+  };
+
+  const handleRemoveMember = async (userId: string) => {
+    if (!project) return;
+    try {
+      const res = await projectsApi.removeMember(project.id, userId);
+      setProject(normalizeProjectData(res.project));
+      showToast(t('Участник удалён'), 'success');
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : t('Ошибка удаления'), 'error');
+    }
+  };
+
   const handleSaveProjectSettings = async () => {
     if (!projectDraft.name.trim()) {
       showToast(t('Название проекта обязательно'), 'error');
@@ -1282,20 +1281,36 @@ const ProjectPage: React.FC = () => {
         onSettingsClick={() => setShowProjectSettings(true)}
       />
 
+      {/* Hidden audio element — only rendered when an audio file is available */}
+      {selectedAudioFile?.url && (
+        <audio
+          ref={audioRef}
+          src={selectedAudioFile.url}
+          onEnded={() => setIsPlaying(false)}
+          onTimeUpdate={() => {
+            if (audioRef.current) {
+              setCurrentTime(Math.floor(audioRef.current.currentTime));
+            }
+          }}
+        />
+      )}
+
       <div className="timeline-section">
         {/* ── Toolbar row: controls + scrub bar + actions ── */}
         <div className="timeline-toolbar">
-          <button className="play-btn" onClick={handlePlayPause} title={isPlaying ? t('Пауза') : t('Воспроизвести')}>
-            {isPlaying ? <Pause size={14} className="play-icon" /> : <Play size={14} className="play-icon" />}
-          </button>
+          {selectedAudioFile && (
+            <button className="play-btn" onClick={handlePlayPause} title={isPlaying ? t('Пауза') : t('Воспроизвести')}>
+              {isPlaying ? <Pause size={14} className="play-icon" /> : <Play size={14} className="play-icon" />}
+            </button>
+          )}
 
           <span className="time-display">
             {formatTime(currentTime)}<span className="time-sep"> / </span>{formatTime(timelineDuration)}
           </span>
 
           {/* Save indicator — inline, only when active */}
-          {saveStatus === 'saving' && <span className="tl-save-indicator tl-save-indicator--saving">⟳ {t('Сохранение...')}</span>}
-          {saveStatus === 'saved' && savedAt && <span className="tl-save-indicator tl-save-indicator--saved">✓ {t('Сохранено')}</span>}
+          {saveStatus === 'saving' && <span className="tl-save-indicator tl-save-indicator--saving">{t('Сохранение...')}</span>}
+          {saveStatus === 'saved' && savedAt && <span className="tl-save-indicator tl-save-indicator--saved">{t('Сохранено')}</span>}
 
           {/* Deadline badge — only when urgent/overdue */}
           {(() => {
@@ -1303,8 +1318,8 @@ const ProjectPage: React.FC = () => {
               ? Math.ceil((new Date(project.deadline).getTime() - Date.now()) / 86400000)
               : null;
             if (daysLeft === null) return null;
-            if (daysLeft < 0) return <span className="tl-deadline-badge tl-deadline-badge--overdue">⚠ {t('{n} дн. просрочен', { n: Math.abs(daysLeft) })}</span>;
-            if (daysLeft <= 7) return <span className="tl-deadline-badge tl-deadline-badge--urgent">⏰ {t('{n} дн.', { n: daysLeft })}</span>;
+            if (daysLeft < 0) return <span className="tl-deadline-badge tl-deadline-badge--overdue">{t('{n} дн. просрочен', { n: Math.abs(daysLeft) })}</span>;
+            if (daysLeft <= 7) return <span className="tl-deadline-badge tl-deadline-badge--urgent">{t('{n} дн.', { n: daysLeft })}</span>;
             return null;
           })()}
 
@@ -1348,13 +1363,15 @@ const ProjectPage: React.FC = () => {
           </div>
 
           {/* Right-side action buttons */}
-          <button
-            className="tl-action-btn"
-            onClick={() => { setMarkerTitle(''); setMarkerComment(''); setShowMarkerModal(true); }}
-            title={t('Добавить маркер для {tab}', { tab: t(tabNames[activeTab]) })}
-          >
-            <MapPinPlus size={15} className="tl-action-icon" />
-          </button>
+          {canEditTab(activeTab) && (
+            <button
+              className="tl-action-btn"
+              onClick={() => { setMarkerTitle(''); setMarkerComment(''); setShowMarkerModal(true); }}
+              title={t('Добавить маркер для {tab}', { tab: t(tabNames[activeTab]) })}
+            >
+              <MapPinPlus size={15} className="tl-action-icon" />
+            </button>
+          )}
 
           <button
             className={`tl-action-btn${showAllMarkers ? ' tl-action-btn--active' : ''}`}
@@ -1386,6 +1403,17 @@ const ProjectPage: React.FC = () => {
           </div>
         </div>
       </div>
+
+      <ProductionStageBar
+        stage={productionStage}
+        scenes={scenes}
+        shootingDays={shootingDays}
+        isOwner={isOwner}
+        canEdit={canEditTab('manager')}
+        onAdvance={handleAdvanceStage}
+        onRetreat={handleRetreatStage}
+        t={t}
+      />
 
       <div className="tabs-section">
         <div className="tabs-header">
@@ -1427,28 +1455,46 @@ const ProjectPage: React.FC = () => {
               handleRemoveScriptFile={handleRemoveScriptFile}
               updateScriptParam={updateScriptParam}
               setScriptParamsDraft={setScriptParamsDraft}
+              canEdit={canEditTab('script')}
+              userRole={userRole}
+              markers={markers}
+              onDeleteMarker={handleDeleteMarker}
+              onMarkerSeek={handleTimelineClick}
+              onAddMarker={() => { setMarkerTitle(''); setMarkerComment(''); setShowMarkerModal(true); }}
+              deptTasks={tasks.filter(tk => tk.department === 'script')}
+              onTaskStatusChange={handleTaskStatusChange}
+              tabComments={comments}
+              onToggleResolved={handleToggleResolved}
+              onAddComment={openCommentModal}
+              scenes={scenes}
+              productionStage={productionStage}
+              onSaveScenes={saveScenes}
             />
           )}
 
           {activeTab === 'director' && (
             <DirectorTab
               t={t}
-              storyboardGrid={storyboardGrid}
-              timelineDuration={timelineDuration}
+              scenes={scenes}
+              onSaveScenes={saveScenes}
               timelineDurationInput={timelineDurationInput}
               setTimelineDurationInput={setTimelineDurationInput}
               handleSaveTimelineDuration={handleSaveTimelineDuration}
-              handleAddStoryboardRow={handleAddStoryboardRow}
-              handleRemoveStoryboardRow={handleRemoveStoryboardRow}
-              handleAddStoryboardColumn={handleAddStoryboardColumn}
-              handleRemoveStoryboardColumn={handleRemoveStoryboardColumn}
-              renameStoryboardRow={renameStoryboardRow}
-              saveStoryboardGrid={saveStoryboardGrid}
-              openCellEditor={openCellEditor}
               directorNotes={directorNotes}
               setDirectorNotes={setDirectorNotes}
               handleSaveNotes={handleSaveNotes}
               handleShareNotes={handleShareNotes}
+              canEdit={canEditTab('director')}
+              userRole={userRole}
+              markers={markers}
+              onDeleteMarker={handleDeleteMarker}
+              onMarkerSeek={handleTimelineClick}
+              onAddMarker={() => { setMarkerTitle(''); setMarkerComment(''); setShowMarkerModal(true); }}
+              deptTasks={tasks.filter(tk => tk.department === 'director')}
+              onTaskStatusChange={handleTaskStatusChange}
+              tabComments={comments}
+              onToggleResolved={handleToggleResolved}
+              onAddComment={openCommentModal}
             />
           )}
 
@@ -1471,6 +1517,18 @@ const ProjectPage: React.FC = () => {
               handleDeleteGarment={handleDeleteGarment}
               saveCostumeOutfits={saveCostumeOutfits}
               handleOutfitRefImage={handleOutfitRefImage}
+              canEdit={canEditTab('costumes')}
+              userRole={userRole}
+              markers={markers}
+              onDeleteMarker={handleDeleteMarker}
+              onMarkerSeek={handleTimelineClick}
+              onAddMarker={() => { setMarkerTitle(''); setMarkerComment(''); setShowMarkerModal(true); }}
+              deptTasks={tasks.filter(tk => tk.department === 'costumes')}
+              onTaskStatusChange={handleTaskStatusChange}
+              tabComments={comments}
+              onToggleResolved={handleToggleResolved}
+              onAddComment={openCommentModal}
+              scenes={scenes}
             />
           )}
 
@@ -1493,6 +1551,18 @@ const ProjectPage: React.FC = () => {
               handleDeleteProduct={handleDeleteProduct}
               saveMakeupLooks={saveMakeupLooks}
               handleLookRefImage={handleLookRefImage}
+              canEdit={canEditTab('makeup')}
+              userRole={userRole}
+              markers={markers}
+              onDeleteMarker={handleDeleteMarker}
+              onMarkerSeek={handleTimelineClick}
+              onAddMarker={() => { setMarkerTitle(''); setMarkerComment(''); setShowMarkerModal(true); }}
+              deptTasks={tasks.filter(tk => tk.department === 'makeup')}
+              onTaskStatusChange={handleTaskStatusChange}
+              tabComments={comments}
+              onToggleResolved={handleToggleResolved}
+              onAddComment={openCommentModal}
+              scenes={scenes}
             />
           )}
 
@@ -1516,6 +1586,16 @@ const ProjectPage: React.FC = () => {
               onDeleteMedia={handleDeleteMedia}
               onUploadDocument={handleUploadDocument}
               onDeleteDocument={handleDeleteDocument}
+              canEdit={canEditTab('edit')}
+              userRole={userRole}
+              markers={markers}
+              onDeleteMarker={handleDeleteMarker}
+              onMarkerSeek={handleTimelineClick}
+              onAddMarker={() => { setMarkerTitle(''); setMarkerComment(''); setShowMarkerModal(true); }}
+              deptTasks={tasks.filter(tk => tk.department === 'edit')}
+              onTaskStatusChange={handleTaskStatusChange}
+              scenes={scenes}
+              onSceneStatusChange={handleSceneStatusChange}
             />
           )}
 
@@ -1528,6 +1608,12 @@ const ProjectPage: React.FC = () => {
               openCommentModal={openCommentModal}
               openMarkerModal={() => setShowMarkerModal(true)}
               handleOpenTimelineMarkerDetails={handleOpenTimelineMarkerDetails}
+              canEdit={canEditTab('sound')}
+              userRole={userRole}
+              onDeleteMarker={handleDeleteMarker}
+              onMarkerSeek={handleTimelineClick}
+              deptTasks={tasks.filter(tk => tk.department === 'sound')}
+              onTaskStatusChange={handleTaskStatusChange}
             />
           )}
 
@@ -1550,6 +1636,15 @@ const ProjectPage: React.FC = () => {
               handleDeleteTask={handleDeleteTask}
               handleTaskStatusChange={handleTaskStatusChange}
               saveTasks={saveTasks}
+              projectName={project?.name}
+              deadline={project?.deadline}
+              allComments={comments}
+              onQuickAddTask={handleQuickAddTask}
+              scenes={scenes}
+              shootingDays={shootingDays}
+              productionStage={productionStage}
+              onSaveShootingDays={saveShootingDays}
+              onSaveScenes={saveScenes}
             />
           )}
         </div>
@@ -1658,7 +1753,17 @@ const ProjectPage: React.FC = () => {
         <div className="form-row-2col">
           <div>
             <div className="form-label">{t('Персонаж')}</div>
-            <input className="form-input" placeholder={t('Алекс')} value={lookDraft.characterName} onChange={e => setLookDraft(p => ({ ...p, characterName: e.target.value }))} />
+            {(() => {
+              const allChars = Array.from(new Set(scenes.flatMap(s => s.characters).filter(Boolean)));
+              return allChars.length > 0 ? (
+                <select className="form-input" value={lookDraft.characterName} onChange={e => setLookDraft(p => ({ ...p, characterName: e.target.value }))}>
+                  <option value="">{t('Выбрать персонажа...')}</option>
+                  {allChars.map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+              ) : (
+                <input className="form-input" placeholder={t('Алекс')} value={lookDraft.characterName} onChange={e => setLookDraft(p => ({ ...p, characterName: e.target.value }))} />
+              );
+            })()}
           </div>
           <div>
             <div className="form-label"><Clock size={13} style={{ display:'inline', verticalAlign:'middle', marginRight:4 }} />{t('Время нанесения (мин)')}</div>
@@ -1726,7 +1831,17 @@ const ProjectPage: React.FC = () => {
         <div className="form-row-2col">
           <div>
             <div className="form-label">{t('Персонаж')}</div>
-            <input className="form-input" placeholder={t('Алекс')} value={outfitDraft.characterName} onChange={e => setOutfitDraft(p => ({ ...p, characterName: e.target.value }))} />
+            {(() => {
+              const allChars = Array.from(new Set(scenes.flatMap(s => s.characters).filter(Boolean)));
+              return allChars.length > 0 ? (
+                <select className="form-input" value={outfitDraft.characterName} onChange={e => setOutfitDraft(p => ({ ...p, characterName: e.target.value }))}>
+                  <option value="">{t('Выбрать персонажа...')}</option>
+                  {allChars.map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+              ) : (
+                <input className="form-input" placeholder={t('Алекс')} value={outfitDraft.characterName} onChange={e => setOutfitDraft(p => ({ ...p, characterName: e.target.value }))} />
+              );
+            })()}
           </div>
           <div>
             <div className="form-label">{t('Статус')}</div>
@@ -1758,13 +1873,13 @@ const ProjectPage: React.FC = () => {
           <div>
             <div className="form-label">{t('Категория')}</div>
             <select className="form-input" value={garmentDraft.category} onChange={e => setGarmentDraft(p => ({ ...p, category: e.target.value as GarmentCategory }))}>
-              <option value="top">👕 {t('Верх')}</option>
-              <option value="bottom">👖 {t('Низ')}</option>
-              <option value="outerwear">🧥 {t('Верхняя одежда')}</option>
-              <option value="shoes">👟 {t('Обувь')}</option>
-              <option value="accessories">💍 {t('Аксессуары')}</option>
-              <option value="headwear">🎩 {t('Головной убор')}</option>
-              <option value="underwear">🩲 {t('Бельё')}</option>
+              <option value="top">{t('Верх')}</option>
+              <option value="bottom">{t('Низ')}</option>
+              <option value="outerwear">{t('Верхняя одежда')}</option>
+              <option value="shoes">{t('Обувь')}</option>
+              <option value="accessories">{t('Аксессуары')}</option>
+              <option value="headwear">{t('Головной убор')}</option>
+              <option value="underwear">{t('Бельё')}</option>
             </select>
           </div>
           <div>
@@ -1793,10 +1908,10 @@ const ProjectPage: React.FC = () => {
           <div>
             <div className="form-label">{t('Статус')}</div>
             <select className="form-input" value={garmentDraft.acquisition} onChange={e => setGarmentDraft(p => ({ ...p, acquisition: e.target.value as GarmentAcquisition }))}>
-              <option value="owned">✅ {t('Есть')}</option>
-              <option value="rented">🔄 {t('Аренда')}</option>
-              <option value="to_buy">🛒 {t('Купить')}</option>
-              <option value="to_make">✂️ {t('Сшить')}</option>
+              <option value="owned">{t('Есть')}</option>
+              <option value="rented">{t('Аренда')}</option>
+              <option value="to_buy">{t('Купить')}</option>
+              <option value="to_make">{t('Сшить')}</option>
             </select>
           </div>
         </div>
@@ -1809,59 +1924,6 @@ const ProjectPage: React.FC = () => {
             <div className="form-label">{t('Заметки')}</div>
             <input className="form-input" placeholder={t('Примерка 15.05...')} value={garmentDraft.notes} onChange={e => setGarmentDraft(p => ({ ...p, notes: e.target.value }))} />
           </div>
-        </div>
-      </Modal>
-
-      {/* Cell editor modal */}
-      <Modal
-        title={`${t('Кадр')} ${cellEditorCol + 1} — ${storyboardGrid.locationNames[cellEditorRow] || ''}`}
-        isOpen={cellEditorOpen}
-        onClose={() => setCellEditorOpen(false)}
-        actions={
-          <>
-            <button className="secondary-btn" style={{ marginRight: 'auto', color: 'var(--error)' }} onClick={handleDeleteCell}>{t('Очистить')}</button>
-            <button className="secondary-btn" onClick={() => setCellEditorOpen(false)}>{t('Отмена')}</button>
-            <button className="primary-btn" onClick={handleSaveCell}>{t('Сохранить')}</button>
-          </>
-        }
-      >
-        <div className="cell-editor">
-          <div className="cell-editor-img-row">
-            {cellEditorDraft.imageUrl ? (
-              <div className="cell-editor-preview">
-                <img src={cellEditorDraft.imageUrl} alt="" className="cell-editor-img" />
-                <button className="cell-editor-remove-img" onClick={() => setCellEditorDraft(prev => ({ ...prev, imageUrl: '' }))}>{t('Удалить фото')}</button>
-              </div>
-            ) : (
-              <label className="cell-editor-upload-btn">
-                <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handleCellImageUpload} />
-                <span>📷 {t('Добавить фото')}</span>
-              </label>
-            )}
-          </div>
-          <select className="form-input" value={cellEditorDraft.shotType} onChange={(e) => setCellEditorDraft(prev => ({ ...prev, shotType: e.target.value }))}>
-            <option value="">{t('Тип плана...')}</option>
-            {[t('Общий план (ОП)'), t('Средний план (СП)'), t('Крупный план (КП)'), t('Деталь (Д)'), t('Субъективная камера'), t('Панорама'), t('Вид сверху'), t('Вид снизу'), t('Движение вперёд (трекинг)')].map(v => <option key={v}>{v}</option>)}
-          </select>
-          <div className="cell-editor-duration-row">
-            <label className="cell-editor-duration-label">{t('Длительность кадра, сек')}:</label>
-            <input
-              type="number"
-              className="form-input cell-editor-duration-input"
-              min={0}
-              max={9999}
-              placeholder="0"
-              value={cellEditorDraft.duration ?? ''}
-              onChange={(e) => setCellEditorDraft(prev => ({ ...prev, duration: e.target.value === '' ? undefined : Math.max(0, parseInt(e.target.value) || 0) }))}
-            />
-          </div>
-          <textarea
-            className="form-input"
-            placeholder={t('Описание кадра: действие, персонажи, атмосфера...')}
-            value={cellEditorDraft.description}
-            onChange={(e) => setCellEditorDraft(prev => ({ ...prev, description: e.target.value }))}
-            rows={4}
-          />
         </div>
       </Modal>
 
@@ -2063,75 +2125,6 @@ const ProjectPage: React.FC = () => {
         />
       </Modal>
 
-      <Modal
-        title={t('Новая локация')}
-        isOpen={showLocationModal}
-        onClose={() => setShowLocationModal(false)}
-        actions={
-          <>
-            <button className="secondary-btn" onClick={() => setShowLocationModal(false)}>
-              {t('Отмена')}
-            </button>
-            <button className="primary-btn" onClick={handleAddLocation}>
-              {t('Добавить')}
-            </button>
-          </>
-        }
-      >
-        <input
-          className="form-input"
-          placeholder={t('Название локации')}
-          value={locationDraft.name}
-          onChange={(e) => setLocationDraft({ ...locationDraft, name: e.target.value })}
-        />
-        <textarea
-          className="form-input"
-          placeholder={t('Описание')}
-          rows={3}
-          value={locationDraft.description}
-          onChange={(e) => setLocationDraft({ ...locationDraft, description: e.target.value })}
-        />
-      </Modal>
-
-      <Modal
-        title={t('Новый кадр')}
-        isOpen={showShotModal}
-        onClose={() => setShowShotModal(false)}
-        actions={
-          <>
-            <button className="secondary-btn" onClick={() => setShowShotModal(false)}>
-              {t('Отмена')}
-            </button>
-            <button className="primary-btn" onClick={handleAddShot}>
-              {t('Добавить')}
-            </button>
-          </>
-        }
-      >
-        <input
-          className="form-input"
-          placeholder={t('Время (сек или мм:сс)')}
-          value={shotDraft.time}
-          onChange={(e) => setShotDraft({ ...shotDraft, time: e.target.value })}
-        />
-        <input
-          className="form-input"
-          placeholder={t('Название кадра')}
-          value={shotDraft.title}
-          onChange={(e) => setShotDraft({ ...shotDraft, title: e.target.value })}
-        />
-        <textarea
-          className="form-input"
-          placeholder={t('Описание')}
-          rows={3}
-          value={shotDraft.description}
-          onChange={(e) => setShotDraft({ ...shotDraft, description: e.target.value })}
-        />
-      </Modal>
-
-      {/* Media upload is handled directly in EditTab via file input */}
-
-      {/* Document upload is handled directly in EditTab via file input */}
 
       <Modal
         title={previewDocument?.name ?? t('Просмотр документа')}
@@ -2166,9 +2159,9 @@ const ProjectPage: React.FC = () => {
           return (
             <div className="doc-preview-wrap">
               <div className="doc-preview-meta">
-                <span>📁 {previewDocument.size}</span>
-                <span>👤 {previewDocument.uploadedBy}</span>
-                <span>📅 {previewDocument.uploadedAt}</span>
+                <span>{previewDocument.size}</span>
+                <span>{previewDocument.uploadedBy}</span>
+                <span>{previewDocument.uploadedAt}</span>
               </div>
               {src && isImage && (
                 <img src={src} alt={previewDocument.name} className="doc-preview-image" />
@@ -2178,7 +2171,7 @@ const ProjectPage: React.FC = () => {
               )}
               {src && !isImage && !isPdf && (
                 <div className="doc-preview-nopreview">
-                  <div style={{ fontSize: 48, marginBottom: 12 }}>📄</div>
+                  <FileText size={48} style={{ marginBottom: 12, opacity: 0.3 }} />
                   <div>{t('Предпросмотр недоступен для этого формата')}</div>
                   <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginTop: 4 }}>{previewDocument.name}</div>
                 </div>
@@ -2273,7 +2266,7 @@ const ProjectPage: React.FC = () => {
         <textarea
           className="form-input"
           placeholder={t('Описание')}
-          rows={3}
+          rows={2}
           value={projectDraft.description}
           onChange={(e) => setProjectDraft({ ...projectDraft, description: e.target.value })}
         />
@@ -2283,6 +2276,61 @@ const ProjectPage: React.FC = () => {
           value={projectDraft.deadline}
           onChange={(e) => setProjectDraft({ ...projectDraft, deadline: e.target.value })}
         />
+
+        {/* ── Team management ── */}
+        {isOwner && (
+          <div className="member-mgmt">
+            <div className="member-mgmt-title">{t('Команда проекта')}</div>
+            <div className="member-list">
+              {(project?.members || []).map((m) => {
+                const id = typeof m === 'string' ? m : (m as UserSummary).id;
+                const nick = typeof m === 'string' ? id : ((m as UserSummary).nickname || id);
+                const role = typeof m === 'string' ? '' : ((m as UserSummary).role || '');
+                const avatar = typeof m === 'string' ? '👤' : ((m as UserSummary).avatar || '👤');
+                const isProjectOwner = id === project?.ownerId;
+                return (
+                  <div key={id} className="member-row">
+                    <span className="member-avatar">{avatar}</span>
+                    <span className="member-nick">{nick}</span>
+                    {role && <span className="member-role-badge">{role}</span>}
+                    {isProjectOwner && <span className="member-owner-badge">{t('Владелец')}</span>}
+                    {!isProjectOwner && (
+                      <button
+                        className="member-remove-btn"
+                        onClick={() => handleRemoveMember(id)}
+                        title={t('Удалить из команды')}
+                      >✕</button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+            <div className="member-search-row">
+              <input
+                className="form-input member-search-input"
+                placeholder={t('Найти участника по нику...')}
+                value={memberSearch}
+                onChange={(e) => handleMemberSearch(e.target.value)}
+              />
+              {memberSearchBusy && <span className="member-search-busy">...</span>}
+            </div>
+            {memberSearchResults.length > 0 && (
+              <div className="member-search-results">
+                {memberSearchResults.map(u => (
+                  <div key={u.id} className="member-search-result-row">
+                    <span className="member-avatar">{u.avatar || '👤'}</span>
+                    <span className="member-nick">{u.nickname}</span>
+                    {u.role && <span className="member-role-badge">{u.role}</span>}
+                    <button
+                      className="member-add-btn"
+                      onClick={() => handleAddMember(u.id)}
+                    >+ {t('Добавить')}</button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </Modal>
     </div>
   );

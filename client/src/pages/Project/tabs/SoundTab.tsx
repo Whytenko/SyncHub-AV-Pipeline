@@ -1,6 +1,8 @@
 import React from 'react';
-import { Music, MapPinPlus, MessageSquarePlus, Reply } from 'lucide-react';
-import type { ProjectMarker, ProjectComment, TabType } from '../../../types';
+import { Music, MapPinPlus, MessageSquarePlus, Reply, Trash2 } from 'lucide-react';
+import type { ProjectMarker, ProjectComment, TabType, Task, TaskStatus } from '../../../types';
+import ReadOnlyBanner from '../components/ReadOnlyBanner';
+import TabTasksPanel from '../components/TabTasksPanel';
 
 const tabColorSound = '#06b6d4';
 const fmt = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
@@ -13,30 +15,44 @@ export interface SoundTabProps {
   openCommentModal: (tab: TabType) => void;
   openMarkerModal: () => void;
   handleOpenTimelineMarkerDetails: (marker: ProjectMarker) => void;
+  canEdit: boolean;
+  userRole?: string;
+  onDeleteMarker: (id: number) => void;
+  onMarkerSeek: (time: number) => void;
+  deptTasks: Task[];
+  onTaskStatusChange: (id: string, status: TaskStatus) => Promise<void>;
 }
 
 const SoundTab: React.FC<SoundTabProps> = ({
   t, soundMarkers, commentsByTabSound,
-  handleToggleResolved, openCommentModal, openMarkerModal, handleOpenTimelineMarkerDetails
+  handleToggleResolved, openCommentModal, openMarkerModal,
+  handleOpenTimelineMarkerDetails,
+  canEdit, userRole, onDeleteMarker, onMarkerSeek,
+  deptTasks, onTaskStatusChange
 }) => (
   <div className="tab-content sound-tab">
+    {!canEdit && <ReadOnlyBanner t={t} role={userRole} />}
     <div className="sound-layout">
       <div className="sound-markers-col">
         <div className="sound-markers-head">
           <h3>{t('Звуковые метки')}</h3>
-          <button className="add-marker-btn" onClick={openMarkerModal}>
-            <MapPinPlus size={16} className="add-marker-icon" />
-            {t('Добавить метку')}
-          </button>
+          {canEdit && (
+            <button className="add-marker-btn" onClick={openMarkerModal}>
+              <MapPinPlus size={16} className="add-marker-icon" />
+              {t('Добавить метку')}
+            </button>
+          )}
         </div>
         <p className="sound-hint">{t('Переместите курсор таймлайна на нужную позицию, затем нажмите «Добавить метку».')}</p>
         {soundMarkers.length === 0 ? (
           <div className="empty-state-rich">
             <Music size={32} className="empty-state-icon" />
             <div className="empty-state-text">{t('Звуковых меток пока нет')}</div>
-            <button className="add-marker-btn" style={{ marginTop: 8 }} onClick={openMarkerModal}>
-              {t('Добавить метку')}
-            </button>
+            {canEdit && (
+              <button className="add-marker-btn" style={{ marginTop: 8 }} onClick={openMarkerModal}>
+                {t('Добавить метку')}
+              </button>
+            )}
           </div>
         ) : (
           <div className="sound-markers-list">
@@ -44,7 +60,7 @@ const SoundTab: React.FC<SoundTabProps> = ({
               <div
                 key={marker.id}
                 className="sound-marker-row"
-                onClick={() => handleOpenTimelineMarkerDetails(marker)}
+                onClick={() => { onMarkerSeek(marker.time); handleOpenTimelineMarkerDetails(marker); }}
               >
                 <div className="sound-marker-time" style={{ color: tabColorSound }}>
                   {fmt(marker.time)}
@@ -54,6 +70,15 @@ const SoundTab: React.FC<SoundTabProps> = ({
                   {marker.comment && <div className="sound-marker-desc">{marker.comment}</div>}
                 </div>
                 <div className="sound-marker-dot" style={{ background: tabColorSound }} />
+                {canEdit && (
+                  <button
+                    className="tab-marker-delete"
+                    title={t('Удалить метку')}
+                    onClick={(e) => { e.stopPropagation(); onDeleteMarker(marker.id); }}
+                  >
+                    <Trash2 size={13} />
+                  </button>
+                )}
               </div>
             ))}
           </div>
@@ -89,6 +114,9 @@ const SoundTab: React.FC<SoundTabProps> = ({
           {t('Добавить комментарий')}
         </button>
       </div>
+    </div>
+    <div style={{ padding: '0 0 16px' }}>
+      <TabTasksPanel t={t} tasks={deptTasks} canEdit={canEdit} onStatusChange={onTaskStatusChange} />
     </div>
   </div>
 );

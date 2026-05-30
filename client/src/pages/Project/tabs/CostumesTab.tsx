@@ -1,6 +1,10 @@
 import React from 'react';
-import { Plus, Trash2, ChevronRight, Palette, Upload, User2, Shirt, ScrollText } from 'lucide-react';
-import type { CostumeOutfit, GarmentCategory, GarmentAcquisition, LookStatus } from '../../../types';
+import { Plus, Trash2, ChevronRight, Palette, Upload, User2, Shirt, ScrollText, Pencil as Pencil2 } from 'lucide-react';
+import type { CostumeOutfit, GarmentCategory, GarmentAcquisition, LookStatus, ProjectMarker, Task, TaskStatus, ProjectComment, TabType, Scene } from '../../../types';
+import TabMarkersPanel from '../components/TabMarkersPanel';
+import TabTasksPanel from '../components/TabTasksPanel';
+import TabCommentsPanel from '../components/TabCommentsPanel';
+import ReadOnlyBanner from '../components/ReadOnlyBanner';
 
 type OutfitDraft = { name: string; characterName: string; sceneRefs: string; outfitNotes: string; status: LookStatus };
 type GarmentDraft = {
@@ -32,6 +36,18 @@ export interface CostumesTabProps {
   handleDeleteGarment: (outfitId: number, garmentId: number) => void;
   saveCostumeOutfits: (outfits: CostumeOutfit[]) => Promise<void>;
   handleOutfitRefImage: (id: number) => void;
+  canEdit: boolean;
+  userRole?: string;
+  markers: ProjectMarker[];
+  onDeleteMarker: (id: number) => void;
+  onMarkerSeek: (time: number) => void;
+  onAddMarker?: () => void;
+  deptTasks: Task[];
+  onTaskStatusChange: (id: string, status: TaskStatus) => Promise<void>;
+  tabComments: ProjectComment[];
+  onToggleResolved: (id: number) => void;
+  onAddComment: (tabId: TabType) => void;
+  scenes: Scene[];
 }
 
 const GARMENT_LABELS: Record<string, string> = {
@@ -39,8 +55,8 @@ const GARMENT_LABELS: Record<string, string> = {
   shoes: 'Обувь', accessories: 'Аксессуары', headwear: 'Головной убор', underwear: 'Бельё'
 };
 const GARMENT_ICONS: Record<string, string> = {
-  top: '👕', bottom: '👖', outerwear: '🧥',
-  shoes: '👟', accessories: '💍', headwear: '🎩', underwear: '🩲'
+  top: 'ВРХ', bottom: 'НИЗ', outerwear: 'ОДЖ',
+  shoes: 'ОБВ', accessories: 'АКС', headwear: 'ГОЛ', underwear: 'БЛЬ'
 };
 const ACQ_LABELS: Record<string, string> = {
   owned: 'Есть', rented: 'Аренда', to_buy: 'Купить', to_make: 'Сшить'
@@ -60,7 +76,11 @@ const CostumesTab: React.FC<CostumesTabProps> = ({
   setOutfitDraft, setOutfitEditId, setShowOutfitModal,
   setGarmentDraft, setGarmentEditId, setGarmentTargetOutfitId, setShowGarmentModal,
   handleOutfitStatusChange, handleDeleteOutfit, handleDeleteGarment,
-  saveCostumeOutfits, handleOutfitRefImage
+  saveCostumeOutfits, handleOutfitRefImage,
+  canEdit, userRole, markers, onDeleteMarker, onMarkerSeek, onAddMarker,
+  deptTasks, onTaskStatusChange,
+  tabComments, onToggleResolved, onAddComment,
+  scenes
 }) => {
   const selectedOutfit = costumeOutfits.find(o => o.id === selectedOutfitId) ?? costumeOutfits[0] ?? null;
   const activeOutfitId = selectedOutfit?.id ?? null;
@@ -68,6 +88,7 @@ const CostumesTab: React.FC<CostumesTabProps> = ({
 
   return (
     <div className="tab-content costumes-tab">
+      {!canEdit && <ReadOnlyBanner t={t} role={userRole} />}
       <div className="craft-layout">
         {/* Left panel — outfits list */}
         <div className="craft-sidebar">
@@ -146,7 +167,7 @@ const CostumesTab: React.FC<CostumesTabProps> = ({
                       setOutfitDraft({ name: selectedOutfit.name, characterName: selectedOutfit.characterName, sceneRefs: selectedOutfit.sceneRefs, outfitNotes: selectedOutfit.outfitNotes, status: selectedOutfit.status });
                       setOutfitEditId(selectedOutfit.id);
                       setShowOutfitModal(true);
-                    }}>✏️</button>
+                    }}><Pencil2 size={14} /></button>
                     <button className="craft-icon-btn craft-icon-btn--danger" title={t('Удалить образ')} onClick={() => handleDeleteOutfit(selectedOutfit.id)}>
                       <Trash2 size={14} />
                     </button>
@@ -159,9 +180,24 @@ const CostumesTab: React.FC<CostumesTabProps> = ({
                   {selectedOutfit.sceneRefs && (
                     <span className="craft-meta-chip">{selectedOutfit.sceneRefs}</span>
                   )}
+                  {/* Show matching scenes from pipeline */}
+                  {scenes.length > 0 && selectedOutfit.characterName && (() => {
+                    const matching = scenes.filter(s =>
+                      s.characters.some(c => c.toLowerCase().includes(selectedOutfit.characterName.toLowerCase()))
+                    );
+                    if (!matching.length) return null;
+                    return (
+                      <div className="craft-scene-refs">
+                        <span className="craft-scene-refs-label">Сцены:</span>
+                        {matching.map(sc => (
+                          <span key={sc.id} className="craft-scene-badge">Сц.{sc.number}</span>
+                        ))}
+                      </div>
+                    );
+                  })()}
                   {totalPrice > 0 && (
                     <span className="craft-meta-chip craft-meta-chip--price">
-                      💰 {totalPrice.toLocaleString('ru-RU')} ₽
+                      {totalPrice.toLocaleString('ru-RU')} ₽
                     </span>
                   )}
                 </div>
@@ -194,7 +230,7 @@ const CostumesTab: React.FC<CostumesTabProps> = ({
                     {selectedOutfit.garments.map(g => (
                       <div key={g.id} className="craft-table-row">
                         <span className="craft-garment-name">
-                          <span className="craft-garment-icon">{GARMENT_ICONS[g.category] || '🧴'}</span>
+                          <span className="craft-garment-icon" style={{ fontVariant: 'small-caps', fontSize: 9 }}>{GARMENT_ICONS[g.category] || 'ЭЛМ'}</span>
                           <span>{g.name || GARMENT_LABELS[g.category]}</span>
                         </span>
                         <span className="craft-color-cell">
@@ -215,7 +251,7 @@ const CostumesTab: React.FC<CostumesTabProps> = ({
                             setGarmentEditId(g.id);
                             setGarmentTargetOutfitId(selectedOutfit.id);
                             setShowGarmentModal(true);
-                          }}>✏️</button>
+                          }}><Pencil2 size={14} /></button>
                           <button className="craft-icon-btn craft-icon-btn--danger" onClick={() => handleDeleteGarment(selectedOutfit.id, g.id)}>
                             <Trash2 size={12} />
                           </button>
@@ -286,6 +322,12 @@ const CostumesTab: React.FC<CostumesTabProps> = ({
           )}
         </div>
       </div>
+      <TabCommentsPanel t={t} comments={tabComments} tabId="costumes" canEdit={canEdit} onToggleResolved={onToggleResolved} onAddComment={onAddComment} />
+      <TabTasksPanel t={t} tasks={deptTasks} canEdit={canEdit} onStatusChange={onTaskStatusChange} />
+      <TabMarkersPanel
+        t={t} markers={markers} tabId="costumes"
+        canEdit={canEdit} onDelete={onDeleteMarker} onSeek={onMarkerSeek} onAddMarker={onAddMarker}
+      />
     </div>
   );
 };

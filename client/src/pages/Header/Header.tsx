@@ -7,7 +7,8 @@ import { useHint } from '../../context/HintContext';
 import { useI18n } from '../../context/I18nContext';
 import {
   Home, Users, Settings2, Download, User, LogOut,
-  FolderPlus, LayoutDashboard, ArrowLeft, type LucideIcon
+  FolderPlus, LayoutDashboard, ArrowLeft, ChevronUp, ChevronDown,
+  type LucideIcon
 } from 'lucide-react';
 
 interface HeaderProps {
@@ -58,6 +59,21 @@ const Header: React.FC<HeaderProps> = ({
   const { hint } = useHint();
   const { t } = useI18n();
   const displayName = username || auth.user?.nickname || t('Пользователь');
+  const [collapsed, setCollapsed] = useState(() =>
+    localStorage.getItem('synchub-header-collapsed') === '1'
+  );
+  const toggleCollapse = () => {
+    setCollapsed(prev => {
+      const next = !prev;
+      localStorage.setItem('synchub-header-collapsed', next ? '1' : '0');
+      document.documentElement.style.setProperty('--header-height', next ? '32px' : '80px');
+      return next;
+    });
+  };
+  useEffect(() => {
+    document.documentElement.style.setProperty('--header-height', collapsed ? '32px' : '80px');
+    return () => { document.documentElement.style.removeProperty('--header-height'); };
+  }, [collapsed]);
   const [isMobileLayout, setIsMobileLayout] = useState(() => {
     if (typeof window === 'undefined') return false;
     return window.matchMedia('(max-width: 992px)').matches;
@@ -232,90 +248,117 @@ const Header: React.FC<HeaderProps> = ({
   }
 
   return (
-    <header className="sync-hub-header">
-      <div className="header-left">
-        {showLogo && (
-          <div className="header-logo" onClick={() => navigate('/home')}>
-            <img src={logo} alt="SyncHub" className="logo-image" />
-          </div>
-        )}
+    <header className={`sync-hub-header${collapsed ? ' sync-hub-header--collapsed' : ''}`}>
 
-        {showBackButton && (
-          <button className="header-btn back-btn" onClick={handleBackClick} title={translatedBackText}>
-            {BackIcon ? (
-              <BackIcon size={18} className="back-icon" />
-            ) : (
-              <ArrowLeft size={18} className="back-icon" />
+      {/* Collapsed strip — only title + expand button */}
+      {collapsed && (
+        <div className="header-collapsed-strip">
+          {showBackButton && (
+            <button className="header-btn back-btn header-collapsed-back" onClick={handleBackClick} title={translatedBackText}>
+              {BackIcon ? <BackIcon size={15} /> : <ArrowLeft size={15} />}
+            </button>
+          )}
+          <span className="header-collapsed-title">{title}</span>
+          <button className="header-collapse-btn" onClick={toggleCollapse} title={t('Развернуть')}>
+            <ChevronDown size={14} />
+          </button>
+        </div>
+      )}
+
+      {/* Full header content */}
+      {!collapsed && (
+        <>
+          <div className="header-left">
+            {showLogo && (
+              <div className="header-logo" onClick={() => navigate('/home')}>
+                <img src={logo} alt="SyncHub" className="logo-image" />
+              </div>
             )}
-          </button>
-        )}
 
-        {showHomeButton && (
-          <button className="header-btn home-btn" onClick={handleHomeClick} title={t('Главная')}>
-            <Home size={18} className="home-icon" />
-          </button>
-        )}
-      </div>
+            {showBackButton && (
+              <button className="header-btn back-btn" onClick={handleBackClick} title={translatedBackText}>
+                {BackIcon ? (
+                  <BackIcon size={18} className="back-icon" />
+                ) : (
+                  <ArrowLeft size={18} className="back-icon" />
+                )}
+              </button>
+            )}
 
-      <div className="header-center">
-        {title && <h1 className="header-title">{t(title)}</h1>}
-        {subtitle && <div className="header-subtitle">{t(subtitle)}</div>}
-      </div>
+            {showHomeButton && (
+              <button className="header-btn home-btn" onClick={handleHomeClick} title={t('Главная')}>
+                <Home size={18} className="home-icon" />
+              </button>
+            )}
+          </div>
 
-      <div className="header-right">
-        <div className="header-hint">{hint || t('Подсказка: наведите на элемент')}</div>
-        {teamCount > 0 && (
-          <button className="header-btn team-btn" title={t('участника')}>
-            <Users size={18} className="team-icon" />
-            <span>{teamCount}</span>
-          </button>
-        )}
+          <div className="header-center">
+            {title && <h1 className="header-title">{t(title)}</h1>}
+            {subtitle && <div className="header-subtitle">{t(subtitle)}</div>}
+          </div>
 
-        {showSettingsButton && (
-          <button
-            className="header-btn settings-btn"
-            onClick={onSettingsClick || (() => navigate('/settings'))}
-            title={t('Настройки')}
-          >
-            <Settings2 size={18} className="settings-icon" />
-          </button>
-        )}
+          <div className="header-right">
+            <div className="header-hint">{hint || t('Подсказка: наведите на элемент')}</div>
+            {teamCount > 0 && (
+              <button className="header-btn team-btn" title={t('участника')}>
+                <Users size={18} className="team-icon" />
+                <span>{teamCount}</span>
+              </button>
+            )}
 
-        {showExportButton && (
-          <button
-            className="header-btn export-btn"
-            onClick={onExportClick}
-            title={t('Экспорт')}
-          >
-            <Download size={18} className="export-icon" />
-            <span>{t('Экспорт')}</span>
-          </button>
-        )}
+            {showSettingsButton && (
+              <button
+                className="header-btn settings-btn"
+                onClick={onSettingsClick || (() => navigate('/settings'))}
+                title={t('Настройки')}
+              >
+                <Settings2 size={18} className="settings-icon" />
+              </button>
+            )}
 
-        {showUserInfo && (
-          <button
-            className="profile-btn"
-            onClick={() => navigate('/profile')}
-            title={t('Профиль')}
-          >
-            <span className="user-avatar">
-              <User size={16} className="profile-icon" />
-            </span>
-            <span className="user-name">{displayName}</span>
-          </button>
-        )}
+            {showExportButton && (
+              <button
+                className="header-btn export-btn"
+                onClick={onExportClick}
+                title={t('Экспорт')}
+              >
+                <Download size={18} className="export-icon" />
+                <span>{t('Экспорт')}</span>
+              </button>
+            )}
 
-        {showLogoutButton && (
-          <button
-            className="header-btn logout-btn"
-            onClick={handleLogoutClick}
-            title={t('Выйти')}
-          >
-            <LogOut size={18} className="logout-icon" />
-            <span>{t('Выйти')}</span>
-          </button>
-        )}
-      </div>
+            {showUserInfo && (
+              <button
+                className="profile-btn"
+                onClick={() => navigate('/profile')}
+                title={t('Профиль')}
+              >
+                <span className="user-avatar">
+                  <User size={16} className="profile-icon" />
+                </span>
+                <span className="user-name">{displayName}</span>
+              </button>
+            )}
+
+            {showLogoutButton && (
+              <button
+                className="header-btn logout-btn"
+                onClick={handleLogoutClick}
+                title={t('Выйти')}
+              >
+                <LogOut size={18} className="logout-icon" />
+                <span>{t('Выйти')}</span>
+              </button>
+            )}
+
+            {/* Collapse button — always at the far right */}
+            <button className="header-collapse-btn" onClick={toggleCollapse} title={t('Свернуть')}>
+              <ChevronUp size={14} />
+            </button>
+          </div>
+        </>
+      )}
+
     </header>
   );
 };
