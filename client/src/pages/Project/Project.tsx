@@ -38,6 +38,7 @@ import type {
 
 import ProductionStageBar from './components/ProductionStageBar';
 import RoleSelectModal from './components/RoleSelectModal';
+import SceneMultiSelect from './components/SceneMultiSelect';
 
 import ScriptTab from './tabs/ScriptTab';
 import DirectorTab from './tabs/DirectorTab';
@@ -1805,8 +1806,14 @@ const ProjectPage: React.FC = () => {
             <input className="form-input" type="number" min={0} value={lookDraft.applyTimeMin} onChange={e => setLookDraft(p => ({ ...p, applyTimeMin: Math.max(0, parseInt(e.target.value)||0) }))} />
           </div>
         </div>
-        <div className="form-label">{t('Сцены')}</div>
-        <input className="form-input" placeholder={t('Сц. 1, 3, 7')} value={lookDraft.sceneRefs} onChange={e => setLookDraft(p => ({ ...p, sceneRefs: e.target.value }))} />
+        <div className="form-label">{t('Сцены, для которых нужен этот образ')}</div>
+        <SceneMultiSelect
+          t={t}
+          scenes={scenes}
+          value={lookDraft.sceneRefs}
+          onChange={(next) => setLookDraft(p => ({ ...p, sceneRefs: next }))}
+          characterFilter={lookDraft.characterName}
+        />
         <div className="form-label">{t('Статус')}</div>
         <select className="form-input" value={lookDraft.status} onChange={e => setLookDraft(p => ({ ...p, status: e.target.value as LookStatus }))}>
           <option value="todo">{t('Не начато')}</option>
@@ -1888,8 +1895,14 @@ const ProjectPage: React.FC = () => {
             </select>
           </div>
         </div>
-        <div className="form-label">{t('Сцены')}</div>
-        <input className="form-input" placeholder={t('Сц. 1, 3, 7')} value={outfitDraft.sceneRefs} onChange={e => setOutfitDraft(p => ({ ...p, sceneRefs: e.target.value }))} />
+        <div className="form-label">{t('Сцены, для которых нужен этот образ')}</div>
+        <SceneMultiSelect
+          t={t}
+          scenes={scenes}
+          value={outfitDraft.sceneRefs}
+          onChange={(next) => setOutfitDraft(p => ({ ...p, sceneRefs: next }))}
+          characterFilter={outfitDraft.characterName}
+        />
       </Modal>
 
       {/* Garment modal */}

@@ -122,7 +122,10 @@ const CostumesTab: React.FC<CostumesTabProps> = ({
                   <div className="craft-list-item-name">{outfit.name}</div>
                   <div className="craft-list-item-meta">
                     {outfit.characterName && <span><User2 size={11} /> {outfit.characterName}</span>}
-                    {outfit.sceneRefs && <span>{outfit.sceneRefs}</span>}
+                    {outfit.sceneRefs && (() => {
+                      const nums = outfit.sceneRefs.split(',').map(s => parseInt(s.replace(/[^\d]/g,''),10)).filter(Boolean);
+                      return nums.length > 0 ? <span>{nums.length} {t('сцен')}</span> : null;
+                    })()}
                     {outfit.garments.length > 0 && <span>{outfit.garments.length} эл.</span>}
                   </div>
                 </div>
@@ -177,20 +180,35 @@ const CostumesTab: React.FC<CostumesTabProps> = ({
                   {selectedOutfit.characterName && (
                     <span className="craft-meta-chip"><User2 size={12} /> {selectedOutfit.characterName}</span>
                   )}
-                  {selectedOutfit.sceneRefs && (
-                    <span className="craft-meta-chip">{selectedOutfit.sceneRefs}</span>
-                  )}
-                  {/* Show matching scenes from pipeline */}
+                  {selectedOutfit.sceneRefs && (() => {
+                    const nums = selectedOutfit.sceneRefs.split(',').map(s => parseInt(s.replace(/[^\d]/g,''),10)).filter(Boolean);
+                    if (!nums.length) return null;
+                    const refs = scenes.filter(s => nums.includes(s.number)).sort((a,b)=>a.number-b.number);
+                    return (
+                      <div className="craft-scene-refs">
+                        <span className="craft-scene-refs-label">{t('Сцены')}:</span>
+                        {refs.length > 0
+                          ? refs.map(s => <span key={s.id} className="craft-scene-badge" title={s.title}>Сц.{s.number}</span>)
+                          : nums.map(n => <span key={n} className="craft-scene-badge">Сц.{n}</span>)
+                        }
+                      </div>
+                    );
+                  })()}
+                  {/* Show matching scenes from pipeline (suggested but not yet picked) */}
                   {scenes.length > 0 && selectedOutfit.characterName && (() => {
+                    const picked = new Set(
+                      (selectedOutfit.sceneRefs || '').split(',').map(s => parseInt(s.replace(/[^\d]/g,''),10)).filter(Boolean)
+                    );
                     const matching = scenes.filter(s =>
+                      !picked.has(s.number) &&
                       s.characters.some(c => c.toLowerCase().includes(selectedOutfit.characterName.toLowerCase()))
                     );
                     if (!matching.length) return null;
                     return (
                       <div className="craft-scene-refs">
-                        <span className="craft-scene-refs-label">Сцены:</span>
+                        <span className="craft-scene-refs-label">{t('Также с этим персонажем')}:</span>
                         {matching.map(sc => (
-                          <span key={sc.id} className="craft-scene-badge">Сц.{sc.number}</span>
+                          <span key={sc.id} className="craft-scene-badge craft-scene-badge--suggested" title={sc.title}>Сц.{sc.number}</span>
                         ))}
                       </div>
                     );

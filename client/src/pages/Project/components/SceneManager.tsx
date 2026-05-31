@@ -1,5 +1,5 @@
 import { useState, forwardRef, useImperativeHandle } from 'react';
-import { Plus, Trash2, Film, Clock, FileText, Users, Pencil, X } from 'lucide-react';
+import { Plus, Trash2, Film, Clock, FileText, Users, Pencil, X, MapPin, CalendarDays } from 'lucide-react';
 import type { Scene, SceneStatus, ProductionStage } from '../../../types';
 
 const STATUS_LABEL: Record<SceneStatus, string> = {
@@ -191,14 +191,18 @@ const SceneManager = forwardRef<SceneManagerHandle, SceneManagerProps>(
             {[...scenes].sort((a, b) => a.number - b.number).map(scene => (
               <div key={scene.id} className={`scene-card scene-card--${scene.status}`}>
                 <div className="scene-card-head">
-                  <span className="scene-number">Сц. {scene.number}</span>
-                  <span className="scene-ie-dn">
-                    {IE_LABELS[scene.interiorExterior]} · {DN_LABELS[scene.dayNight]}
-                  </span>
-                  <span className="scene-title">{scene.title}</span>
-                  {scene.shootingDayId && (
-                    <span className="scene-day-badge">День {scene.shootingDayId}</span>
-                  )}
+                  <div className="scene-card-head-main">
+                    <span className="scene-number">{scene.number}</span>
+                    <span className="scene-ie-dn">
+                      {IE_LABELS[scene.interiorExterior]} · {DN_LABELS[scene.dayNight]}
+                    </span>
+                    <span className="scene-title">{scene.title || t('Без названия')}</span>
+                    {scene.shootingDayId && (
+                      <span className="scene-day-badge">
+                        <CalendarDays size={10} /> {t('День')} {scene.shootingDayId}
+                      </span>
+                    )}
+                  </div>
                   <div className="scene-card-actions">
                     {canEdit && (
                       <>
@@ -213,12 +217,12 @@ const SceneManager = forwardRef<SceneManagerHandle, SceneManagerProps>(
                             <option key={s} value={s}>{STATUS_LABEL[s]}</option>
                           ))}
                         </select>
-                        <button className="scene-edit-btn" onClick={() => openEdit(scene)} title="Редактировать">
-                          <Pencil size={13} />
+                        <button className="scene-edit-btn" onClick={() => openEdit(scene)} title={t('Редактировать')}>
+                          <Pencil size={12} />
                         </button>
                         {canModify && (
-                          <button className="scene-delete-btn" onClick={() => handleDelete(scene.id)}>
-                            <Trash2 size={13} />
+                          <button className="scene-delete-btn" onClick={() => handleDelete(scene.id)} title={t('Удалить')}>
+                            <Trash2 size={12} />
                           </button>
                         )}
                       </>
@@ -233,21 +237,21 @@ const SceneManager = forwardRef<SceneManagerHandle, SceneManagerProps>(
 
                 <div className="scene-card-body">
                   {scene.location && (
-                    <span className="scene-meta-chip">{scene.location}</span>
+                    <span className="scene-meta-chip"><MapPin size={11} /> {scene.location}</span>
                   )}
                   {scene.characters.length > 0 && (
-                    <span className="scene-meta-chip">
+                    <span className="scene-meta-chip scene-meta-chip--characters">
                       <Users size={11} /> {scene.characters.join(', ')}
                     </span>
                   )}
                   {scene.estimatedMinutes > 0 && (
-                    <span className="scene-meta-chip"><Clock size={11} /> {scene.estimatedMinutes} мин</span>
+                    <span className="scene-meta-chip"><Clock size={11} /> {scene.estimatedMinutes} {t('мин')}</span>
                   )}
                   {scene.pageCount > 0 && (
-                    <span className="scene-meta-chip"><FileText size={11} /> {scene.pageCount} стр.</span>
+                    <span className="scene-meta-chip"><FileText size={11} /> {scene.pageCount} {t('стр.')}</span>
                   )}
                   {(scene.storyboardFrameCount ?? 0) > 0 && (
-                    <span className="scene-meta-chip"><Film size={11} /> {scene.storyboardFrameCount} кадров</span>
+                    <span className="scene-meta-chip"><Film size={11} /> {scene.storyboardFrameCount} {t('кадров')}</span>
                   )}
                 </div>
 
