@@ -319,7 +319,23 @@ export interface Project {
   productionStage?: ProductionStage;
   scenes?: Scene[];
   shootingDays?: ShootingDay[];
+  // Per-project roles: maps user id → role chosen for THIS project
+  projectRoles?: Record<string, string>;
 }
+
+export type ProjectRole =
+  | 'Сценарист'
+  | 'Режиссёр'
+  | 'Костюмер'
+  | 'Визажист'
+  | 'Монтажёр'
+  | 'Звукорежиссёр'
+  | 'Менеджер';
+
+export const PROJECT_ROLES: ProjectRole[] = [
+  'Сценарист', 'Режиссёр', 'Костюмер', 'Визажист',
+  'Монтажёр', 'Звукорежиссёр', 'Менеджер'
+];
 
 export interface ProjectSummary {
   id: string;

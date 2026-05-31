@@ -50,9 +50,12 @@ const multerStorage = multer.diskStorage({
   }
 });
 
+const UPLOAD_MAX_BYTES = parseInt(process.env.UPLOAD_MAX_MB || '500') * 1024 * 1024;
+const UPLOAD_DOC_MAX_BYTES = parseInt(process.env.UPLOAD_DOC_MAX_MB || '100') * 1024 * 1024;
+
 const upload = multer({
   storage: multerStorage,
-  limits: { fileSize: 2 * 1024 * 1024 * 1024 }, // 2 GB
+  limits: { fileSize: UPLOAD_MAX_BYTES },
   fileFilter: (_req, file, cb) => {
     if (ALLOWED_MIME.has(file.mimetype)) {
       cb(null, true);
@@ -94,7 +97,7 @@ const uploadDoc = multer({
       cb(null, `${Date.now()}_${crypto.randomUUID()}${ext}`);
     }
   }),
-  limits: { fileSize: 100 * 1024 * 1024 }, // 100 MB
+  limits: { fileSize: UPLOAD_DOC_MAX_BYTES },
   fileFilter: (_req, file, cb) => {
     if (ALLOWED_DOC_MIME.has(file.mimetype)) {
       cb(null, true);
@@ -184,6 +187,12 @@ const authRequired = async (req, res, next) => {
 
     req.user = mapUser(userRow);
     req.sessionToken = session.token;
+
+    // Slide session expiry on each request
+    const newExpiry = new Date(Date.now() + SESSION_TTL_MS).toISOString();
+    pool.query('UPDATE sessions SET expires_at = $1 WHERE token = $2', [newExpiry, session.token])
+      .catch(e => console.error('[SESSION SLIDE ERROR]', e.message));
+
     next();
   } catch (err) {
     console.error('[AUTH ERROR]', err.message);
@@ -242,7 +251,7 @@ app.get('/api/status', (req, res) => {
 
 app.post('/api/auth/register', async (req, res) => {
   try {
-    const { firstName, lastName = '', nickname, email = '', password, gender = '', birthdate = '' } = req.body || {};
+    const { firstName, lastName = '', nickname, email = '', password, gender = '', birthdate = '', role = '' } = req.body || {};
 
     if (!firstName || typeof firstName !== 'string' || !firstName.trim())
       return res.status(400).json({ success: false, message: 'Имя обязательно' });
@@ -273,10 +282,11 @@ app.post('/api/auth/register', async (req, res) => {
     const now = nowISO();
     const expiresAt = new Date(Date.now() + SESSION_TTL_MS).toISOString();
 
+    const userRole = (typeof role === 'string' && role.trim()) ? role.trim() : 'Участник';
     await pool.query(
       `INSERT INTO users (id, first_name, last_name, nickname, email, role, avatar, gender, birthdate, password_hash, created_at, updated_at)
-       VALUES ($1,$2,$3,$4,$5,'Участник','👤',$6,$7,$8,$9,$10)`,
-      [userId, firstName.trim(), lastName, nickname.trim(), email, gender, birthdate, hashPassword(password), now, now]
+       VALUES ($1,$2,$3,$4,$5,$6,'👤',$7,$8,$9,$10,$11)`,
+      [userId, firstName.trim(), lastName, nickname.trim(), email, userRole, gender, birthdate, hashPassword(password), now, now]
     );
     await pool.query(
       'INSERT INTO sessions (token, user_id, expires_at, created_at) VALUES ($1,$2,$3,$4)',
@@ -397,6 +407,26 @@ app.patch('/api/users/me/password', authRequired, async (req, res) => {
   }
 });
 
+// ─── User search (for invite) ──────────────────────────────────────────────────
+
+app.get('/api/users/search', authRequired, async (req, res) => {
+  try {
+    const q = (req.query.q || '').toString().trim().toLowerCase();
+    if (!q || q.length < 2) return res.json({ success: true, users: [] });
+    const { rows } = await pool.query(
+      `SELECT * FROM users
+       WHERE (LOWER(nickname) LIKE $1 OR LOWER(first_name) LIKE $1 OR LOWER(last_name) LIKE $1)
+         AND id != $2
+       ORDER BY nickname LIMIT 10`,
+      [`%${q}%`, req.user.id]
+    );
+    res.json({ success: true, users: rows.map(u => toUserSummary(mapUser(u))) });
+  } catch (err) {
+    console.error('[SEARCH USERS ERROR]', err.message);
+    res.status(500).json({ success: false, message: 'Ошибка поиска пользователей' });
+  }
+});
+
 // ─── Projects ──────────────────────────────────────────────────────────────────
 
 app.get('/api/projects', authRequired, async (req, res) => {
@@ -504,7 +534,8 @@ app.patch('/api/projects/:id', authRequired, async (req, res) => {
       locations: 'locations', mediaFiles: 'media_files', documents: 'documents',
       comments: 'comments', scriptParams: 'script_params',
       storyboardGrid: 'storyboard_grid', tasks: 'tasks',
-      makeupLooks: 'makeup_looks', costumeOutfits: 'costume_outfits'
+      makeupLooks: 'makeup_looks', costumeOutfits: 'costume_outfits',
+      productionStage: 'production_stage', scenes: 'scenes', shootingDays: 'shooting_days'
     };
 
     const sets = ['updated_at = NOW()'];
@@ -544,6 +575,92 @@ app.delete('/api/projects/:id', authRequired, async (req, res) => {
   } catch (err) {
     console.error('[DELETE PROJECT ERROR]', err.message);
     res.status(500).json({ success: false, message: 'Ошибка удаления проекта' });
+  }
+});
+
+// ─── Project members ───────────────────────────────────────────────────────────
+
+app.post('/api/projects/:id/members', authRequired, async (req, res) => {
+  try {
+    const { userId } = req.body || {};
+    if (!userId || typeof userId !== 'string')
+      return res.status(400).json({ success: false, message: 'userId обязателен' });
+
+    const { rows: [row] } = await pool.query('SELECT * FROM projects WHERE id = $1', [req.params.id]);
+    if (!row) return res.status(404).json({ success: false, message: 'Проект не найден' });
+    if (row.owner_id !== req.user.id)
+      return res.status(403).json({ success: false, message: 'Только владелец может добавлять участников' });
+
+    const { rows: [targetUser] } = await pool.query('SELECT id FROM users WHERE id = $1', [userId]);
+    if (!targetUser) return res.status(404).json({ success: false, message: 'Пользователь не найден' });
+
+    const members = row.members || [];
+    if (members.includes(userId))
+      return res.status(409).json({ success: false, message: 'Пользователь уже в команде' });
+
+    const { rows: [updated] } = await pool.query(
+      'UPDATE projects SET members = $1, updated_at = NOW() WHERE id = $2 RETURNING *',
+      [[...members, userId], req.params.id]
+    );
+    res.json({ success: true, project: mapProject(updated) });
+  } catch (err) {
+    console.error('[ADD MEMBER ERROR]', err.message);
+    res.status(500).json({ success: false, message: 'Ошибка добавления участника' });
+  }
+});
+
+app.delete('/api/projects/:id/members/:userId', authRequired, async (req, res) => {
+  try {
+    const { rows: [row] } = await pool.query('SELECT * FROM projects WHERE id = $1', [req.params.id]);
+    if (!row) return res.status(404).json({ success: false, message: 'Проект не найден' });
+    if (row.owner_id !== req.user.id)
+      return res.status(403).json({ success: false, message: 'Только владелец может удалять участников' });
+
+    const targetId = req.params.userId;
+    if (targetId === row.owner_id)
+      return res.status(400).json({ success: false, message: 'Нельзя удалить владельца из проекта' });
+
+    const newMembers = (row.members || []).filter(id => id !== targetId);
+    const { rows: [updated] } = await pool.query(
+      'UPDATE projects SET members = $1, updated_at = NOW() WHERE id = $2 RETURNING *',
+      [newMembers, req.params.id]
+    );
+    res.json({ success: true, project: mapProject(updated) });
+  } catch (err) {
+    console.error('[REMOVE MEMBER ERROR]', err.message);
+    res.status(500).json({ success: false, message: 'Ошибка удаления участника' });
+  }
+});
+
+// Set the calling user's role within a specific project. Chosen once on first entry.
+// Owner can later re-assign via the same endpoint (treated as administrative override).
+app.put('/api/projects/:id/role', authRequired, async (req, res) => {
+  try {
+    const { role } = req.body || {};
+    const ALLOWED = ['Сценарист','Режиссёр','Костюмер','Визажист','Монтажёр','Звукорежиссёр','Менеджер'];
+    if (!role || typeof role !== 'string' || !ALLOWED.includes(role))
+      return res.status(400).json({ success: false, message: 'Недопустимая роль для проекта' });
+
+    const { rows: [row] } = await pool.query('SELECT * FROM projects WHERE id = $1', [req.params.id]);
+    if (!row) return res.status(404).json({ success: false, message: 'Проект не найден' });
+    if (!(row.members || []).includes(req.user.id))
+      return res.status(403).json({ success: false, message: 'Вы не участник проекта' });
+
+    const roles = row.project_roles || {};
+    // Owner can overwrite anyone's role; participants can only set their own once
+    if (roles[req.user.id] && row.owner_id !== req.user.id) {
+      return res.status(409).json({ success: false, message: 'Роль уже выбрана — обратитесь к владельцу' });
+    }
+    roles[req.user.id] = role;
+
+    const { rows: [updated] } = await pool.query(
+      'UPDATE projects SET project_roles = $1, updated_at = NOW() WHERE id = $2 RETURNING *',
+      [roles, req.params.id]
+    );
+    res.json({ success: true, project: mapProject(updated) });
+  } catch (err) {
+    console.error('[SET PROJECT ROLE ERROR]', err.message);
+    res.status(500).json({ success: false, message: 'Ошибка установки роли' });
   }
 });
 

@@ -291,8 +291,8 @@ input::placeholder {
 }
 
 .modal {
-  width: min(560px, 95vw);
-  max-height: calc(100dvh - 64px);
+  width: min(760px, 96vw);
+  max-height: min(80dvh, calc(100dvh - 48px));
   background: var(--bg-core-400);
   border: 1px solid var(--border-strong);
   border-radius: 16px;
@@ -300,6 +300,19 @@ input::placeholder {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+}
+
+/* Modal body grid auto-fits multiple form rows to 2 columns when content allows */
+.modal-body {
+  grid-template-columns: 1fr;
+}
+.modal-body > .form-row-2col {
+  grid-template-columns: 1fr 1fr;
+  display: grid;
+  gap: 12px;
+}
+@media (max-width: 600px) {
+  .modal-body > .form-row-2col { grid-template-columns: 1fr; }
 }
 
 .modal-header {

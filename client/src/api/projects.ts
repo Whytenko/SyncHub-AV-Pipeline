@@ -161,5 +161,26 @@ export const projectsApi = {
       `/api/projects/${projectId}/documents/${docId}`,
       { method: 'DELETE' }
     );
+  },
+
+  async addMember(projectId: string, userId: string) {
+    return apiRequest<{ success: boolean; project: Project }>(
+      `/api/projects/${projectId}/members`,
+      { method: 'POST', body: JSON.stringify({ userId }) }
+    );
+  },
+
+  async removeMember(projectId: string, userId: string) {
+    return apiRequest<{ success: boolean; project: Project }>(
+      `/api/projects/${projectId}/members/${userId}`,
+      { method: 'DELETE' }
+    );
+  },
+
+  async setProjectRole(projectId: string, role: string) {
+    return apiRequest<{ success: boolean; project: Project }>(
+      `/api/projects/${projectId}/role`,
+      { method: 'PUT', body: JSON.stringify({ role }) }
+    );
   }
 };

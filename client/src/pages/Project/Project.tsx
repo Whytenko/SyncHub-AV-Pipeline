@@ -37,6 +37,7 @@ import type {
 } from '../../types';
 
 import ProductionStageBar from './components/ProductionStageBar';
+import RoleSelectModal from './components/RoleSelectModal';
 
 import ScriptTab from './tabs/ScriptTab';
 import DirectorTab from './tabs/DirectorTab';
@@ -460,10 +461,16 @@ const ProjectPage: React.FC = () => {
       typeof m === 'string' ? m === user!.id : (m as UserSummary).id === user!.id
     ));
 
+  // ── Per-project role (chosen once on first entry) ─────────────────────────
+  // Falls back to the global profile role only for legacy projects that
+  // never had projectRoles populated.
+  const projectRoleForCurrentUser = (user && project?.projectRoles?.[user.id]) || '';
+  const userRole = projectRoleForCurrentUser || user?.role || '';
+  const needsRoleSelection = !!user && isMember && !isOwner && !projectRoleForCurrentUser;
+
   // ── Role-based gate ───────────────────────────────────────────────────────
   // During 'development' with no locked scene: only Сценарист edits the
   // script tab, only Менеджер edits the manager tab — everyone else reads.
-  const userRole = user?.role || '';
   const isScriptwriterRole = (r: string) =>
     /сценарист|script|writer/i.test(r);
   const isManagerRole = (r: string) =>
@@ -1196,6 +1203,27 @@ const ProjectPage: React.FC = () => {
     showToast(t('Настройки проекта сохранены'), 'success');
   };
 
+  const handlePickProjectRole = async (role: string) => {
+    if (!project) return;
+    try {
+      const res = await projectsApi.setProjectRole(project.id, role);
+      setProject(normalizeProjectData(res.project));
+      showToast(t('Роль в проекте: {role}', { role }), 'success');
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : t('Не удалось установить роль'), 'error');
+    }
+  };
+
+  const handleCopyProjectLink = async () => {
+    const url = `${window.location.origin}/project/${project?.id ?? ''}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      showToast(t('Ссылка скопирована'), 'success');
+    } catch {
+      showToast(t('Не удалось скопировать ссылку'), 'error');
+    }
+  };
+
   const getTimelineTimeFromClientX = (clientX: number) => {
     const timelineElement = timelineBarRef.current;
     if (!timelineElement) {
@@ -1264,6 +1292,13 @@ const ProjectPage: React.FC = () => {
 
   return (
     <div className="project-page">
+      <RoleSelectModal
+        t={t}
+        projectName={project.name}
+        isOpen={needsRoleSelection}
+        onSelect={handlePickProjectRole}
+      />
+
       <Header
         title={project.name}
         subtitle={`ID: ${project.id}`}
@@ -1273,11 +1308,11 @@ const ProjectPage: React.FC = () => {
         backButtonIcon={ArrowLeft}
         showHomeButton={true}
         showUserInfo={false}
-        showExportButton={true}
+        showCopyLinkButton={true}
         showSettingsButton={true}
         showLogoutButton={false}
         teamCount={Array.isArray(project.members) ? project.members.length : 0}
-        onExportClick={handleExport}
+        onCopyLinkClick={handleCopyProjectLink}
         onSettingsClick={() => setShowProjectSettings(true)}
       />
 
@@ -2248,6 +2283,9 @@ const ProjectPage: React.FC = () => {
         onClose={() => setShowProjectSettings(false)}
         actions={
           <>
+            <button className="secondary-btn" style={{ marginRight: 'auto' }} onClick={handleExport}>
+              {t('Экспорт проекта (JSON)')}
+            </button>
             <button className="secondary-btn" onClick={() => setShowProjectSettings(false)}>
               {t('Отмена')}
             </button>

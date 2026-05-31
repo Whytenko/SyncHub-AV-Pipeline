@@ -6,7 +6,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useHint } from '../../context/HintContext';
 import { useI18n } from '../../context/I18nContext';
 import {
-  Home, Users, Settings2, Download, User, LogOut,
+  Home, Users, Settings2, Download, User, LogOut, Link2,
   FolderPlus, LayoutDashboard, ArrowLeft, ChevronUp, ChevronDown,
   type LucideIcon
 } from 'lucide-react';
@@ -22,11 +22,13 @@ interface HeaderProps {
   showHomeButton?: boolean;
   showUserInfo?: boolean;
   showExportButton?: boolean;
+  showCopyLinkButton?: boolean;
   showSettingsButton?: boolean;
   showLogoutButton?: boolean;
   username?: string;
   teamCount?: number;
   onExportClick?: () => void;
+  onCopyLinkClick?: () => void;
   onSettingsClick?: () => void;
   onLogoutClick?: () => void;
 }
@@ -44,12 +46,14 @@ const Header: React.FC<HeaderProps> = ({
   showHomeButton = false,
   showUserInfo = true,
   showExportButton = false,
+  showCopyLinkButton = false,
   showSettingsButton = false,
   showLogoutButton = true,
   showLogo = false,
   username,
   teamCount = 0,
   onExportClick,
+  onCopyLinkClick,
   onSettingsClick,
   onLogoutClick
 }) => {
@@ -250,7 +254,7 @@ const Header: React.FC<HeaderProps> = ({
   return (
     <header className={`sync-hub-header${collapsed ? ' sync-hub-header--collapsed' : ''}`}>
 
-      {/* Collapsed strip — only title + expand button */}
+      {/* Collapsed strip — back + title + copy-link + expand */}
       {collapsed && (
         <div className="header-collapsed-strip">
           {showBackButton && (
@@ -259,6 +263,15 @@ const Header: React.FC<HeaderProps> = ({
             </button>
           )}
           <span className="header-collapsed-title">{title}</span>
+          {showCopyLinkButton && (
+            <button
+              className="header-btn back-btn header-collapsed-back"
+              onClick={onCopyLinkClick}
+              title={t('Скопировать ссылку на проект')}
+            >
+              <Link2 size={14} />
+            </button>
+          )}
           <button className="header-collapse-btn" onClick={toggleCollapse} title={t('Развернуть')}>
             <ChevronDown size={14} />
           </button>
@@ -313,6 +326,17 @@ const Header: React.FC<HeaderProps> = ({
                 title={t('Настройки')}
               >
                 <Settings2 size={18} className="settings-icon" />
+              </button>
+            )}
+
+            {showCopyLinkButton && (
+              <button
+                className="header-btn export-btn"
+                onClick={onCopyLinkClick}
+                title={t('Скопировать ссылку на проект')}
+              >
+                <Link2 size={18} className="export-icon" />
+                <span>{t('Ссылка')}</span>
               </button>
             )}
 

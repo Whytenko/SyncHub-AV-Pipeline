@@ -73,7 +73,11 @@ const mapProject = (row) => {
     storyboardGrid: row.storyboard_grid || null,
     tasks: row.tasks || [],
     makeupLooks: row.makeup_looks || [],
-    costumeOutfits: row.costume_outfits || []
+    costumeOutfits: row.costume_outfits || [],
+    productionStage: row.production_stage || 'development',
+    scenes: row.scenes || [],
+    shootingDays: row.shooting_days || [],
+    projectRoles: row.project_roles || {}
   };
 };
 
