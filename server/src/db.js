@@ -77,7 +77,10 @@ const mapProject = (row) => {
     productionStage: row.production_stage || 'development',
     scenes: row.scenes || [],
     shootingDays: row.shooting_days || [],
-    projectRoles: row.project_roles || {}
+    projectRoles: row.project_roles || {},
+    projectKind: row.project_kind || 'short_film',
+    audioTrackId: row.audio_track_id != null ? Number(row.audio_track_id) : undefined,
+    musicTimeline: row.music_timeline || []
   };
 };
 

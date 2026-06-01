@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Plus, Trash2, Clock, CheckCircle2, Film, ChevronLeft, ChevronRight, CalendarDays, MapPin } from 'lucide-react';
+import { Plus, Trash2, Clock, CheckCircle2, Film, ChevronLeft, ChevronRight, CalendarDays, MapPin, X } from 'lucide-react';
 import type { Scene, ShootingDay, ShootingDayStatus } from '../../../types';
 
 const STATUS_LABEL: Record<ShootingDayStatus, string> = {
@@ -44,10 +44,14 @@ interface ShootingCalendarProps {
   canEdit: boolean;
   onSave: (days: ShootingDay[]) => Promise<void>;
   onUpdateScenes: (scenes: Scene[]) => Promise<void>;
+  productionStage?: string;
+  isOwner?: boolean;
+  onAdvanceStage?: () => void;
 }
 
 const ShootingCalendar: React.FC<ShootingCalendarProps> = ({
-  t, scenes, shootingDays, canEdit, onSave, onUpdateScenes
+  t, scenes, shootingDays, canEdit, onSave, onUpdateScenes,
+  productionStage, isOwner, onAdvanceStage
 }) => {
   const now = new Date();
   const [viewYear, setViewYear] = useState(now.getFullYear());
@@ -169,8 +173,90 @@ const ShootingCalendar: React.FC<ShootingCalendarProps> = ({
     await onUpdateScenes(updScenes);
   };
 
+  // ── Day counters & phase transition prompt ──
+  const totalDays = shootingDays.length;
+  const wrappedCount   = shootingDays.filter(d => d.status === 'wrapped').length;
+  const shootingCount  = shootingDays.filter(d => d.status === 'shooting').length;
+  const plannedCount   = shootingDays.filter(d => d.status === 'planned').length;
+  const postponedCount = shootingDays.filter(d => d.status === 'postponed').length;
+  const remainingCount = plannedCount + shootingCount;
+  const allDone = totalDays > 0 && remainingCount === 0;
+  const isProductionPhase = productionStage === 'production';
+  const isPreProductionPhase = productionStage === 'pre_production';
+
   return (
     <div className="shooting-calendar">
+
+      {/* ── Day summary + phase CTA ── */}
+      {totalDays > 0 && (
+        <div className="shooting-summary">
+          <div className="shooting-summary-counts">
+            <div className="shooting-summary-stat">
+              <div className="shooting-summary-stat-value">{totalDays}</div>
+              <div className="shooting-summary-stat-label">{t('Всего дней')}</div>
+            </div>
+            <div className="shooting-summary-divider" />
+            <div className="shooting-summary-stat">
+              <div className="shooting-summary-stat-value" style={{ color: '#22c55e' }}>{wrappedCount}</div>
+              <div className="shooting-summary-stat-label">{t('Завершено')}</div>
+            </div>
+            <div className="shooting-summary-stat">
+              <div className="shooting-summary-stat-value" style={{ color: '#FF9800' }}>{shootingCount}</div>
+              <div className="shooting-summary-stat-label">{t('Идут')}</div>
+            </div>
+            <div className="shooting-summary-stat">
+              <div className="shooting-summary-stat-value" style={{ color: '#2196F3' }}>{plannedCount}</div>
+              <div className="shooting-summary-stat-label">{t('Осталось')}</div>
+            </div>
+            {postponedCount > 0 && (
+              <div className="shooting-summary-stat">
+                <div className="shooting-summary-stat-value" style={{ color: '#6b7280' }}>{postponedCount}</div>
+                <div className="shooting-summary-stat-label">{t('Перенесено')}</div>
+              </div>
+            )}
+            <div className="shooting-summary-progress">
+              <div
+                className="shooting-summary-progress-fill"
+                style={{ width: `${totalDays > 0 ? (wrappedCount / totalDays) * 100 : 0}%` }}
+              />
+            </div>
+          </div>
+
+          {/* CTA: переход в production когда дни запланированы (на pre_production) */}
+          {isPreProductionPhase && totalDays > 0 && isOwner && onAdvanceStage && (
+            <div className="shooting-summary-cta shooting-summary-cta--start">
+              <div className="shooting-summary-cta-text">
+                <strong>{t('Готовы начать съёмки?')}</strong>
+                <span>{t('Все сцены утверждены и дни запланированы')}: {totalDays}</span>
+              </div>
+              <button className="shooting-summary-cta-btn" onClick={onAdvanceStage}>
+                {t('Перейти к этапу «Съёмки» →')}
+              </button>
+            </div>
+          )}
+
+          {/* CTA: переход в post-production когда все дни сняты */}
+          {isProductionPhase && allDone && isOwner && onAdvanceStage && (
+            <div className="shooting-summary-cta shooting-summary-cta--wrap">
+              <div className="shooting-summary-cta-text">
+                <strong>{t('Все съёмочные дни завершены')}</strong>
+                <span>{wrappedCount + postponedCount} {t('из')} {totalDays} — {t('пора в монтаж')}</span>
+              </div>
+              <button className="shooting-summary-cta-btn shooting-summary-cta-btn--success" onClick={onAdvanceStage}>
+                {t('Перейти к этапу «Пост-продакшн» →')}
+              </button>
+            </div>
+          )}
+
+          {/* Info: в production но дни ещё не закрыты */}
+          {isProductionPhase && !allDone && (
+            <div className="shooting-summary-info">
+              {t('Закройте все дни (wrapped/postponed), чтобы открыть переход к пост-продакшну')}
+            </div>
+          )}
+        </div>
+      )}
+
       <div className="shooting-calendar-layout">
 
         {/* ── Left: calendar grid ── */}
@@ -234,7 +320,7 @@ const ShootingCalendar: React.FC<ShootingCalendarProps> = ({
                   <Film size={16} />
                   <span>Съёмочный день №{selectedDay.dayNumber}</span>
                 </div>
-                <button className="cal-nav-btn" onClick={() => setSelectedDayId(null)}>✕</button>
+                <button className="cal-nav-btn" onClick={() => setSelectedDayId(null)}><X size={14} /></button>
               </div>
 
               <div className="shooting-day-meta">

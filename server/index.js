@@ -124,6 +124,13 @@ app.use((req, res, next) => {
 });
 
 // ─── Static file serving (uploads) ────────────────────────────────────────────
+// Strip CSP frame-ancestors / etc — uploads are raw assets (images, audio, PDFs)
+// served cross-origin to the SPA dev server. They must be embeddable in iframes.
+app.use('/uploads', (req, res, next) => {
+  res.removeHeader('Content-Security-Policy');
+  res.removeHeader('X-Frame-Options');
+  next();
+});
 app.use('/uploads', express.static(UPLOAD_DIR, {
   setHeaders: (res, filePath) => {
     const ext = path.extname(filePath).toLowerCase();
@@ -131,7 +138,11 @@ app.use('/uploads', express.static(UPLOAD_DIR, {
     const audioExts = ['.mp3', '.wav', '.ogg', '.aac', '.m4a', '.flac'];
     if (videoExts.includes(ext)) res.setHeader('Content-Type', `video/${ext.slice(1) === 'mov' ? 'quicktime' : ext.slice(1)}`);
     else if (audioExts.includes(ext)) res.setHeader('Content-Type', `audio/${ext.slice(1) === 'm4a' ? 'mp4' : ext.slice(1)}`);
+    else if (ext === '.pdf') res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Accept-Ranges', 'bytes');
+    // explicitly: remove CSP & X-Frame-Options after express.static set them
+    res.removeHeader('Content-Security-Policy');
+    res.removeHeader('X-Frame-Options');
   }
 }));
 
@@ -535,7 +546,9 @@ app.patch('/api/projects/:id', authRequired, async (req, res) => {
       comments: 'comments', scriptParams: 'script_params',
       storyboardGrid: 'storyboard_grid', tasks: 'tasks',
       makeupLooks: 'makeup_looks', costumeOutfits: 'costume_outfits',
-      productionStage: 'production_stage', scenes: 'scenes', shootingDays: 'shooting_days'
+      productionStage: 'production_stage', scenes: 'scenes', shootingDays: 'shooting_days',
+      projectRoles: 'project_roles', projectKind: 'project_kind',
+      audioTrackId: 'audio_track_id', musicTimeline: 'music_timeline'
     };
 
     const sets = ['updated_at = NOW()'];
@@ -807,6 +820,64 @@ app.post('/api/projects/:id/documents/upload', authRequired, (req, res, next) =>
   } catch (err) {
     console.error('[UPLOAD DOC ERROR]', err.message);
     res.status(500).json({ success: false, message: 'Ошибка сохранения документа' });
+  }
+});
+
+// ─── Script: upload (PDF/DOC/TXT → scriptParams.scriptFile.url) ───────────────
+const uploadScriptFile = multer({
+  storage: multer.diskStorage({
+    destination: (req, _file, cb) => {
+      const dir = path.join(UPLOAD_DIR, req.params.id || 'tmp', 'scripts');
+      fs.mkdirSync(dir, { recursive: true });
+      cb(null, dir);
+    },
+    filename: (_req, file, cb) => {
+      const ext = path.extname(file.originalname).toLowerCase();
+      cb(null, `${Date.now()}_${crypto.randomUUID()}${ext}`);
+    }
+  }),
+  limits: { fileSize: UPLOAD_DOC_MAX_BYTES }
+});
+
+app.post('/api/projects/:id/script/upload', authRequired, (req, res, next) => {
+  uploadScriptFile.single('file')(req, res, (err) => {
+    if (err instanceof multer.MulterError) return res.status(400).json({ success: false, message: `Ошибка загрузки: ${err.message}` });
+    if (err) return res.status(400).json({ success: false, message: err.message });
+    next();
+  });
+}, async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ success: false, message: 'Файл не получен' });
+
+    const { rows: [row] } = await pool.query('SELECT * FROM projects WHERE id = $1', [req.params.id]);
+    if (!row) return res.status(404).json({ success: false, message: 'Проект не найден' });
+    if (!(row.members || []).includes(req.user.id))
+      return res.status(403).json({ success: false, message: 'Недостаточно прав доступа' });
+
+    const ext = path.extname(req.file.originalname).toLowerCase().replace(/^\./, '');
+    const sizeBytes = req.file.size;
+    const sizeFmt = sizeBytes < 1024 * 1024
+      ? `${(sizeBytes / 1024).toFixed(0)} KB`
+      : `${(sizeBytes / (1024 * 1024)).toFixed(1)} MB`;
+
+    const scriptFile = {
+      name: req.file.originalname,
+      type: ext || 'file',
+      size: sizeFmt,
+      url:  `/uploads/${req.params.id}/scripts/${req.file.filename}`
+    };
+
+    const params = row.script_params || {};
+    params.scriptFile = scriptFile;
+
+    const { rows: [updated] } = await pool.query(
+      'UPDATE projects SET script_params = $1, updated_at = NOW() WHERE id = $2 RETURNING *',
+      [JSON.stringify(params), req.params.id]
+    );
+    res.json({ success: true, scriptFile, project: mapProject(updated) });
+  } catch (err) {
+    console.error('[UPLOAD SCRIPT ERROR]', err.message);
+    res.status(500).json({ success: false, message: 'Ошибка сохранения сценария' });
   }
 });
 

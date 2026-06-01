@@ -44,7 +44,7 @@ const TabTasksPanel: React.FC<TabTasksPanelProps> = ({ t, tasks, canEdit, onStat
         <ClipboardList size={14} />
         <span>{t('Задачи отдела')}</span>
         {tasks.length > 0 && (
-          <span className="tab-tasks-count">{active.length > 0 ? active.length : `${done.length} ✓`}</span>
+          <span className="tab-tasks-count">{active.length > 0 ? active.length : `${done.length} OK`}</span>
         )}
       </div>
 

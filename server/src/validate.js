@@ -48,6 +48,9 @@ const GARMENT_CATEGORIES = new Set([
 ]);
 const GARMENT_ACQUISITIONS = new Set(['owned', 'rented', 'to_buy', 'to_make']);
 const BODY_MARKER_STATUSES = new Set(['todo', 'in_progress', 'ready', 'approved']);
+const PRODUCTION_STAGES = new Set(['development', 'pre_production', 'production', 'post_production', 'delivery']);
+const SCENE_STATUSES = new Set(['draft', 'locked', 'shot', 'edited', 'approved']);
+const SHOOTING_DAY_STATUSES = new Set(['planned', 'shooting', 'wrapped', 'postponed']);
 
 // ─── Password validation ──────────────────────────────────────────────────────
 
@@ -286,7 +289,8 @@ const validateProjectPatch = (payload) => {
         return { error: 'Некорректный тип медиафайла' };
       }
       normalizedMediaFiles.push({
-        id, name: file.name, type: file.type, duration: file.duration, size: file.size
+        id, name: file.name, type: file.type, duration: file.duration, size: file.size,
+        ...(typeof file.url === 'string' && file.url ? { url: file.url } : {})
       });
     }
     patch.mediaFiles = normalizedMediaFiles;
@@ -312,7 +316,8 @@ const validateProjectPatch = (payload) => {
       }
       normalizedDocuments.push({
         id, name: document.name, size: document.size,
-        uploadedBy: document.uploadedBy, uploadedAt: document.uploadedAt, type: document.type
+        uploadedBy: document.uploadedBy, uploadedAt: document.uploadedAt, type: document.type,
+        ...(typeof document.url === 'string' && document.url ? { url: document.url } : {})
       });
     }
     patch.documents = normalizedDocuments;
@@ -457,6 +462,140 @@ const validateProjectPatch = (payload) => {
       });
     }
     patch.costumeOutfits = normalizedOutfits;
+  }
+
+  // ── Production stage ────────────────────────────────────────────────────────
+  if (hasOwn(payload, 'productionStage')) {
+    if (!PRODUCTION_STAGES.has(payload.productionStage)) {
+      return { error: 'Некорректный productionStage' };
+    }
+    patch.productionStage = payload.productionStage;
+  }
+
+  // ── Scenes ──────────────────────────────────────────────────────────────────
+  if (hasOwn(payload, 'scenes')) {
+    if (!Array.isArray(payload.scenes)) return { error: 'scenes должны быть массивом' };
+    const normalizedScenes = [];
+    for (const s of payload.scenes) {
+      if (!isObjectRecord(s)) return { error: 'Некорректный формат сцены' };
+      if (typeof s.id !== 'string' || !s.id) return { error: 'Некорректный id сцены' };
+      const number = toPositiveInt(s.number);
+      if (!number) return { error: 'Некорректный номер сцены' };
+      if (typeof s.title !== 'string') return { error: 'Некорректный title сцены' };
+      if (!['INT', 'EXT'].includes(s.interiorExterior)) return { error: 'interiorExterior: INT или EXT' };
+      if (!['DAY', 'NIGHT'].includes(s.dayNight)) return { error: 'dayNight: DAY или NIGHT' };
+      if (!SCENE_STATUSES.has(s.status)) return { error: 'Некорректный status сцены' };
+      // Frames внутри сцены — кадры раскадровки (необязательно)
+      const frames = Array.isArray(s.frames)
+        ? s.frames.map((f) => isObjectRecord(f) ? {
+            shotType:    typeof f.shotType === 'string' ? f.shotType.slice(0, 50) : '',
+            description: typeof f.description === 'string' ? f.description.slice(0, 1000) : '',
+            imageUrl:    typeof f.imageUrl === 'string' ? f.imageUrl : '',
+            ...(typeof f.duration === 'number' && f.duration >= 0 ? { duration: Math.floor(f.duration) } : {}),
+            ...(typeof f.editorShotUrl === 'string' && f.editorShotUrl ? { editorShotUrl: f.editorShotUrl } : {}),
+            ...(typeof f.editorNote === 'string' && f.editorNote ? { editorNote: f.editorNote.slice(0, 1000) } : {})
+          } : { shotType: '', description: '', imageUrl: '' })
+        : undefined;
+
+      normalizedScenes.push({
+        id: s.id,
+        number,
+        title: String(s.title).slice(0, 300),
+        location: typeof s.location === 'string' ? s.location.slice(0, 200) : '',
+        interiorExterior: s.interiorExterior,
+        dayNight: s.dayNight,
+        characters: Array.isArray(s.characters) ? s.characters.filter(c => typeof c === 'string') : [],
+        description: typeof s.description === 'string' ? s.description.slice(0, 2000) : '',
+        estimatedMinutes: toNonNegativeInt(s.estimatedMinutes) || 0,
+        pageCount: toNonNegativeInt(s.pageCount) || 0,
+        status: s.status,
+        ...(typeof s.shootingDayId === 'string' && s.shootingDayId ? { shootingDayId: s.shootingDayId } : {}),
+        ...(typeof s.storyboardRef === 'string' && s.storyboardRef ? { storyboardRef: s.storyboardRef } : {}),
+        ...(typeof s.storyboardFrameCount === 'number' && s.storyboardFrameCount > 0 ? { storyboardFrameCount: Math.floor(s.storyboardFrameCount) } : {}),
+        ...(frames ? { frames } : {}),
+      });
+    }
+    patch.scenes = normalizedScenes;
+  }
+
+  // ── Shooting days ────────────────────────────────────────────────────────────
+  if (hasOwn(payload, 'shootingDays')) {
+    if (!Array.isArray(payload.shootingDays)) return { error: 'shootingDays должны быть массивом' };
+    const normalizedDays = [];
+    for (const d of payload.shootingDays) {
+      if (!isObjectRecord(d)) return { error: 'Некорректный формат съёмочного дня' };
+      if (typeof d.id !== 'string' || !d.id) return { error: 'Некорректный id съёмочного дня' };
+      const dayNumber = toPositiveInt(d.dayNumber);
+      if (!dayNumber) return { error: 'Некорректный dayNumber' };
+      if (!SHOOTING_DAY_STATUSES.has(d.status)) return { error: 'Некорректный status съёмочного дня' };
+      normalizedDays.push({
+        id: d.id,
+        dayNumber,
+        date: typeof d.date === 'string' ? d.date : '',
+        callTime: typeof d.callTime === 'string' ? d.callTime.slice(0, 10) : '08:00',
+        wrapTime: typeof d.wrapTime === 'string' ? d.wrapTime.slice(0, 10) : '19:00',
+        location: typeof d.location === 'string' ? d.location.slice(0, 300) : '',
+        sceneIds: Array.isArray(d.sceneIds) ? d.sceneIds.filter(x => typeof x === 'string') : [],
+        status: d.status,
+        notes: typeof d.notes === 'string' ? d.notes.slice(0, 2000) : '',
+        totalMinutes: toNonNegativeInt(d.totalMinutes) || 0,
+      });
+    }
+    patch.shootingDays = normalizedDays;
+  }
+
+  // ── Project kind ─────────────────────────────────────────────────────────────
+  const PROJECT_KINDS = new Set(['short_film', 'music_video', 'commercial', 'documentary']);
+  if (hasOwn(payload, 'projectKind')) {
+    if (!PROJECT_KINDS.has(payload.projectKind)) {
+      return { error: 'Некорректный projectKind' };
+    }
+    patch.projectKind = payload.projectKind;
+  }
+
+  // ── Audio track ID (foreign reference into mediaFiles) ───────────────────────
+  if (hasOwn(payload, 'audioTrackId')) {
+    if (payload.audioTrackId === null) {
+      patch.audioTrackId = null;
+    } else {
+      const id = Number(payload.audioTrackId);
+      if (!Number.isFinite(id) || id <= 0) return { error: 'Некорректный audioTrackId' };
+      patch.audioTrackId = Math.floor(id);
+    }
+  }
+
+  // ── Music clip timeline ──────────────────────────────────────────────────────
+  if (hasOwn(payload, 'musicTimeline')) {
+    if (!Array.isArray(payload.musicTimeline)) return { error: 'musicTimeline должно быть массивом' };
+    const normalised = [];
+    for (const cf of payload.musicTimeline) {
+      if (!isObjectRecord(cf)) return { error: 'Некорректный формат clip-кадра' };
+      if (typeof cf.id !== 'string' || !cf.id) return { error: 'clipFrame.id обязателен' };
+      if (typeof cf.sceneId !== 'string' || !cf.sceneId) return { error: 'clipFrame.sceneId обязателен' };
+      const frameIdx = Number(cf.frameIdx);
+      if (!Number.isFinite(frameIdx) || frameIdx < 0) return { error: 'clipFrame.frameIdx некорректный' };
+      const time = Number(cf.time);
+      if (!Number.isFinite(time) || time < 0) return { error: 'clipFrame.time некорректный' };
+      normalised.push({
+        id: cf.id,
+        sceneId: cf.sceneId,
+        frameIdx: Math.floor(frameIdx),
+        time: Math.round(time * 1000) / 1000
+      });
+    }
+    patch.musicTimeline = normalised;
+  }
+
+  // ── Project roles (map user_id → role) ──────────────────────────────────────
+  if (hasOwn(payload, 'projectRoles')) {
+    if (!isObjectRecord(payload.projectRoles)) return { error: 'projectRoles должно быть объектом' };
+    const roles = {};
+    for (const [uid, role] of Object.entries(payload.projectRoles)) {
+      if (typeof role === 'string' && role.length > 0 && role.length < 100) {
+        roles[uid] = role;
+      }
+    }
+    patch.projectRoles = roles;
   }
 
   return { patch };

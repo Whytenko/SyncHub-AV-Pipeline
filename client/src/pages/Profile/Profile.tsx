@@ -20,7 +20,7 @@ const Profile: React.FC = () => {
     lastName: '',
     email: '',
     role: '',
-    avatar: '👤',
+    avatar: '',
     nickname: '',
     birthdate: ''
   })
@@ -29,7 +29,7 @@ const Profile: React.FC = () => {
     lastName: '',
     email: '',
     role: '',
-    avatar: '👤',
+    avatar: '',
     nickname: '',
     birthdate: ''
   })
@@ -51,7 +51,7 @@ const Profile: React.FC = () => {
         lastName: user.lastName,
         email: user.email,
         role: user.role,
-        avatar: user.avatar || '👤',
+        avatar: user.avatar || '',
         nickname: user.nickname,
         birthdate: user.birthdate || ''
       }
@@ -90,7 +90,7 @@ const Profile: React.FC = () => {
         lastName: response.user.lastName,
         email: response.user.email,
         role: response.user.role,
-        avatar: response.user.avatar || '👤',
+        avatar: response.user.avatar || '',
         nickname: response.user.nickname,
         birthdate: response.user.birthdate || ''
       })
@@ -494,13 +494,13 @@ const Profile: React.FC = () => {
         }
       >
         <div className="avatar-grid">
-          {['🎬', '🎥', '🎧', '🎨', '🧑‍💻', '🧑‍🎤', '🧑‍🎨', '🧑‍🔧'].map((emoji) => (
+          {['A','B','C','D','E','F','G','H'].map((letter) => (
             <button
-              key={emoji}
-              className={`avatar-choice ${profile.avatar === emoji ? 'active' : ''}`}
-              onClick={() => setProfile({ ...profile, avatar: emoji })}
+              key={letter}
+              className={`avatar-choice ${profile.avatar === letter ? 'active' : ''}`}
+              onClick={() => setProfile({ ...profile, avatar: letter })}
             >
-              {emoji}
+              {letter}
             </button>
           ))}
         </div>

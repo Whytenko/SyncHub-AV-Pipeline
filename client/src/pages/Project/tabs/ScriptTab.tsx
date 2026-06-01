@@ -1,11 +1,12 @@
 import React, { useRef, useState } from 'react';
-import { FileText, Film, Settings, Plus, ChevronDown, ChevronUp, Users, MapPin, Shirt, Zap, Truck, Camera, Music, Star, AlertTriangle, BookOpen } from 'lucide-react';
+import { FileText, Film, Settings, Plus, ChevronDown, ChevronUp, Users, MapPin, Shirt, Zap, Truck, Camera, Music, Star, AlertTriangle, BookOpen, Eye, RefreshCcw, Trash2 } from 'lucide-react';
 import type { ScriptParams, ProjectMarker, Task, TaskStatus, ProjectComment, TabType, Scene, ProductionStage } from '../../../types';
 import TabMarkersPanel from '../components/TabMarkersPanel';
 import TabTasksPanel from '../components/TabTasksPanel';
 import TabCommentsPanel from '../components/TabCommentsPanel';
 import SceneManager, { type SceneManagerHandle } from '../components/SceneManager';
 import ReadOnlyBanner from '../components/ReadOnlyBanner';
+import FilePreview from '../../../components/FilePreview';
 
 export interface ScriptTabProps {
   t: (key: string, params?: Record<string, string | number>) => string;
@@ -41,6 +42,7 @@ const ScriptTab: React.FC<ScriptTabProps> = ({
   scenes, productionStage, onSaveScenes
 }) => {
   const [showFullSettings, setShowFullSettings] = useState(false);
+  const [showFilePreview, setShowFilePreview] = useState(false);
   const sceneManagerRef = useRef<SceneManagerHandle>(null);
 
   const canModify = canEdit && (productionStage === 'development' || productionStage === 'pre_production');
@@ -60,45 +62,71 @@ const ScriptTab: React.FC<ScriptTabProps> = ({
       {/* ── Top 3-column action row ── */}
       <div className="script-top-row">
 
-        {/* Card 1: Upload Script */}
-        <div
-          className="script-action-card"
-          onClick={() => canEdit && scriptFileInputRef.current?.click()}
-          style={canEdit ? { cursor: 'pointer' } : {}}
-        >
-          <div className="script-action-card-head">
-            <FileText size={16} className="script-action-card-icon" />
-            <span className="script-action-card-title">{t('Загрузка сценария')}</span>
-          </div>
-          {scriptParams.scriptFile ? (
-            <>
-              <span className="script-action-card-file">{scriptParams.scriptFile.name}</span>
-              <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
-                {canEdit && (
-                  <button
-                    className="script-action-card-cta"
-                    onClick={e => { e.stopPropagation(); scriptFileInputRef.current?.click(); }}
-                  >
-                    Заменить
-                  </button>
-                )}
-                {canEdit && (
-                  <button
-                    className="script-action-card-cta"
-                    style={{ color: 'var(--error)' }}
-                    onClick={e => { e.stopPropagation(); handleRemoveScriptFile(); }}
-                  >
-                    Удалить
-                  </button>
-                )}
+        {/* Card 1: Upload Script — два состояния (пусто vs файл-плашка) */}
+        {scriptParams.scriptFile ? (() => {
+          const sf  = scriptParams.scriptFile;
+          const ext = (sf.type || sf.name?.split('.').pop() || '').toLowerCase();
+          return (
+            <div
+              className="script-file-card"
+              onClick={() => setShowFilePreview(true)}
+              title={t('Открыть сценарий')}
+              role="button"
+              tabIndex={0}
+              onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setShowFilePreview(true); } }}
+            >
+              <div className="script-file-card-main">
+                <div className="script-file-card-badge">
+                  <FileText size={20} />
+                  <span className="script-file-card-ext">{(ext || 'FILE').toUpperCase().slice(0,4)}</span>
+                </div>
+                <div className="script-file-card-info">
+                  <div className="script-file-card-eyebrow">{t('Сценарий загружен')}</div>
+                  <div className="script-file-card-name" title={sf.name}>{sf.name}</div>
+                  <div className="script-file-card-meta">{sf.size}{ext ? ` · ${ext.toUpperCase()}` : ''}</div>
+                </div>
+                <div className="script-file-card-open-hint">
+                  <Eye size={14} />
+                  <span>{t('Открыть')}</span>
+                </div>
               </div>
-            </>
-          ) : (
+              {canEdit && (
+                <div className="script-file-card-actions" onClick={e => e.stopPropagation()}>
+                  <button
+                    type="button"
+                    className="script-file-card-action"
+                    onClick={() => scriptFileInputRef.current?.click()}
+                    title={t('Заменить файл')}
+                  >
+                    <RefreshCcw size={12} /> {t('Заменить')}
+                  </button>
+                  <button
+                    type="button"
+                    className="script-file-card-action script-file-card-action--danger"
+                    onClick={handleRemoveScriptFile}
+                    title={t('Удалить файл')}
+                  >
+                    <Trash2 size={12} /> {t('Удалить')}
+                  </button>
+                </div>
+              )}
+            </div>
+          );
+        })() : (
+          <div
+            className="script-action-card"
+            onClick={() => canEdit && scriptFileInputRef.current?.click()}
+            style={canEdit ? { cursor: 'pointer' } : {}}
+          >
+            <div className="script-action-card-head">
+              <FileText size={16} className="script-action-card-icon" />
+              <span className="script-action-card-title">{t('Загрузка сценария')}</span>
+            </div>
             <span className="script-action-card-body">
-              {canEdit ? 'PDF, Word, PNG, JPG — нажмите или перетащите' : 'Файл не загружен'}
+              {canEdit ? t('PDF, Word, PNG, JPG — нажмите или перетащите') : t('Файл не загружен')}
             </span>
-          )}
-        </div>
+          </div>
+        )}
 
         {/* Card 2: Create Scenes */}
         <div className="script-action-card">
@@ -152,16 +180,17 @@ const ScriptTab: React.FC<ScriptTabProps> = ({
 
       </div>
 
-      {/* ── Scene file preview (when file is loaded) ── */}
-      {scriptParams.scriptFile?.dataUrl && (
-        <div style={{ marginBottom: 16 }}>
-          <img
-            src={scriptParams.scriptFile.dataUrl}
-            className="script-file-thumb"
-            alt={scriptParams.scriptFile.name}
-            style={{ maxWidth: '100%', maxHeight: 300, borderRadius: 8, objectFit: 'contain', display: 'block' }}
-          />
-        </div>
+      {showFilePreview && scriptParams.scriptFile && (scriptParams.scriptFile.url || scriptParams.scriptFile.dataUrl) && (
+        <FilePreview
+          file={{
+            name: scriptParams.scriptFile.name,
+            type: scriptParams.scriptFile.type,
+            size: scriptParams.scriptFile.size,
+            url: scriptParams.scriptFile.url,
+            dataUrl: scriptParams.scriptFile.dataUrl
+          }}
+          onClose={() => setShowFilePreview(false)}
+        />
       )}
 
       {/* ── Scene Manager (always visible) ── */}

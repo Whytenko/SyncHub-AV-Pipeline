@@ -1,10 +1,12 @@
-import React from 'react';
+import React, { useState } from 'react';
+import ImageLightbox from '../../../components/ImageLightbox';
 import { Plus, Trash2, ChevronRight, Palette, Clock, AlertCircle, Upload, User2, Sparkles, Pencil as Pencil2 } from 'lucide-react';
 import type { MakeupLook, MakeupZone, LookStatus, ProjectMarker, Task, TaskStatus, ProjectComment, TabType, Scene } from '../../../types';
 import TabMarkersPanel from '../components/TabMarkersPanel';
 import TabTasksPanel from '../components/TabTasksPanel';
 import TabCommentsPanel from '../components/TabCommentsPanel';
 import ReadOnlyBanner from '../components/ReadOnlyBanner';
+import { resolveAssetUrl } from '../../../api/assets';
 
 type LookDraft = { name: string; characterName: string; sceneRefs: string; applyTimeMin: number; skinNotes: string; status: LookStatus };
 type ProductDraft = { zone: MakeupZone; productName: string; colorHex: string; technique: string };
@@ -65,6 +67,7 @@ const MakeupTab: React.FC<MakeupTabProps> = ({
 }) => {
   const selectedLook = makeupLooks.find(l => l.id === selectedLookId) ?? makeupLooks[0] ?? null;
   const activeLookId = selectedLook?.id ?? null;
+  const [lightboxOpen, setLightboxOpen] = useState(false);
 
   return (
     <div className="tab-content makeup-tab">
@@ -130,6 +133,59 @@ const MakeupTab: React.FC<MakeupTabProps> = ({
             </div>
           ) : (
             <>
+              {/* ── Reference post: большая карточка с фото-референсом лука ── */}
+              {selectedLook.referenceImage && (
+                <div className="craft-ref-post">
+                  <div
+                    className="craft-ref-post-image craft-ref-post-image--clickable"
+                    onClick={() => setLightboxOpen(true)}
+                    title={t('Нажмите, чтобы увидеть на весь экран')}
+                  >
+                    <img src={resolveAssetUrl(selectedLook.referenceImage)} alt={selectedLook.name} />
+                    <div className="craft-ref-post-zoom">⤢</div>
+                  </div>
+                  <div className="craft-ref-post-side">
+                    <div className="craft-ref-post-eyebrow">
+                      <Sparkles size={11} /> {t('Референс грима')}
+                    </div>
+                    <h3 className="craft-ref-post-title">{selectedLook.name}</h3>
+                    <div className="craft-ref-post-meta">
+                      {selectedLook.characterName && (
+                        <span className="craft-ref-post-chip"><User2 size={11} /> {selectedLook.characterName}</span>
+                      )}
+                      {selectedLook.applyTimeMin > 0 && (
+                        <span className="craft-ref-post-chip"><Clock size={11} /> {selectedLook.applyTimeMin} {t('мин')}</span>
+                      )}
+                      <span
+                        className="craft-ref-post-status"
+                        style={{ color: STATUS_COLORS[selectedLook.status], borderColor: STATUS_COLORS[selectedLook.status] }}
+                      >
+                        {STATUS_LABELS[selectedLook.status]}
+                      </span>
+                    </div>
+                    {selectedLook.skinNotes && (
+                      <div className="craft-ref-post-notes">{selectedLook.skinNotes}</div>
+                    )}
+                    {canEdit && (
+                      <div className="craft-ref-post-actions">
+                        <button className="craft-ref-post-btn" onClick={() => handleLookRefImage(selectedLook.id)}>
+                          <Upload size={12} /> {t('Заменить референс')}
+                        </button>
+                        <button
+                          className="craft-ref-post-btn craft-ref-post-btn--danger"
+                          onClick={async () => {
+                            const updated = makeupLooks.map(l => l.id === selectedLook.id ? { ...l, referenceImage: '' } : l);
+                            await saveMakeupLooks(updated);
+                          }}
+                        >
+                          <Trash2 size={12} /> {t('Убрать')}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {/* Detail header */}
               <div className="craft-detail-header">
                 <div className="craft-detail-title-row">
@@ -265,23 +321,17 @@ const MakeupTab: React.FC<MakeupTabProps> = ({
                 />
               </div>
 
-              {/* Reference image */}
-              <div className="craft-section">
-                <div className="craft-section-title"><Upload size={14} /> {t('Референс')}</div>
-                {selectedLook.referenceImage ? (
-                  <div className="craft-ref-img-wrap">
-                    <img src={selectedLook.referenceImage} alt="reference" className="craft-ref-img" />
-                    <button className="craft-ref-remove" onClick={async () => {
-                      const updated = makeupLooks.map(l => l.id === selectedLook.id ? { ...l, referenceImage: '' } : l);
-                      await saveMakeupLooks(updated);
-                    }}>✕</button>
-                  </div>
-                ) : (
-                  <button className="craft-upload-btn" onClick={() => handleLookRefImage(selectedLook.id)}>
-                    <Upload size={16} /> {t('Загрузить фото')}
+              {/* Reference image — placeholder только когда референса ещё нет */}
+              {!selectedLook.referenceImage && (
+                <div className="craft-section">
+                  <div className="craft-section-title"><Upload size={14} /> {t('Референс')}</div>
+                  <button className="craft-ref-empty" onClick={() => handleLookRefImage(selectedLook.id)}>
+                    <Upload size={18} />
+                    <span>{t('Загрузить фото-референс грима')}</span>
+                    <span className="craft-ref-empty-sub">{t('JPG, PNG до 5 МБ — появится постом в шапке вкладки')}</span>
                   </button>
-                )}
-              </div>
+                </div>
+              )}
             </>
           )}
         </div>
@@ -292,6 +342,14 @@ const MakeupTab: React.FC<MakeupTabProps> = ({
         t={t} markers={markers} tabId="makeup"
         canEdit={canEdit} onDelete={onDeleteMarker} onSeek={onMarkerSeek} onAddMarker={onAddMarker}
       />
+      {lightboxOpen && selectedLook?.referenceImage && (
+        <ImageLightbox
+          src={resolveAssetUrl(selectedLook.referenceImage)}
+          alt={selectedLook.name}
+          caption={`${selectedLook.name}${selectedLook.characterName ? ' — ' + selectedLook.characterName : ''}`}
+          onClose={() => setLightboxOpen(false)}
+        />
+      )}
     </div>
   );
 };

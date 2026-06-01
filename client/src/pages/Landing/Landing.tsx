@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { Check as CheckIcon, X as XIcon, Minus as MinusIcon } from 'lucide-react'
 import './Landing.css'
 import logo from '../assets/logo.svg'
 import { useAuth } from '../../context/AuthContext'
@@ -73,9 +74,9 @@ const FAQS = [
 ]
 
 function Check({ ok }: { ok: boolean | 'part' }) {
-  if (ok === true) return <span className="cmp-yes">✓</span>
-  if (ok === 'part') return <span className="cmp-part">~</span>
-  return <span className="cmp-no">✗</span>
+  if (ok === true) return <span className="cmp-yes"><CheckIcon size={14} /></span>
+  if (ok === 'part') return <span className="cmp-part"><MinusIcon size={14} /></span>
+  return <span className="cmp-no"><XIcon size={14} /></span>
 }
 
 const CountUp: React.FC<{ target: string; active: boolean; delay?: number }> = ({ target, active, delay = 0 }) => {

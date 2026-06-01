@@ -1,11 +1,13 @@
-import React, { useState } from 'react';
-import { Film, Upload, Clock, StickyNote, ChevronDown, ChevronUp, CheckCircle2, Circle } from 'lucide-react';
-import type { StoryboardFrame, ProjectMarker, Task, TaskStatus, ProjectComment, TabType, Scene } from '../../../types';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Film, Upload, Clock, StickyNote, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, CheckCircle2, Circle, Lock, Unlock } from 'lucide-react';
+import type { StoryboardFrame, ProjectMarker, Task, TaskStatus, ProjectComment, TabType, Scene, ClipFrame, MediaFile, ProjectKind } from '../../../types';
 import TabMarkersPanel from '../components/TabMarkersPanel';
 import TabTasksPanel from '../components/TabTasksPanel';
 import TabCommentsPanel from '../components/TabCommentsPanel';
 import ReadOnlyBanner from '../components/ReadOnlyBanner';
 import Modal from '../../../components/Modal';
+import MusicClipTimeline from '../components/MusicClipTimeline';
+import { resolveAssetUrl } from '../../../api/assets';
 
 const SHOT_TYPES = [
   { code: 'ДЛ',  label: 'Дальний план' },
@@ -48,9 +50,19 @@ export interface DirectorTabProps {
   t: (key: string, params?: Record<string, string | number>) => string;
   scenes: Scene[];
   onSaveScenes: (scenes: Scene[]) => Promise<void>;
+  projectId: string;
+  timelineDuration: number;
+  onSaveTimelineDuration: (next: number) => Promise<void>;
   timelineDurationInput: string;
   setTimelineDurationInput: (v: string) => void;
   handleSaveTimelineDuration: () => void;
+  // Music clip context — for music_video / commercial projects
+  projectKind?: ProjectKind;
+  mediaFiles: MediaFile[];
+  audioTrackId?: number;
+  musicTimeline: ClipFrame[];
+  onSaveMusicTimeline: (next: ClipFrame[]) => Promise<void>;
+  apiBase: string;
   directorNotes: string;
   setDirectorNotes: (v: string) => void;
   handleSaveNotes: () => void;
@@ -72,19 +84,36 @@ const DEFAULT_FRAME_COUNT = 4;
 const EMPTY_FRAME: StoryboardFrame = { shotType: '', description: '', imageUrl: '' };
 
 const DirectorTab: React.FC<DirectorTabProps> = ({
-  t, scenes, onSaveScenes,
+  t, scenes, onSaveScenes, projectId,
+  timelineDuration, onSaveTimelineDuration,
   timelineDurationInput, setTimelineDurationInput, handleSaveTimelineDuration,
   directorNotes, setDirectorNotes, handleSaveNotes, handleShareNotes,
   canEdit, userRole, markers, onDeleteMarker, onMarkerSeek, onAddMarker,
   deptTasks, onTaskStatusChange,
   tabComments, onToggleResolved, onAddComment,
+  projectKind, mediaFiles, audioTrackId, musicTimeline, onSaveMusicTimeline, apiBase,
 }) => {
+  const masterAudio = mediaFiles.find(f => f.id === audioTrackId && f.type === 'audio');
+  const showMusicClip = (projectKind === 'music_video' || projectKind === 'commercial') && !!masterAudio;
   const [frameEditorOpen, setFrameEditorOpen] = useState(false);
   const [editorSceneId, setEditorSceneId] = useState<string | null>(null);
   const [editorFrameIdx, setEditorFrameIdx] = useState<number>(0);
   const [editorDraft, setEditorDraft] = useState<StoryboardFrame>({ ...EMPTY_FRAME });
   const [collapsedScenes, setCollapsedScenes] = useState<Set<string>>(new Set());
   const [showNotes, setShowNotes] = useState(false);
+
+  // Auto / manual timeline duration mode — per-project, stored locally.
+  // When 'auto', timeline length = sum of all frame durations (updated on save).
+  // When 'manual', the value stays whatever the user typed.
+  const tlAutoKey = `synchub-timeline-auto-${projectId}`;
+  const [timelineAuto, setTimelineAuto] = useState<boolean>(() => {
+    const stored = localStorage.getItem(tlAutoKey);
+    return stored === null ? true : stored === '1';
+  });
+  const setTimelineAutoPersisted = (v: boolean) => {
+    setTimelineAuto(v);
+    localStorage.setItem(tlAutoKey, v ? '1' : '0');
+  };
 
   const openFrameEditor = (scene: Scene, frameIdx: number) => {
     const frames = scene.frames ?? [];
@@ -169,6 +198,71 @@ const DirectorTab: React.FC<DirectorTabProps> = ({
 
   const allCollapsed = scenes.length > 0 && collapsedScenes.size === scenes.length;
 
+  // ── Flat list of all frames across all scenes — used for prev/next navigation ──
+  const flatFrames = useMemo(() => {
+    const list: Array<{ sceneId: string; sceneNumber: number; sceneTitle: string; frameIdx: number; total: number }> = [];
+    for (const s of sortedScenes) {
+      const total = s.storyboardFrameCount || DEFAULT_FRAME_COUNT;
+      for (let i = 0; i < total; i++) {
+        list.push({ sceneId: s.id, sceneNumber: s.number, sceneTitle: s.title, frameIdx: i, total });
+      }
+    }
+    return list;
+  }, [sortedScenes]);
+
+  const currentFlatIndex = useMemo(() => {
+    if (!editorSceneId) return -1;
+    return flatFrames.findIndex(f => f.sceneId === editorSceneId && f.frameIdx === editorFrameIdx);
+  }, [flatFrames, editorSceneId, editorFrameIdx]);
+
+  // ── Auto timeline duration: when ON, push sum of frame durations to server ──
+  // Debounced to avoid PATCH spam; persists current scene mutations first.
+  const lastAutoSavedRef = useRef<number>(timelineDuration);
+  useEffect(() => {
+    if (!timelineAuto || !canEdit) return;
+    if (totalDurationSec <= 0) return;
+    if (totalDurationSec === lastAutoSavedRef.current) return;
+    const handle = setTimeout(() => {
+      lastAutoSavedRef.current = totalDurationSec;
+      onSaveTimelineDuration(totalDurationSec).catch(() => {});
+    }, 800);
+    return () => clearTimeout(handle);
+  }, [timelineAuto, canEdit, totalDurationSec, onSaveTimelineDuration]);
+
+  // Sync the manual input field with the live duration value
+  useEffect(() => {
+    if (timelineAuto) {
+      const mm = Math.floor(timelineDuration / 60);
+      const ss = String(timelineDuration % 60).padStart(2, '0');
+      setTimelineDurationInput(`${mm}:${ss}`);
+    }
+  }, [timelineAuto, timelineDuration, setTimelineDurationInput]);
+
+  const navigateFrame = (direction: -1 | 1) => {
+    if (currentFlatIndex < 0) return;
+    const nextIdx = currentFlatIndex + direction;
+    if (nextIdx < 0 || nextIdx >= flatFrames.length) return;
+    const target = flatFrames[nextIdx];
+    const scene = scenes.find(s => s.id === target.sceneId);
+    if (!scene) return;
+    const frames = scene.frames ?? [];
+    setEditorSceneId(target.sceneId);
+    setEditorFrameIdx(target.frameIdx);
+    setEditorDraft({ ...(frames[target.frameIdx] ?? EMPTY_FRAME) });
+  };
+
+  // Keyboard nav inside the editor
+  useEffect(() => {
+    if (!frameEditorOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement || e.target instanceof HTMLSelectElement) return;
+      if (e.key === 'ArrowLeft')  { e.preventDefault(); navigateFrame(-1); }
+      if (e.key === 'ArrowRight') { e.preventDefault(); navigateFrame(1); }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  });
+
   return (
     <div className="tab-content director-tab">
       {!canEdit && <ReadOnlyBanner t={t} role={userRole} />}
@@ -206,26 +300,61 @@ const DirectorTab: React.FC<DirectorTabProps> = ({
           </div>
         </div>
 
-        {/* Timeline duration card */}
+        {/* Timeline duration card — auto-syncs to sum of frame durations */}
         <div className="director-tool-card">
           <div className="director-tool-card-head">
             <Clock size={14} className="director-tool-card-icon" />
             <span className="director-tool-card-title">{t('Длительность таймлайна')}</span>
-          </div>
-          <div className="director-tool-card-row">
-            <input
-              className="form-input director-tl-input"
-              placeholder={t('240 или 4:00')}
-              value={timelineDurationInput}
-              onChange={(e) => setTimelineDurationInput(e.target.value)}
-              disabled={!canEdit}
-            />
-            {canEdit && (
-              <button className="director-tl-apply" onClick={handleSaveTimelineDuration}>
-                {t('Применить')}
-              </button>
+            {timelineAuto && (
+              <span className="director-tl-badge director-tl-badge--auto">{t('авто')}</span>
+            )}
+            {!timelineAuto && (
+              <span className="director-tl-badge director-tl-badge--manual">{t('вручную')}</span>
             )}
           </div>
+          {timelineAuto ? (
+            <>
+              <div className="director-tl-auto-value">
+                {Math.floor(timelineDuration / 60)}:{String(timelineDuration % 60).padStart(2, '0')}
+                <span className="director-tl-auto-hint">{t('= сумма кадров')}</span>
+              </div>
+              {canEdit && (
+                <button
+                  className="director-tl-share director-tl-mode-btn"
+                  onClick={() => setTimelineAutoPersisted(false)}
+                  title={t('Открепить от хронометража')}
+                >
+                  <Unlock size={12} /> {t('Открепить, задать вручную')}
+                </button>
+              )}
+            </>
+          ) : (
+            <>
+              <div className="director-tool-card-row">
+                <input
+                  className="form-input director-tl-input"
+                  placeholder={t('240 или 4:00')}
+                  value={timelineDurationInput}
+                  onChange={(e) => setTimelineDurationInput(e.target.value)}
+                  disabled={!canEdit}
+                />
+                {canEdit && (
+                  <button className="director-tl-apply" onClick={handleSaveTimelineDuration}>
+                    {t('Применить')}
+                  </button>
+                )}
+              </div>
+              {canEdit && (
+                <button
+                  className="director-tl-share director-tl-mode-btn"
+                  onClick={() => setTimelineAutoPersisted(true)}
+                  title={t('Прикрепить к хронометражу')}
+                >
+                  <Lock size={12} /> {t('Прикрепить к сумме кадров')}
+                </button>
+              )}
+            </>
+          )}
         </div>
 
         {/* Notes card (collapsible) */}
@@ -351,12 +480,17 @@ const DirectorTab: React.FC<DirectorTabProps> = ({
                           >
                             <span className="sb-frame-num">{fi + 1}</span>
                             {frame?.imageUrl
-                              ? <img src={frame.imageUrl} alt="" className="sb-frame-img" />
+                              ? <img src={resolveAssetUrl(frame.imageUrl)} alt="" className="sb-frame-img" />
                               : <div className="sb-frame-placeholder"><Film size={18} style={{ opacity: 0.3 }} /></div>
                             }
                             {frame?.shotType && <div className="sb-frame-type">{frame.shotType}</div>}
                             {frame?.description && <div className="sb-frame-desc">{frame.description}</div>}
                             {frame?.duration ? <div className="sb-frame-dur">{frame.duration}с</div> : null}
+                            {frame?.editorShotUrl && (
+                              <div className="sb-frame-editor-badge" title={t('Монтажёр загрузил финальный шот')}>
+                                <CheckCircle2 size={11} /> {t('шот')}
+                              </div>
+                            )}
                           </div>
                         );
                       })}
@@ -369,14 +503,34 @@ const DirectorTab: React.FC<DirectorTabProps> = ({
         )}
       </div>
 
-      {/* Frame editor modal */}
+      {/* Frame editor modal — z-index above header (.modal already at 1000, header at 100) */}
       <Modal
-        title={`${t('Кадр')} ${editorFrameIdx + 1} — ${currentEditorScene?.title ?? ''}`}
+        title={`${t('Кадр')} ${editorFrameIdx + 1}/${currentEditorScene?.storyboardFrameCount || DEFAULT_FRAME_COUNT} — ${t('Сц.')} ${currentEditorScene?.number ?? ''} ${currentEditorScene?.title ?? ''}`}
         isOpen={frameEditorOpen}
         onClose={() => setFrameEditorOpen(false)}
         actions={
           <>
-            <button className="secondary-btn" style={{ marginRight: 'auto', color: 'var(--error)' }} onClick={handleDeleteFrame}>
+            <button
+              className="secondary-btn sb-nav-btn"
+              onClick={() => navigateFrame(-1)}
+              disabled={currentFlatIndex <= 0}
+              title={`${t('Предыдущий кадр')} (←)`}
+            >
+              <ChevronLeft size={14} /> {t('Назад')}
+            </button>
+            <button
+              className="secondary-btn sb-nav-btn"
+              onClick={() => navigateFrame(1)}
+              disabled={currentFlatIndex < 0 || currentFlatIndex >= flatFrames.length - 1}
+              title={`${t('Следующий кадр')} (→)`}
+            >
+              {t('Вперёд')} <ChevronRight size={14} />
+            </button>
+            <span className="sb-nav-counter">
+              {currentFlatIndex + 1} / {flatFrames.length}
+            </span>
+            <span style={{ flex: 1 }} />
+            <button className="secondary-btn" style={{ color: 'var(--error)' }} onClick={handleDeleteFrame}>
               {t('Очистить')}
             </button>
             <button className="secondary-btn" onClick={() => setFrameEditorOpen(false)}>{t('Отмена')}</button>
@@ -384,62 +538,89 @@ const DirectorTab: React.FC<DirectorTabProps> = ({
           </>
         }
       >
-        <div className="sb-editor">
-          <div className="sb-editor-img-row">
+        <div className="sb-editor sb-editor--split">
+          <div className="sb-editor-image-side">
             {editorDraft.imageUrl ? (
-              <div className="sb-editor-preview">
-                <img src={editorDraft.imageUrl} alt="" className="sb-editor-img" />
+              <div className="sb-editor-preview-big">
+                <img src={resolveAssetUrl(editorDraft.imageUrl)} alt="" className="sb-editor-img-big" />
                 <button className="sb-editor-remove-img" onClick={() => setEditorDraft(p => ({ ...p, imageUrl: '' }))}>
                   {t('Удалить фото')}
                 </button>
               </div>
             ) : (
-              <label className="sb-editor-upload">
+              <label className="sb-editor-upload sb-editor-upload--big">
                 <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handleImageUpload} />
-                <Upload size={16} /> {t('Добавить фото кадра')}
+                <Upload size={28} />
+                <span>{t('Добавить фото кадра')}</span>
+                <span className="sb-editor-upload-hint">{t('PNG / JPG до 5 МБ')}</span>
               </label>
             )}
           </div>
 
-          <div>
-            <div className="form-label">{t('Тип плана')}</div>
-            <select
-              className="form-input"
-              value={editorDraft.shotType}
-              onChange={e => setEditorDraft(p => ({ ...p, shotType: e.target.value }))}
-            >
-              <option value="">{t('Выбрать тип плана...')}</option>
-              {SHOT_TYPES.map(st => (
-                <option key={st.code} value={st.code}>{st.code} — {st.label}</option>
-              ))}
-            </select>
-          </div>
+          <div className="sb-editor-form-side">
+            <div>
+              <div className="form-label">{t('Тип плана')}</div>
+              <select
+                className="form-input"
+                value={editorDraft.shotType}
+                onChange={e => setEditorDraft(p => ({ ...p, shotType: e.target.value }))}
+              >
+                <option value="">{t('Выбрать тип плана...')}</option>
+                {SHOT_TYPES.map(st => (
+                  <option key={st.code} value={st.code}>{st.code} — {st.label}</option>
+                ))}
+              </select>
+            </div>
 
-          <div className="sb-editor-duration-row">
-            <label className="sb-editor-duration-label">{t('Длит. кадра (сек)')}:</label>
-            <input
-              type="number"
-              className="form-input sb-editor-duration-input"
-              min={0}
-              max={9999}
-              placeholder="0"
-              value={editorDraft.duration ?? ''}
-              onChange={e => setEditorDraft(p => ({
-                ...p,
-                duration: e.target.value === '' ? undefined : Math.max(0, parseInt(e.target.value) || 0)
-              }))}
+            <div className="sb-editor-duration-row">
+              <label className="sb-editor-duration-label">{t('Длит. кадра (сек)')}:</label>
+              <input
+                type="number"
+                className="form-input sb-editor-duration-input"
+                min={0}
+                max={9999}
+                placeholder="0"
+                value={editorDraft.duration ?? ''}
+                onChange={e => setEditorDraft(p => ({
+                  ...p,
+                  duration: e.target.value === '' ? undefined : Math.max(0, parseInt(e.target.value) || 0)
+                }))}
+              />
+            </div>
+
+            <textarea
+              className="form-input"
+              placeholder={t('Описание кадра: действие, персонажи, атмосфера...')}
+              value={editorDraft.description}
+              onChange={e => setEditorDraft(p => ({ ...p, description: e.target.value }))}
+              rows={4}
             />
           </div>
-
-          <textarea
-            className="form-input"
-            placeholder={t('Описание кадра: действие, персонажи, атмосфера...')}
-            value={editorDraft.description}
-            onChange={e => setEditorDraft(p => ({ ...p, description: e.target.value }))}
-            rows={4}
-          />
         </div>
       </Modal>
+
+      {/* ── Music clip timeline — only when projectKind requires it and audio is set ── */}
+      {showMusicClip && masterAudio && (
+        <MusicClipTimeline
+          t={t}
+          scenes={scenes}
+          audioFile={masterAudio}
+          apiBase={apiBase}
+          timeline={musicTimeline}
+          onSave={onSaveMusicTimeline}
+          canEdit={canEdit}
+        />
+      )}
+
+      {/* When music clip is supported but no audio yet — show CTA */}
+      {(projectKind === 'music_video' || projectKind === 'commercial') && !masterAudio && (
+        <div className="music-clip-empty">
+          <div className="music-clip-empty-title">{t('Раскадровка под музыку — ожидает трек')}</div>
+          <div className="music-clip-empty-hint">
+            {t('Звукорежиссёр должен выбрать главный аудио-трек на вкладке «Звук» — после этого здесь появится таймлайн.')}
+          </div>
+        </div>
+      )}
 
       <TabCommentsPanel t={t} comments={tabComments} tabId="director" canEdit={canEdit} onToggleResolved={onToggleResolved} onAddComment={onAddComment} />
       <TabTasksPanel t={t} tasks={deptTasks} canEdit={canEdit} onStatusChange={onTaskStatusChange} />

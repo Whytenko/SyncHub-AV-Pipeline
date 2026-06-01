@@ -1,9 +1,11 @@
 import React, { useRef, useState, useCallback } from 'react';
-import { Music, Film, Upload, Eye, MessageSquarePlus, Reply, Trash2, Loader, FileText } from 'lucide-react';
-import type { MediaFile, DocumentFile, ProjectComment, TabType, ProjectMarker, Task, TaskStatus, Scene } from '../../../types';
+import { Music, Film, Upload, Eye, MessageSquarePlus, Reply, Trash2, Loader, FileText, Scissors, Check, ImagePlus, CheckCircle2 } from 'lucide-react';
+import type { MediaFile, DocumentFile, ProjectComment, TabType, ProjectMarker, Task, TaskStatus, Scene, StoryboardFrame } from '../../../types';
 import TabMarkersPanel from '../components/TabMarkersPanel';
 import TabTasksPanel from '../components/TabTasksPanel';
 import ReadOnlyBanner from '../components/ReadOnlyBanner';
+import FramePairViewer from '../components/FramePairViewer';
+import { resolveAssetUrl } from '../../../api/assets';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
 const tabColorEdit = '#FF391A';
@@ -35,6 +37,31 @@ const DOC_ICONS: Record<string, string> = {
   jpeg: 'JPG', gif: 'GIF', webp: 'WEB', other: 'FILE'
 };
 
+const DEFAULT_FRAME_COUNT = 4;
+const EMPTY_FRAME: StoryboardFrame = { shotType: '', description: '', imageUrl: '' };
+
+const compressEditorShot = (file: File, maxW = 480, maxH = 320): Promise<string> =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = reject;
+    reader.onload = (ev) => {
+      const img = new Image();
+      img.onerror = reject;
+      img.onload = () => {
+        let w = img.width, h = img.height;
+        const ratio = Math.min(maxW / w, maxH / h, 1);
+        w = Math.round(w * ratio);
+        h = Math.round(h * ratio);
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d')!.drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL('image/jpeg', 0.82));
+      };
+      img.src = ev.target!.result as string;
+    };
+    reader.readAsDataURL(file);
+  });
+
 
 export interface EditTabProps {
   t: (key: string, params?: Record<string, string | number>) => string;
@@ -65,6 +92,7 @@ export interface EditTabProps {
   onTaskStatusChange: (id: string, status: TaskStatus) => Promise<void>;
   scenes: Scene[];
   onSceneStatusChange: (sceneId: string, status: 'edited' | 'approved') => Promise<void>;
+  onSaveScenes: (scenes: Scene[]) => Promise<void>;
 }
 
 const EditTab: React.FC<EditTabProps> = ({
@@ -76,14 +104,68 @@ const EditTab: React.FC<EditTabProps> = ({
   onUploadDocument, onDeleteDocument,
   canEdit, userRole, markers, onDeleteMarker, onMarkerSeek, onAddMarker,
   deptTasks, onTaskStatusChange,
-  scenes, onSceneStatusChange
+  scenes, onSceneStatusChange, onSaveScenes
 }) => {
   const mediaInputRef = useRef<HTMLInputElement>(null);
   const docInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
+  const editorShotInputRef = useRef<HTMLInputElement>(null);
   const [uploadingMedia, setUploadingMedia] = useState(false);
   const [uploadingDoc, setUploadingDoc] = useState(false);
+  const [shotTarget, setShotTarget] = useState<{ sceneId: string; frameIdx: number } | null>(null);
+  const [collapsedShotScenes, setCollapsedShotScenes] = useState<Set<string>>(new Set());
+  const [pairViewer, setPairViewer] = useState<{ sceneId: string; frameIdx: number } | null>(null);
+
+  const handleEditorShotUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    const target = shotTarget;
+    e.target.value = '';
+    if (!file || !target) return;
+    try {
+      const dataUrl = await compressEditorShot(file);
+      const updated = scenes.map(s => {
+        if (s.id !== target.sceneId) return s;
+        const count = s.storyboardFrameCount || DEFAULT_FRAME_COUNT;
+        const frames = Array.from({ length: count }, (_, i) => (s.frames ?? [])[i] ?? { ...EMPTY_FRAME });
+        frames[target.frameIdx] = { ...frames[target.frameIdx], editorShotUrl: dataUrl };
+        return { ...s, frames };
+      });
+      await onSaveScenes(updated);
+    } catch { /* ignore */ }
+    setShotTarget(null);
+  }, [scenes, shotTarget, onSaveScenes]);
+
+  const triggerShotUpload = (sceneId: string, frameIdx: number) => {
+    setShotTarget({ sceneId, frameIdx });
+    setTimeout(() => editorShotInputRef.current?.click(), 0);
+  };
+
+  const removeEditorShot = async (sceneId: string, frameIdx: number) => {
+    const updated = scenes.map(s => {
+      if (s.id !== sceneId) return s;
+      const count = s.storyboardFrameCount || DEFAULT_FRAME_COUNT;
+      const frames = Array.from({ length: count }, (_, i) => (s.frames ?? [])[i] ?? { ...EMPTY_FRAME });
+      frames[frameIdx] = { ...frames[frameIdx], editorShotUrl: '' };
+      return { ...s, frames };
+    });
+    await onSaveScenes(updated);
+  };
+
+  const toggleShotScene = (id: string) => {
+    setCollapsedShotScenes(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const matchSortedScenes = [...scenes].sort((a, b) => a.number - b.number);
+  const totalFrames = matchSortedScenes.reduce((sum, s) => sum + (s.storyboardFrameCount || 0), 0);
+  const matchedFrames = matchSortedScenes.reduce((sum, s) => {
+    return sum + (s.frames || []).filter(f => f?.editorShotUrl).length;
+  }, 0);
+  const matchPct = totalFrames > 0 ? Math.round((matchedFrames / totalFrames) * 100) : 0;
 
   const handleMediaChange = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -122,6 +204,135 @@ const EditTab: React.FC<EditTabProps> = ({
         accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.png,.jpg,.jpeg,.gif,.webp"
         style={{ display: 'none' }} onChange={handleDocChange} />
 
+      {/* ── Соответствие раскадровке: монтажёр загружает шоты под каждый кадр ── */}
+      <input
+        ref={editorShotInputRef}
+        type="file"
+        accept="image/png,image/jpeg,image/webp"
+        style={{ display: 'none' }}
+        onChange={handleEditorShotUpload}
+      />
+      {matchSortedScenes.length > 0 && totalFrames > 0 && (
+        <div className="editor-match-section">
+          <div className="editor-match-head">
+            <div className="editor-match-head-left">
+              <Film size={18} style={{ color: '#FF391A' }} />
+              <h3 style={{ margin: 0 }}>{t('Соответствие раскадровке')}</h3>
+            </div>
+            <div className="editor-match-head-stats">
+              <span className="editor-match-stat">
+                <CheckCircle2 size={13} style={{ color: matchPct === 100 ? '#22c55e' : '#FF9800' }} />
+                {matchedFrames} / {totalFrames} {t('кадров загружено')}
+              </span>
+              <div className="editor-match-bar">
+                <div
+                  className="editor-match-bar-fill"
+                  style={{ width: `${matchPct}%`, background: matchPct === 100 ? '#22c55e' : '#FF391A' }}
+                />
+              </div>
+              <span className="editor-match-pct">{matchPct}%</span>
+            </div>
+          </div>
+          <div className="editor-match-hint">
+            {t('Под каждый кадр раскадровки загрузите шот из готового монтажа. Это покажет команде, что порядок соблюдён и ни один кадр не пропущен.')}
+          </div>
+
+          <div className="editor-match-scene-list">
+            {matchSortedScenes.map(scene => {
+              const count = scene.storyboardFrameCount || 0;
+              if (count === 0) return null;
+              const frames = scene.frames || [];
+              const sceneMatched = frames.filter(f => f?.editorShotUrl).length;
+              const isCollapsed = collapsedShotScenes.has(scene.id);
+              const fullMatched = sceneMatched === count;
+
+              return (
+                <div key={scene.id} className={`editor-match-scene${isCollapsed ? ' editor-match-scene--collapsed' : ''}`}>
+                  <button className="editor-match-scene-head" onClick={() => toggleShotScene(scene.id)}>
+                    {fullMatched
+                      ? <CheckCircle2 size={14} style={{ color: '#22c55e' }} />
+                      : <Film size={14} style={{ color: 'var(--text-muted)' }} />
+                    }
+                    <span className="editor-match-scene-num">Сц.{scene.number}</span>
+                    <span className="editor-match-scene-title">{scene.title}</span>
+                    <span className="editor-match-scene-count">{sceneMatched}/{count}</span>
+                  </button>
+
+                  {!isCollapsed && (
+                    <div className="editor-match-frames">
+                      {Array.from({ length: count }, (_, fi) => {
+                        const frame = frames[fi];
+                        const sb = frame?.imageUrl;
+                        const shot = frame?.editorShotUrl;
+                        return (
+                          <div
+                            key={fi}
+                            className={`editor-match-frame editor-match-frame--clickable${shot ? ' editor-match-frame--matched' : ''}`}
+                            onClick={() => setPairViewer({ sceneId: scene.id, frameIdx: fi })}
+                            title={t('Открыть пару')}
+                          >
+                            <div className="editor-match-frame-num">#{fi + 1}</div>
+                            <div className="editor-match-frame-pair">
+                              <div className="editor-match-thumb editor-match-thumb--storyboard">
+                                {sb
+                                  ? <img src={resolveAssetUrl(sb)} alt="" />
+                                  : <div className="editor-match-thumb-empty"><Film size={20} style={{ opacity: 0.25 }} /></div>
+                                }
+                                <span className="editor-match-thumb-label">{t('раскадровка')}</span>
+                              </div>
+                              <div className="editor-match-arrow">→</div>
+                              <div className="editor-match-thumb editor-match-thumb--shot">
+                                {shot
+                                  ? <img src={resolveAssetUrl(shot)} alt="" />
+                                  : <div className="editor-match-thumb-empty"><ImagePlus size={20} style={{ opacity: 0.3 }} /></div>
+                                }
+                                <span className="editor-match-thumb-label">{t('финальный шот')}</span>
+                                {shot && <span className="editor-match-thumb-badge"><Check size={10} /></span>}
+                              </div>
+                            </div>
+                            {canEdit && (
+                              <div className="editor-match-frame-actions" onClick={e => e.stopPropagation()}>
+                                <button
+                                  className="editor-match-upload-btn"
+                                  onClick={(e) => { e.stopPropagation(); triggerShotUpload(scene.id, fi); }}
+                                  title={shot ? t('Заменить шот') : t('Загрузить шот')}
+                                >
+                                  <Upload size={11} />
+                                  {shot ? t('Заменить') : t('Загрузить')}
+                                </button>
+                                {shot && (
+                                  <button
+                                    className="editor-match-clear-btn"
+                                    onClick={(e) => { e.stopPropagation(); removeEditorShot(scene.id, fi); }}
+                                    title={t('Убрать шот')}
+                                  >
+                                    <Trash2 size={11} />
+                                  </button>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {pairViewer && (
+        <FramePairViewer
+          scenes={scenes}
+          initial={pairViewer}
+          onClose={() => setPairViewer(null)}
+          t={t}
+        />
+      )}
+
+      {/* ── Медиатека / Плеер / Комментарии — ниже основного блока соответствия ── */}
       <div className="columns-container">
         {/* ── Медиатека ── */}
         <div className="column media-column">
@@ -179,7 +390,7 @@ const EditTab: React.FC<EditTabProps> = ({
             )}
             {documents.map((doc) => (
               <div key={doc.id} className="doc-item-row" onClick={() => setPreviewDocument(doc)}>
-                <span className="doc-item-icon">{DOC_ICONS[doc.type?.toLowerCase()] || '📎'}</span>
+                <span className="doc-item-icon">{DOC_ICONS[doc.type?.toLowerCase()] || 'FILE'}</span>
                 <div className="doc-item-info">
                   <div className="doc-item-name" title={doc.name}>{doc.name}</div>
                   <div className="doc-item-meta">{doc.size} · {doc.uploadedAt}</div>
@@ -257,6 +468,7 @@ const EditTab: React.FC<EditTabProps> = ({
           </button>
         </div>
       </div>
+
       {/* Scene progress for post-production */}
       {scenes.some(s => s.status === 'shot' || s.status === 'edited' || s.status === 'approved') && (
         <div className="edit-scenes-panel">
@@ -272,15 +484,15 @@ const EditTab: React.FC<EditTabProps> = ({
                   <div className="edit-scene-actions">
                     {scene.status === 'shot' && (
                       <button className="edit-scene-btn" onClick={() => onSceneStatusChange(scene.id, 'edited')}>
-                        ✂️ Смонтировать
+                        <Scissors size={12} /> Смонтировать
                       </button>
                     )}
                     {scene.status === 'edited' && (
                       <button className="edit-scene-btn edit-scene-btn--approve" onClick={() => onSceneStatusChange(scene.id, 'approved')}>
-                        ✓ Утвердить
+                        <Check size={12} /> Утвердить
                       </button>
                     )}
-                    {scene.status === 'approved' && <span style={{ color: '#22c55e', fontSize: 12 }}>✓ Утверждено</span>}
+                    {scene.status === 'approved' && <span style={{ color: '#22c55e', fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 4 }}><Check size={12} /> Утверждено</span>}
                   </div>
                 )}
               </div>

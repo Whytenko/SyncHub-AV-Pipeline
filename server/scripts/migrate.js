@@ -7,12 +7,20 @@ const path = require('path');
 const pool = require('../src/pool');
 
 async function migrate() {
-  const sqlPath = path.join(__dirname, '..', 'migrations', '001_init.sql');
-  const sql = fs.readFileSync(sqlPath, 'utf8');
+  const migrationsDir = path.join(__dirname, '..', 'migrations');
+  const files = fs.readdirSync(migrationsDir)
+    .filter(f => f.endsWith('.sql'))
+    .sort(); // runs in alphabetical order: 001_, 002_, ...
 
-  console.log('▶ Running migration: 001_init.sql ...');
-  await pool.query(sql);
-  console.log('✅ Migration complete.');
+  for (const file of files) {
+    const sqlPath = path.join(migrationsDir, file);
+    const sql = fs.readFileSync(sqlPath, 'utf8');
+    console.log(`▶ Running migration: ${file} ...`);
+    await pool.query(sql);
+    console.log(`✅ ${file} complete.`);
+  }
+
+  console.log('\n🎬 All migrations applied.');
   await pool.end();
 }
 

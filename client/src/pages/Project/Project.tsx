@@ -8,6 +8,8 @@ import { useToast } from '../../context/ToastContext';
 import { useI18n } from '../../context/I18nContext';
 import { useAuth } from '../../context/AuthContext';
 import Modal from '../../components/Modal';
+import FilePreview from '../../components/FilePreview';
+import { PROJECT_KINDS } from '../../types';
 import type {
   BodyMarker,
   BodySilhouette,
@@ -50,7 +52,7 @@ import ManagerTab from './tabs/ManagerTab';
 
 // Импорт иконок
 import {
-  Play, Pause, Music, MapPin, MapPinPlus, FileText,
+  Play, Pause, Music, MapPin, MapPinPlus, X,
   ArrowLeft, Clapperboard, Sparkles,
   ScrollText, Shirt, Zap, ClipboardList, Clock, CalendarDays,
   type LucideIcon
@@ -248,7 +250,9 @@ const ProjectPage: React.FC = () => {
     relatedMarkersCount: number;
   } | null>(null);
   const [showProjectSettings, setShowProjectSettings] = useState(false);
-  const [projectDraft, setProjectDraft] = useState({ name: '', description: '', deadline: '' });
+  const [projectDraft, setProjectDraft] = useState<{ name: string; description: string; deadline: string; projectKind: import('../../types').ProjectKind; audioTrackId: number | null }>({
+    name: '', description: '', deadline: '', projectKind: 'short_film', audioTrackId: null
+  });
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
   const [savedAt, setSavedAt] = useState<Date | null>(null);
 
@@ -356,7 +360,9 @@ const ProjectPage: React.FC = () => {
         setProjectDraft({
           name: normalizedProject.name || '',
           description: normalizedProject.description || '',
-          deadline: normalizedProject.deadline || ''
+          deadline: normalizedProject.deadline || '',
+          projectKind: (normalizedProject.projectKind as any) || 'short_film',
+          audioTrackId: normalizedProject.audioTrackId ?? null
         });
       } catch (err) {
         const message = err instanceof Error ? err.message : t('Не удалось загрузить проект');
@@ -389,7 +395,9 @@ const ProjectPage: React.FC = () => {
       setProjectDraft({
         name: project.name || '',
         description: project.description || '',
-        deadline: project.deadline || ''
+        deadline: project.deadline || '',
+        projectKind: (project.projectKind as any) || 'short_film',
+        audioTrackId: project.audioTrackId ?? null
       });
     }
   }, [project]);
@@ -483,15 +491,21 @@ const ProjectPage: React.FC = () => {
 
   const canEditTab = (tabId: TabType): boolean => {
     if (!user || !isMember) return false;
-    if (isOwner) return true;
 
     // Hard gate: development stage, no scene locked yet
     if (productionStage === 'development' && !hasLockedScene) {
+      if (isOwner) return true;
       if (tabId === 'script')  return isScriptwriterRole(userRole);
       if (tabId === 'manager') return isManagerRole(userRole);
       return false; // director, costumes, makeup, edit, sound — read-only
     }
 
+    // Edit tab is only editable in post-production or later — even for owner
+    if (tabId === 'edit' && productionStage !== 'post_production' && productionStage !== 'delivery') {
+      return false;
+    }
+
+    if (isOwner) return true;
     return true;
   };
 
@@ -712,19 +726,18 @@ const ProjectPage: React.FC = () => {
 
   const handleScriptFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
-    const isImage = file.type.startsWith('image/');
-    const sizeStr = file.size > 1024 * 1024
-      ? `${(file.size / 1024 / 1024).toFixed(1)} MB`
-      : `${(file.size / 1024).toFixed(0)} KB`;
-    let dataUrl: string | undefined;
-    if (isImage) {
-      try { dataUrl = await compressImage(file, 600, 400); } catch { dataUrl = undefined; }
-    }
-    const ext = file.name.split('.').pop()?.toUpperCase() || 'FILE';
-    await updateScriptParam('scriptFile', { name: file.name, type: ext, size: sizeStr, dataUrl });
-    showToast(t('Файл сценария загружен'), 'success');
+    if (!file || !project) return;
     e.target.value = '';
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const result = await projectsApi.uploadScript(project.id, formData);
+      if (result.project) setProject(normalizeProjectData(result.project));
+      showToast(t('Файл сценария загружен'), 'success');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : t('Не удалось загрузить файл сценария');
+      showToast(message, 'error');
+    }
   };
 
   const handleRemoveScriptFile = async () => {
@@ -1198,8 +1211,10 @@ const ProjectPage: React.FC = () => {
     await saveProject({
       name: projectDraft.name.trim(),
       description: projectDraft.description.trim(),
-      deadline: projectDraft.deadline
-    });
+      deadline: projectDraft.deadline,
+      projectKind: projectDraft.projectKind,
+      audioTrackId: projectDraft.audioTrackId === null ? undefined : projectDraft.audioTrackId
+    } as Partial<Project>);
     setShowProjectSettings(false);
     showToast(t('Настройки проекта сохранены'), 'success');
   };
@@ -1513,6 +1528,9 @@ const ProjectPage: React.FC = () => {
               t={t}
               scenes={scenes}
               onSaveScenes={saveScenes}
+              projectId={project.id}
+              timelineDuration={timelineDuration}
+              onSaveTimelineDuration={async (next) => { await saveProject({ timelineDuration: next } as Partial<Project>); }}
               timelineDurationInput={timelineDurationInput}
               setTimelineDurationInput={setTimelineDurationInput}
               handleSaveTimelineDuration={handleSaveTimelineDuration}
@@ -1531,6 +1549,12 @@ const ProjectPage: React.FC = () => {
               tabComments={comments}
               onToggleResolved={handleToggleResolved}
               onAddComment={openCommentModal}
+              projectKind={project.projectKind}
+              mediaFiles={mediaFiles}
+              audioTrackId={project.audioTrackId}
+              musicTimeline={project.musicTimeline || []}
+              onSaveMusicTimeline={async (next) => { await saveProject({ musicTimeline: next } as Partial<Project>); }}
+              apiBase={(import.meta as any).env?.VITE_API_URL || 'http://localhost:5001'}
             />
           )}
 
@@ -1602,7 +1626,26 @@ const ProjectPage: React.FC = () => {
             />
           )}
 
-          {activeTab === 'edit' && (
+          {activeTab === 'edit' && productionStage !== 'post_production' && productionStage !== 'delivery' && (
+            <div className="tab-content">
+              <div className="phase-lock-banner">
+                <div className="phase-lock-icon">
+                  <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                </div>
+                <div className="phase-lock-title">{t('Монтаж доступен только на этапе пост-продакшна')}</div>
+                <div className="phase-lock-hint">
+                  {t('Сейчас проект на этапе')}: <strong>{
+                    productionStage === 'development' ? t('Разработка') :
+                    productionStage === 'pre_production' ? t('Пре-продакшн') :
+                    productionStage === 'production' ? t('Съёмки') : productionStage
+                  }</strong>.
+                  {' '}{t('Завершите съёмочные дни и переведите проект в пост-продакшн, чтобы открыть медиатеку и плеер.')}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'edit' && (productionStage === 'post_production' || productionStage === 'delivery') && (
             <EditTab
               t={t}
               projectId={project?.id ?? ''}
@@ -1632,6 +1675,7 @@ const ProjectPage: React.FC = () => {
               onTaskStatusChange={handleTaskStatusChange}
               scenes={scenes}
               onSceneStatusChange={handleSceneStatusChange}
+              onSaveScenes={saveScenes}
             />
           )}
 
@@ -1650,6 +1694,17 @@ const ProjectPage: React.FC = () => {
               onMarkerSeek={handleTimelineClick}
               deptTasks={tasks.filter(tk => tk.department === 'sound')}
               onTaskStatusChange={handleTaskStatusChange}
+              scenes={scenes}
+              shootingDays={shootingDays}
+              projectId={project.id}
+              projectKind={project.projectKind}
+              mediaFiles={mediaFiles}
+              audioTrackId={project.audioTrackId}
+              onSetAudioTrack={async (id) => {
+                await saveProject({ audioTrackId: id === null ? undefined : id } as Partial<Project>);
+              }}
+              onUploadAudio={handleUploadMedia}
+              onDeleteAudio={handleDeleteMedia}
             />
           )}
 
@@ -1681,6 +1736,15 @@ const ProjectPage: React.FC = () => {
               productionStage={productionStage}
               onSaveShootingDays={saveShootingDays}
               onSaveScenes={saveScenes}
+              isOwner={isOwner}
+              onAdvanceStage={() => {
+                const nextMap: Record<string, ProductionStage> = {
+                  pre_production: 'production',
+                  production: 'post_production'
+                };
+                const next = nextMap[productionStage];
+                if (next) handleAdvanceStage(next);
+              }}
             />
           )}
         </div>
@@ -2174,65 +2238,17 @@ const ProjectPage: React.FC = () => {
       </Modal>
 
 
-      <Modal
-        title={previewDocument?.name ?? t('Просмотр документа')}
-        isOpen={Boolean(previewDocument)}
-        onClose={() => setPreviewDocument(null)}
-        actions={
-          <>
-            {previewDocument?.url && (
-              <a
-                className="secondary-btn"
-                href={`${import.meta.env.VITE_API_URL || 'http://localhost:5001'}${previewDocument.url}`}
-                download={previewDocument.name}
-                style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6 }}
-              >
-                ⬇ {t('Скачать')}
-              </a>
-            )}
-            <button className="primary-btn" onClick={() => setPreviewDocument(null)}>
-              {t('Закрыть')}
-            </button>
-          </>
-        }
-      >
-        {previewDocument && (() => {
-          const src = previewDocument.url
-            ? `${import.meta.env.VITE_API_URL || 'http://localhost:5001'}${previewDocument.url}`
-            : null;
-          const type = previewDocument.type?.toLowerCase();
-          const isImage = ['png', 'jpg', 'jpeg', 'gif', 'webp'].includes(type ?? '');
-          const isPdf = type === 'pdf';
-
-          return (
-            <div className="doc-preview-wrap">
-              <div className="doc-preview-meta">
-                <span>{previewDocument.size}</span>
-                <span>{previewDocument.uploadedBy}</span>
-                <span>{previewDocument.uploadedAt}</span>
-              </div>
-              {src && isImage && (
-                <img src={src} alt={previewDocument.name} className="doc-preview-image" />
-              )}
-              {src && isPdf && (
-                <iframe src={src} className="doc-preview-pdf" title={previewDocument.name} />
-              )}
-              {src && !isImage && !isPdf && (
-                <div className="doc-preview-nopreview">
-                  <FileText size={48} style={{ marginBottom: 12, opacity: 0.3 }} />
-                  <div>{t('Предпросмотр недоступен для этого формата')}</div>
-                  <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginTop: 4 }}>{previewDocument.name}</div>
-                </div>
-              )}
-              {!src && (
-                <div className="doc-preview-nopreview">
-                  <div>{t('Файл добавлен вручную — URL недоступен')}</div>
-                </div>
-              )}
-            </div>
-          );
-        })()}
-      </Modal>
+      {previewDocument && (
+        <FilePreview
+          file={{
+            name: previewDocument.name,
+            type: previewDocument.type,
+            size: previewDocument.size,
+            url:  previewDocument.url
+          }}
+          onClose={() => setPreviewDocument(null)}
+        />
+      )}
 
       <Modal
         title={t('Маркер')}
@@ -2328,6 +2344,47 @@ const ProjectPage: React.FC = () => {
           onChange={(e) => setProjectDraft({ ...projectDraft, deadline: e.target.value })}
         />
 
+        {/* ── Project kind ── */}
+        <div className="form-label">{t('Тип проекта')}</div>
+        <div className="project-kind-grid project-kind-grid--compact">
+          {(() => {
+            return PROJECT_KINDS.map((k: { value: string; label: string; desc: string; needsAudio: boolean }) => (
+              <button
+                key={k.value}
+                type="button"
+                className={`project-kind-card${projectDraft.projectKind === k.value ? ' project-kind-card--active' : ''}`}
+                onClick={() => setProjectDraft({ ...projectDraft, projectKind: k.value as any })}
+              >
+                <span className="project-kind-card-title">{t(k.label)}</span>
+                <span className="project-kind-card-desc">{t(k.desc)}</span>
+                {k.needsAudio && <span className="project-kind-card-badge">{t('с аудио-таймлайном')}</span>}
+              </button>
+            ));
+          })()}
+        </div>
+
+        {/* ── Audio track picker (only for music_video / commercial) ── */}
+        {(projectDraft.projectKind === 'music_video' || projectDraft.projectKind === 'commercial') && (
+          <>
+            <div className="form-label">{t('Главный аудио-трек проекта')}</div>
+            <select
+              className="form-input"
+              value={projectDraft.audioTrackId ?? ''}
+              onChange={(e) => setProjectDraft({ ...projectDraft, audioTrackId: e.target.value ? Number(e.target.value) : null })}
+            >
+              <option value="">{t('Не выбран — загрузите аудио на вкладке «Звук» или «Монтаж»')}</option>
+              {(project?.mediaFiles || [])
+                .filter(f => f.type === 'audio')
+                .map(f => (
+                  <option key={f.id} value={f.id}>{f.name} · {f.duration}</option>
+                ))}
+            </select>
+            <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 6 }}>
+              {t('Когда трек выбран, у режиссёра в раскадровке появится таймлайн под музыку.')}
+            </div>
+          </>
+        )}
+
         {/* ── Team management ── */}
         {isOwner && (
           <div className="member-mgmt">
@@ -2337,7 +2394,8 @@ const ProjectPage: React.FC = () => {
                 const id = typeof m === 'string' ? m : (m as UserSummary).id;
                 const nick = typeof m === 'string' ? id : ((m as UserSummary).nickname || id);
                 const role = typeof m === 'string' ? '' : ((m as UserSummary).role || '');
-                const avatar = typeof m === 'string' ? '👤' : ((m as UserSummary).avatar || '👤');
+                const rawAvatar = typeof m === 'string' ? '' : ((m as UserSummary).avatar || '');
+                const avatar = rawAvatar || (nick ? nick.charAt(0).toUpperCase() : '?');
                 const isProjectOwner = id === project?.ownerId;
                 return (
                   <div key={id} className="member-row">
@@ -2350,7 +2408,7 @@ const ProjectPage: React.FC = () => {
                         className="member-remove-btn"
                         onClick={() => handleRemoveMember(id)}
                         title={t('Удалить из команды')}
-                      >✕</button>
+                      ><X size={13} /></button>
                     )}
                   </div>
                 );
@@ -2369,7 +2427,7 @@ const ProjectPage: React.FC = () => {
               <div className="member-search-results">
                 {memberSearchResults.map(u => (
                   <div key={u.id} className="member-search-result-row">
-                    <span className="member-avatar">{u.avatar || '👤'}</span>
+                    <span className="member-avatar">{u.avatar || (u.nickname ? u.nickname.charAt(0).toUpperCase() : '?')}</span>
                     <span className="member-nick">{u.nickname}</span>
                     {u.role && <span className="member-role-badge">{u.role}</span>}
                     <button

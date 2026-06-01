@@ -2,17 +2,18 @@ import React, { useState } from 'react';
 import Header from '../Header/Header';
 import './Help.css';
 import { useI18n } from '../../context/I18nContext';
+import { Clapperboard, Film, Shirt, Sparkles, Music, Plus, Minus, type LucideIcon } from 'lucide-react';
 
 const Help: React.FC = () => {
   const { t } = useI18n();
   const [openFaq, setOpenFaq] = useState<number | null>(null);
 
-  const modules = [
-    { emoji: '🎬', title: t('Режиссёр'), desc: t('Текстовый редактор сценария. Пишите и редактируйте сцены прямо в браузере — текст сохраняется автоматически.') },
-    { emoji: '🎞', title: t('Монтажёр'), desc: t('Визуальный таймлайн с маркерами. Добавляйте временные метки, описывайте монтажные переходы, управляйте ключевыми сценами.') },
-    { emoji: '👗', title: t('Костюмер'), desc: t('Силуэт персонажа с интерактивными маркерами. Добавляйте описания костюмов по зонам тела. Поддерживается несколько персонажей.') },
-    { emoji: '💄', title: t('Визажист'), desc: t('Детализированная иллюстрация лица. Добавляйте маркеры с описаниями грима по зонам: Лоб, Глаза, Нос, Губы, Подбородок.') },
-    { emoji: '🎙', title: t('Звукорежиссёр'), desc: t('Список звуковых треков и временных меток. Координируйте звуковое оформление с таймлайном монтажёра.') },
+  const modules: { Icon: LucideIcon; title: string; desc: string }[] = [
+    { Icon: Clapperboard, title: t('Режиссёр'), desc: t('Текстовый редактор сценария. Пишите и редактируйте сцены прямо в браузере — текст сохраняется автоматически.') },
+    { Icon: Film,         title: t('Монтажёр'), desc: t('Визуальный таймлайн с маркерами. Добавляйте временные метки, описывайте монтажные переходы, управляйте ключевыми сценами.') },
+    { Icon: Shirt,        title: t('Костюмер'), desc: t('Силуэт персонажа с интерактивными маркерами. Добавляйте описания костюмов по зонам тела. Поддерживается несколько персонажей.') },
+    { Icon: Sparkles,     title: t('Визажист'), desc: t('Детализированная иллюстрация лица. Добавляйте маркеры с описаниями грима по зонам: Лоб, Глаза, Нос, Губы, Подбородок.') },
+    { Icon: Music,        title: t('Звукорежиссёр'), desc: t('Список звуковых треков и временных меток. Координируйте звуковое оформление с таймлайном монтажёра.') },
   ];
 
   const faqs = [
@@ -64,7 +65,7 @@ const Help: React.FC = () => {
           <div className="help-modules-grid">
             {modules.map((m, i) => (
               <div className="help-module-card" key={i}>
-                <div className="help-module-emoji">{m.emoji}</div>
+                <div className="help-module-emoji"><m.Icon size={28} /></div>
                 <div className="help-module-title">{m.title}</div>
                 <div className="help-module-desc">{m.desc}</div>
               </div>
@@ -86,7 +87,7 @@ const Help: React.FC = () => {
               >
                 <div className="help-faq-q">
                   <span>{item.q}</span>
-                  <span className="help-faq-icon">{openFaq === i ? '−' : '+'}</span>
+                  <span className="help-faq-icon">{openFaq === i ? <Minus size={14} /> : <Plus size={14} />}</span>
                 </div>
                 <div className="help-faq-a">
                   <p>{item.a}</p>

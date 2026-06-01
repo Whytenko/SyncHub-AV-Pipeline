@@ -24,3 +24,26 @@ docs/
 Курсовая_*/
 Отчёт_по_практике_*.txt
 Курсовая_Работа_*.txt
+
+# Local-only docs (kept on disk, never committed)
+DIPLOMA_DESCRIPTION.txt
+DIPLOMA_DRAFT.txt
+DIPLOMA_*.txt
+TESTING_INSTRUCTIONS.txt
+schemes/
+seed-showcase.mjs
+design-system/
+
+# Local content (showcase project source files & academic doc — not for repo)
+Хаски/
+VKR*.docx
+VKR*.pdf
+VKR_*.docx
+VKR_*.md
+Хаски*/
+*.docx
+*.pdf
+!docs/**/*.pdf
+
+# OS / IDE local cache
+.qodo/

@@ -149,6 +149,13 @@ export const projectsApi = {
     );
   },
 
+  async uploadScript(projectId: string, formData: FormData) {
+    return apiRequest<{ success: boolean; scriptFile: { name: string; type: string; size: string; url: string }; project: Project }>(
+      `/api/projects/${projectId}/script/upload`,
+      { method: 'POST', body: formData }
+    );
+  },
+
   async uploadDocument(projectId: string, formData: FormData) {
     return apiRequest<{ success: boolean; document: import('../types').DocumentFile; project: Project }>(
       `/api/projects/${projectId}/documents/upload`,

@@ -1,10 +1,12 @@
-import React from 'react';
+import React, { useState } from 'react';
+import ImageLightbox from '../../../components/ImageLightbox';
 import { Plus, Trash2, ChevronRight, Palette, Upload, User2, Shirt, ScrollText, Pencil as Pencil2 } from 'lucide-react';
 import type { CostumeOutfit, GarmentCategory, GarmentAcquisition, LookStatus, ProjectMarker, Task, TaskStatus, ProjectComment, TabType, Scene } from '../../../types';
 import TabMarkersPanel from '../components/TabMarkersPanel';
 import TabTasksPanel from '../components/TabTasksPanel';
 import TabCommentsPanel from '../components/TabCommentsPanel';
 import ReadOnlyBanner from '../components/ReadOnlyBanner';
+import { resolveAssetUrl } from '../../../api/assets';
 
 type OutfitDraft = { name: string; characterName: string; sceneRefs: string; outfitNotes: string; status: LookStatus };
 type GarmentDraft = {
@@ -85,6 +87,7 @@ const CostumesTab: React.FC<CostumesTabProps> = ({
   const selectedOutfit = costumeOutfits.find(o => o.id === selectedOutfitId) ?? costumeOutfits[0] ?? null;
   const activeOutfitId = selectedOutfit?.id ?? null;
   const totalPrice = selectedOutfit ? selectedOutfit.garments.reduce((s, g) => s + (g.price || 0), 0) : 0;
+  const [lightboxOpen, setLightboxOpen] = useState(false);
 
   return (
     <div className="tab-content costumes-tab">
@@ -152,6 +155,61 @@ const CostumesTab: React.FC<CostumesTabProps> = ({
           ) : (
             <>
               {/* Detail header */}
+              {/* ── Reference post: большая карточка с фото-референсом образа ── */}
+              {selectedOutfit.referenceImage && (
+                <div className="craft-ref-post">
+                  <div
+                    className="craft-ref-post-image craft-ref-post-image--clickable"
+                    onClick={() => setLightboxOpen(true)}
+                    title={t('Нажмите, чтобы увидеть на весь экран')}
+                  >
+                    <img src={resolveAssetUrl(selectedOutfit.referenceImage)} alt={selectedOutfit.name} />
+                    <div className="craft-ref-post-zoom">⤢</div>
+                  </div>
+                  <div className="craft-ref-post-side">
+                    <div className="craft-ref-post-eyebrow">
+                      <Shirt size={11} /> {t('Референс образа')}
+                    </div>
+                    <h3 className="craft-ref-post-title">{selectedOutfit.name}</h3>
+                    <div className="craft-ref-post-meta">
+                      {selectedOutfit.characterName && (
+                        <span className="craft-ref-post-chip"><User2 size={11} /> {selectedOutfit.characterName}</span>
+                      )}
+                      <span
+                        className="craft-ref-post-status"
+                        style={{ color: STATUS_COLORS[selectedOutfit.status], borderColor: STATUS_COLORS[selectedOutfit.status] }}
+                      >
+                        {STATUS_LABELS[selectedOutfit.status]}
+                      </span>
+                      {totalPrice > 0 && (
+                        <span className="craft-ref-post-chip craft-ref-post-chip--price">
+                          {totalPrice.toLocaleString('ru-RU')} ₽
+                        </span>
+                      )}
+                    </div>
+                    {selectedOutfit.outfitNotes && (
+                      <div className="craft-ref-post-notes">{selectedOutfit.outfitNotes}</div>
+                    )}
+                    {canEdit && (
+                      <div className="craft-ref-post-actions">
+                        <button className="craft-ref-post-btn" onClick={() => handleOutfitRefImage(selectedOutfit.id)}>
+                          <Upload size={12} /> {t('Заменить референс')}
+                        </button>
+                        <button
+                          className="craft-ref-post-btn craft-ref-post-btn--danger"
+                          onClick={async () => {
+                            const updated = costumeOutfits.map(o => o.id === selectedOutfit.id ? { ...o, referenceImage: '' } : o);
+                            await saveCostumeOutfits(updated);
+                          }}
+                        >
+                          <Trash2 size={12} /> {t('Убрать')}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
               <div className="craft-detail-header">
                 <div className="craft-detail-title-row">
                   <h3 className="craft-detail-title">{selectedOutfit.name}</h3>
@@ -319,23 +377,17 @@ const CostumesTab: React.FC<CostumesTabProps> = ({
                 />
               </div>
 
-              {/* Reference image */}
-              <div className="craft-section">
-                <div className="craft-section-title"><Upload size={14} /> {t('Референс')}</div>
-                {selectedOutfit.referenceImage ? (
-                  <div className="craft-ref-img-wrap">
-                    <img src={selectedOutfit.referenceImage} alt="reference" className="craft-ref-img" />
-                    <button className="craft-ref-remove" onClick={async () => {
-                      const updated = costumeOutfits.map(o => o.id === selectedOutfit.id ? { ...o, referenceImage: '' } : o);
-                      await saveCostumeOutfits(updated);
-                    }}>✕</button>
-                  </div>
-                ) : (
-                  <button className="craft-upload-btn" onClick={() => handleOutfitRefImage(selectedOutfit.id)}>
-                    <Upload size={16} /> {t('Загрузить фото')}
+              {/* Reference image — placeholder только когда референса ещё нет */}
+              {!selectedOutfit.referenceImage && (
+                <div className="craft-section">
+                  <div className="craft-section-title"><Upload size={14} /> {t('Референс')}</div>
+                  <button className="craft-ref-empty" onClick={() => handleOutfitRefImage(selectedOutfit.id)}>
+                    <Upload size={18} />
+                    <span>{t('Загрузить фото-референс образа')}</span>
+                    <span className="craft-ref-empty-sub">{t('JPG, PNG до 5 МБ — появится постом в шапке вкладки')}</span>
                   </button>
-                )}
-              </div>
+                </div>
+              )}
             </>
           )}
         </div>
@@ -346,6 +398,14 @@ const CostumesTab: React.FC<CostumesTabProps> = ({
         t={t} markers={markers} tabId="costumes"
         canEdit={canEdit} onDelete={onDeleteMarker} onSeek={onMarkerSeek} onAddMarker={onAddMarker}
       />
+      {lightboxOpen && selectedOutfit?.referenceImage && (
+        <ImageLightbox
+          src={resolveAssetUrl(selectedOutfit.referenceImage)}
+          alt={selectedOutfit.name}
+          caption={`${selectedOutfit.name}${selectedOutfit.characterName ? ' — ' + selectedOutfit.characterName : ''}`}
+          onClose={() => setLightboxOpen(false)}
+        />
+      )}
     </div>
   );
 };

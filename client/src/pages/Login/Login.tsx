@@ -5,6 +5,7 @@ import logo from '../assets/logo.svg'
 import { useAuth } from '../../context/AuthContext'
 import { useToast } from '../../context/ToastContext'
 import { useI18n } from '../../context/I18nContext'
+import { Eye, EyeOff } from 'lucide-react'
 
 const Login: React.FC = () => {
   const [nickname, setNickname] = useState('')
@@ -93,7 +94,7 @@ const Login: React.FC = () => {
                       tabIndex={-1}
                       aria-label={showPass ? t('Скрыть пароль') : t('Показать пароль')}
                     >
-                      {showPass ? '🙈' : '👁'}
+                      {showPass ? <EyeOff size={16} /> : <Eye size={16} />}
                     </button>
                   </div>
                 </div>

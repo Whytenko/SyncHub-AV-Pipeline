@@ -5,6 +5,10 @@ export default defineConfig({
   plugins: [react()],
   server: {
     port: 3000,
-    open: true
+    open: true,
+    proxy: {
+      '/uploads': 'http://localhost:5001',
+      '/api':     'http://localhost:5001'
+    }
   }
 })

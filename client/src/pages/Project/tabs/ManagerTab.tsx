@@ -3,6 +3,7 @@ import {
   Music, MapPinPlus, Clapperboard, ScrollText, Sparkles,
   Shirt, Zap, ClipboardList, LayoutGrid, List, CalendarDays, User2,
   Download, TrendingUp, AlertTriangle, MessageCircle, Plus, Pencil,
+  Trash2, Ban, X,
   type LucideIcon
 } from 'lucide-react';
 import type { Task, TaskStatus, TaskPriority, TabType, ProjectComment, Scene, ShootingDay, ProductionStage } from '../../../types';
@@ -72,6 +73,8 @@ export interface ManagerTabProps {
   productionStage: ProductionStage;
   onSaveShootingDays: (days: ShootingDay[]) => Promise<void>;
   onSaveScenes: (scenes: Scene[]) => Promise<void>;
+  isOwner?: boolean;
+  onAdvanceStage?: () => void;
 }
 
 const ManagerTab: React.FC<ManagerTabProps> = ({
@@ -85,8 +88,9 @@ const ManagerTab: React.FC<ManagerTabProps> = ({
   handleTaskStatusChange, saveTasks,
   projectName, deadline, allComments = [],
   onQuickAddTask,
-  scenes, shootingDays, productionStage: _productionStage,
-  onSaveShootingDays, onSaveScenes
+  scenes, shootingDays, productionStage,
+  onSaveShootingDays, onSaveScenes,
+  isOwner, onAdvanceStage
 }) => {
   const [managerSection, setManagerSection] = useState<'tasks' | 'calendar'>('tasks');
   // ── Quick add state ─────────────────────────────────────────────────────────
@@ -183,7 +187,7 @@ const ManagerTab: React.FC<ManagerTabProps> = ({
         if (!depTasks.length) return [];
         const done = depTasks.filter(tk => tk.status === 'approved').length;
         const blocked = depTasks.filter(tk => tk.status === 'blocked').length;
-        return [`${deptName(dep)}: ${done}/${depTasks.length} готово${blocked ? ` | ⛔ ${blocked} заблок.` : ''}`];
+        return [`${deptName(dep)}: ${done}/${depTasks.length} готово${blocked ? ` | ${blocked} заблок.` : ''}`];
       }),
       '',
       `--- Задачи ---`,
@@ -229,7 +233,7 @@ const ManagerTab: React.FC<ManagerTabProps> = ({
         <div className="manager-task-actions">
           <button className="craft-icon-btn" onClick={() => handleOpenEditTask(task)} title={t('Редактировать')}><Pencil size={14} /></button>
           {!compact && (
-            <button className="craft-icon-btn" style={{ color: 'var(--error)' }} onClick={() => handleDeleteTask(task.id)} title={t('Удалить')}>🗑</button>
+            <button className="craft-icon-btn" style={{ color: 'var(--error)' }} onClick={() => handleDeleteTask(task.id)} title={t('Удалить')}><Trash2 size={14} /></button>
           )}
         </div>
       </div>
@@ -273,7 +277,7 @@ const ManagerTab: React.FC<ManagerTabProps> = ({
           >
             <ClipboardList size={15} /> {t('Задачи')}
             {tasks.filter(tk => tk.status === 'blocked').length > 0 && (
-              <span className="manager-switcher-badge">⛔</span>
+              <span className="manager-switcher-badge"><Ban size={11} /></span>
             )}
           </button>
           <button
@@ -296,6 +300,9 @@ const ManagerTab: React.FC<ManagerTabProps> = ({
             canEdit={true}
             onSave={onSaveShootingDays}
             onUpdateScenes={onSaveScenes}
+            productionStage={productionStage}
+            isOwner={isOwner}
+            onAdvanceStage={onAdvanceStage}
           />
         )}
 
@@ -320,7 +327,7 @@ const ManagerTab: React.FC<ManagerTabProps> = ({
             )}
             {blockedTasks.length > 0 && (
               <div className="manager-alert manager-alert--blocked">
-                <span>⛔</span>
+                <span><Ban size={14} /></span>
                 <span><strong>{blockedTasks.length}</strong> {t('заблокированных')}:</span>
                 <div className="manager-alert-tasks">
                   {blockedTasks.slice(0, 3).map(tk => (
@@ -419,7 +426,7 @@ const ManagerTab: React.FC<ManagerTabProps> = ({
                   <div className="manager-health-card-head">
                     {(() => { const HIcon = iconMap[dep]; return HIcon ? <HIcon size={18} className="manager-health-icon" style={{ color: tabColors[dep] }} /> : null; })()}
                     <span className="manager-health-dept" style={{ color: tabColors[dep] }}>{deptName(dep)}</span>
-                    {blocked > 0 && <span className="manager-health-blocked-badge">⛔ {blocked}</span>}
+                    {blocked > 0 && <span className="manager-health-blocked-badge"><Ban size={11} /> {blocked}</span>}
                     {isActive && <span className="manager-health-active-dot" />}
                   </div>
                   <div className="manager-health-bar-wrap">
@@ -511,7 +518,7 @@ const ManagerTab: React.FC<ManagerTabProps> = ({
               <button
                 className="manager-filter-clear"
                 onClick={() => { setTaskFilterStatus('all'); setTaskFilterDept('all'); }}
-              >✕ {t('Сбросить')}</button>
+              ><X size={12} /> {t('Сбросить')}</button>
             )}
           </div>
           <div className="manager-view-toggle">

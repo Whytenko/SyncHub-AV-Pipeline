@@ -1,4 +1,5 @@
-import { useState, forwardRef, useImperativeHandle } from 'react';
+import { useState, forwardRef, useImperativeHandle, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Plus, Trash2, Film, Clock, FileText, Users, Pencil, X, MapPin, CalendarDays } from 'lucide-react';
 import type { Scene, SceneStatus, ProductionStage } from '../../../types';
 
@@ -63,6 +64,15 @@ interface SceneManagerProps {
 const SceneManager = forwardRef<SceneManagerHandle, SceneManagerProps>(
   ({ t, scenes, productionStage, canEdit, onSave }, ref) => {
     const [showForm, setShowForm] = useState(false);
+
+    useEffect(() => {
+      if (!showForm) return;
+      const prev = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setShowForm(false); };
+      window.addEventListener('keydown', onKey);
+      return () => { document.body.style.overflow = prev; window.removeEventListener('keydown', onKey); };
+    }, [showForm]);
     const [editId, setEditId] = useState<string | null>(null);
     const [form, setForm] = useState<SceneFormState>(emptyForm(scenes.length + 1));
     const [busy, setBusy] = useState(false);
@@ -263,9 +273,9 @@ const SceneManager = forwardRef<SceneManagerHandle, SceneManagerProps>(
           </div>
         )}
 
-        {showForm && (
-          <div className="scene-form-overlay" onClick={() => setShowForm(false)}>
-            <div className="scene-form-modal" onClick={e => e.stopPropagation()}>
+        {showForm && createPortal(
+          <div className="scene-form-overlay" onMouseDown={e => { if (e.target === e.currentTarget) setShowForm(false); }}>
+            <div className="scene-form-modal" onMouseDown={e => e.stopPropagation()}>
               <div className="scene-form-title">
                 {editId ? t('Редактировать сцену') : t('Новая сцена')}
               </div>
@@ -373,7 +383,8 @@ const SceneManager = forwardRef<SceneManagerHandle, SceneManagerProps>(
                 </button>
               </div>
             </div>
-          </div>
+          </div>,
+          document.body
         )}
       </div>
     );

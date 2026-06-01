@@ -16,6 +16,7 @@ interface AuthContextValue {
     password: string;
     gender?: string;
     birthdate?: string;
+    role?: string;
   }) => Promise<void>;
   logout: () => Promise<void>;
   setUser: React.Dispatch<React.SetStateAction<User | null>>;
@@ -110,7 +111,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           nickname: nickname || 'local',
           email: '',
           role: 'Участник',
-          avatar: '👤',
+          avatar: '',
           gender: '',
           birthdate: '',
           createdAt: new Date().toISOString(),
@@ -139,6 +140,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     password: string;
     gender?: string;
     birthdate?: string;
+    role?: string;
   }) => {
     setLoading(true);
     try {
@@ -158,7 +160,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           nickname: payload.nickname || 'local',
           email: payload.email || '',
           role: 'Участник',
-          avatar: '👤',
+          avatar: '',
           gender: payload.gender || '',
           birthdate: payload.birthdate || '',
           createdAt: new Date().toISOString(),

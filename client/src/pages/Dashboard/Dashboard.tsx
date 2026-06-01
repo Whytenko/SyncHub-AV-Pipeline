@@ -7,6 +7,7 @@ import { useToast } from '../../context/ToastContext'
 import { useI18n } from '../../context/I18nContext'
 import type { ProjectSummary } from '../../types'
 import Modal from '../../components/Modal'
+import { PROJECT_KINDS, type ProjectKind } from '../../types'
 
 import { Users, Film, ClipboardList, CalendarClock, FolderPlus } from 'lucide-react'
 
@@ -18,7 +19,9 @@ const Dashboard: React.FC = () => {
   const [projects, setProjects] = useState<ProjectSummary[]>([])
   const [loading, setLoading] = useState(true)
   const [showCreate, setShowCreate] = useState(false)
-  const [createData, setCreateData] = useState({ name: '', description: '', deadline: '' })
+  const [createData, setCreateData] = useState<{ name: string; description: string; deadline: string; projectKind: import('../../types').ProjectKind }>({
+    name: '', description: '', deadline: '', projectKind: 'short_film'
+  })
   const [creating, setCreating] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [projectToDelete, setProjectToDelete] = useState<ProjectSummary | null>(null)
@@ -109,14 +112,19 @@ const Dashboard: React.FC = () => {
     }
     setCreating(true)
     try {
-      await projectsApi.create({
+      const created = await projectsApi.create({
         name: createData.name.trim(),
         description: createData.description.trim(),
         deadline: createData.deadline
       })
+      // projectKind is set as a separate PATCH because POST /api/projects
+      // intentionally accepts only basic fields — keeps the create endpoint clean.
+      if (created?.project?.id && createData.projectKind !== 'short_film') {
+        await projectsApi.update(created.project.id, { projectKind: createData.projectKind } as any)
+      }
       showToast(t('Проект создан'), 'success')
       setShowCreate(false)
-      setCreateData({ name: '', description: '', deadline: '' })
+      setCreateData({ name: '', description: '', deadline: '', projectKind: 'short_film' })
       await loadProjects()
     } catch (err) {
       const message = err instanceof Error ? err.message : t('Не удалось создать проект')
@@ -323,6 +331,23 @@ const Dashboard: React.FC = () => {
           onChange={(e) => setCreateData({ ...createData, description: e.target.value })}
           rows={3}
         />
+
+        <div className="form-label">{t('Тип проекта')}</div>
+        <div className="project-kind-grid">
+          {PROJECT_KINDS.map(k => (
+            <button
+              key={k.value}
+              type="button"
+              className={`project-kind-card${createData.projectKind === k.value ? ' project-kind-card--active' : ''}`}
+              onClick={() => setCreateData({ ...createData, projectKind: k.value as ProjectKind })}
+            >
+              <span className="project-kind-card-title">{t(k.label)}</span>
+              <span className="project-kind-card-desc">{t(k.desc)}</span>
+              {k.needsAudio && <span className="project-kind-card-badge">{t('с аудио-таймлайном')}</span>}
+            </button>
+          ))}
+        </div>
+
         <div className="form-label">{t('Дедлайн')}</div>
         <input
           className="form-input"

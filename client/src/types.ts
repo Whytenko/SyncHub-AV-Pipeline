@@ -171,6 +171,7 @@ export interface ScriptFile {
   type: string;
   size: string;
   dataUrl?: string;
+  url?: string;
 }
 
 export interface ScriptParams {
@@ -231,6 +232,8 @@ export interface StoryboardCell {
   imageUrl: string;
   shotType: string;
   duration?: number;
+  editorShotUrl?: string;
+  editorNote?: string;
 }
 
 export interface StoryboardFrame {
@@ -238,6 +241,10 @@ export interface StoryboardFrame {
   description: string;
   imageUrl: string;
   duration?: number;
+  // Editor's final shot — screenshot of the corresponding frame in the actual cut.
+  // When filled, signals director/scriptwriter that this frame is matched in the edit.
+  editorShotUrl?: string;
+  editorNote?: string;
 }
 
 export interface StoryboardGrid {
@@ -321,6 +328,37 @@ export interface Project {
   shootingDays?: ShootingDay[];
   // Per-project roles: maps user id → role chosen for THIS project
   projectRoles?: Record<string, string>;
+  // Project kind — drives which workflows are available
+  projectKind?: ProjectKind;
+  // For music_video / commercial: ID of the audio file from mediaFiles
+  // that is treated as the master clip soundtrack
+  audioTrackId?: number;
+  // Music clip timeline — frames placed against the audio track
+  musicTimeline?: ClipFrame[];
+}
+
+// ── Project kind ──────────────────────────────────────────────────────────────
+// short_film    — короткометражка (по умолчанию)
+// music_video   — музыкальный клип (включает аудио-таймлайн раскадровки)
+// commercial    — рекламный ролик (та же механика, но обычно короче)
+// documentary   — документальный фильм (без аудио-таймлайна, длиннее)
+export type ProjectKind = 'short_film' | 'music_video' | 'commercial' | 'documentary';
+
+export const PROJECT_KINDS: { value: ProjectKind; label: string; desc: string; needsAudio: boolean }[] = [
+  { value: 'short_film',  label: 'Короткий метр',    desc: 'Художественный короткометражный фильм (5–30 мин).',        needsAudio: false },
+  { value: 'music_video', label: 'Музыкальный клип', desc: 'Видео под музыку. Раскадровка привязывается к биту трека.', needsAudio: true  },
+  { value: 'commercial',  label: 'Рекламный ролик',  desc: 'Короткий ролик 15–90 сек. Подобный workflow клипа.',        needsAudio: true  },
+  { value: 'documentary', label: 'Документальный',   desc: 'Документальный или образовательный фильм без жёсткой музыки.', needsAudio: false }
+];
+
+// ── ClipFrame: размещённый кадр раскадровки на аудио-таймлайне ────────────────
+// duration кадра наследуется из StoryboardFrame.duration на сцене:
+// frame(sceneId, frameIdx).duration → длится с time до time + duration
+export interface ClipFrame {
+  id: string;          // уникальный id размещения (clip_xxx)
+  sceneId: string;     // id сцены, из которой взят кадр
+  frameIdx: number;    // индекс кадра в раскадровке сцены
+  time: number;        // момент на аудио-таймлайне в секундах (дробное допустимо)
 }
 
 export type ProjectRole =
