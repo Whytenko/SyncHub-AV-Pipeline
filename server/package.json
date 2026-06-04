@@ -10,7 +10,7 @@
     "seed": "node scripts/seed.js",
     "db:setup": "npm run migrate && npm run seed",
     "lint": "node --check index.js",
-    "test": "node --test ./test/**/*.test.js"
+    "test": "node --test test/*.test.js"
   },
   "keywords": [
     "av",
