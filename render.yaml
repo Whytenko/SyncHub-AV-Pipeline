@@ -1,0 +1,64 @@
+# SyncHub AV Pipeline — Render Blueprint
+# One-click infra: managed Postgres + Express API + static React client.
+# Docs: https://render.com/docs/blueprint-spec
+#
+# After first deploy, set the two cross-referencing URLs (sync:false):
+#   synchub-api  → ALLOWED_ORIGINS = https://<your synchub-web URL>
+#   synchub-web  → VITE_API_URL    = https://<your synchub-api URL>
+
+databases:
+  - name: synchub-db
+    databaseName: synchub
+    plan: free
+
+services:
+  # ─── API (Express) ──────────────────────────────────────────────────────────
+  - type: web
+    name: synchub-api
+    runtime: node
+    rootDir: server
+    plan: free
+    buildCommand: npm ci
+    startCommand: node index.js
+    preDeployCommand: npm run migrate   # idempotent (ADD COLUMN IF NOT EXISTS)
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: synchub-db
+          property: connectionString
+      - key: DATABASE_SSL
+        value: "true"
+      - key: ALLOWED_ORIGINS
+        sync: false               # set to the synchub-web URL after first deploy
+      - key: UPLOAD_MAX_MB
+        value: "500"
+
+    # Persistent uploads (media/docs/scripts). Without this, the disk is ephemeral
+    # and uploaded files are lost on every redeploy. A Render disk requires a paid
+    # instance (plan: starter+) — uncomment both blocks to enable.
+    # Free-tier alternative for images: set the S3_* env vars (see .env.example),
+    # which already cover covers/frames/shots/refs via the storage layer.
+    #
+    # plan: starter
+    # disk:
+    #   name: synchub-uploads
+    #   mountPath: /opt/render/project/src/server/public/uploads
+    #   sizeGB: 5
+
+  # ─── Web (Vite static SPA) ──────────────────────────────────────────────────
+  - type: web
+    name: synchub-web
+    runtime: static
+    rootDir: client
+    buildCommand: npm ci && npm run build
+    staticPublishPath: dist
+    envVars:
+      - key: VITE_API_URL
+        sync: false               # set to the synchub-api URL after first deploy
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html

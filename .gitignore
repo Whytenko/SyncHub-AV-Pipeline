@@ -47,3 +47,8 @@ VKR_*.md
 
 # OS / IDE local cache
 .qodo/
+
+# Diploma figures / reference images / test stills (not app code)
+изображения/
+тестовый/
+schemas/

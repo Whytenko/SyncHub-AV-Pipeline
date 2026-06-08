@@ -8,6 +8,7 @@ import { useI18n } from '../../context/I18nContext'
 import type { ProjectSummary } from '../../types'
 import Modal from '../../components/Modal'
 import { PROJECT_KINDS, type ProjectKind } from '../../types'
+import { resolveAssetUrl } from '../../api/assets'
 
 import { Users, Film, ClipboardList, CalendarClock, FolderPlus } from 'lucide-react'
 
@@ -209,6 +210,19 @@ const Dashboard: React.FC = () => {
                 className={cardClass}
                 onClick={() => navigate(`/project/${project.id}`)}
               >
+                <div className="project-card-head">
+                {project.coverUrl
+                  ? (
+                    <div
+                      className="project-card-cover"
+                      style={{ backgroundImage: `url(${resolveAssetUrl(project.coverUrl)})` }}
+                    />
+                  )
+                  : (
+                    <div className="project-card-cover project-card-cover--empty">
+                      {project.name.charAt(0).toUpperCase()}
+                    </div>
+                  )}
                 <div className="project-header">
                   <h3 className="project-name">{project.name}</h3>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
@@ -222,6 +236,7 @@ const Dashboard: React.FC = () => {
                       <span className="deadline-badge deadline-badge--urgent">&#9888; Горит</span>
                     )}
                   </div>
+                </div>
                 </div>
 
                 <div className="project-stats">

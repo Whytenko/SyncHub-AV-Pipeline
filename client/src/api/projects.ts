@@ -1,4 +1,4 @@
-import { apiRequest } from './client';
+import { apiRequest, ApiError } from './client';
 import type { Project, ProjectSummary } from '../types';
 
 const LOCAL_KEY = 'synchub_projects';
@@ -91,13 +91,36 @@ export const projectsApi = {
     }
   },
 
+  async uploadCover(id: string, file: Blob) {
+    const form = new FormData();
+    form.append('file', file, 'cover.jpg');
+    return apiRequest<{ success: boolean; coverUrl: string; project: Project }>(
+      `/api/projects/${id}/cover`,
+      { method: 'POST', body: form }
+    );
+  },
+
+  // Upload a compressed image (storyboard frame, editor shot, look reference) and
+  // get back a URL to store in the relevant field — instead of a base64 data URL.
+  async uploadImage(id: string, file: Blob) {
+    const form = new FormData();
+    form.append('file', file, 'image.jpg');
+    return apiRequest<{ success: boolean; url: string }>(
+      `/api/projects/${id}/image`,
+      { method: 'POST', body: form }
+    );
+  },
+
   async update(id: string, payload: Partial<Project>) {
     try {
       return await apiRequest<{ success: boolean; project: Project }>(`/api/projects/${id}`, {
         method: 'PATCH',
         body: JSON.stringify(payload)
       });
-    } catch {
+    } catch (err) {
+      // Server responded with an error status (409 conflict, 403, 400…) — surface
+      // it. Only a genuine network failure falls back to an offline local save.
+      if (err instanceof ApiError) throw err;
       const projects = readLocalProjects();
       const index = projects.findIndex((item) => item.id === id);
       if (index === -1) {

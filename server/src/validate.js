@@ -553,6 +553,19 @@ const validateProjectPatch = (payload) => {
     patch.projectKind = payload.projectKind;
   }
 
+  // ── Cover image (data URL of a compressed image, or an /uploads path) ────────
+  if (hasOwn(payload, 'coverUrl')) {
+    if (payload.coverUrl === null || payload.coverUrl === '') {
+      patch.coverUrl = '';
+    } else if (typeof payload.coverUrl !== 'string') {
+      return { error: 'coverUrl должно быть строкой' };
+    } else if (payload.coverUrl.length > 3_000_000) {
+      return { error: 'Обложка слишком большая' };
+    } else {
+      patch.coverUrl = payload.coverUrl;
+    }
+  }
+
   // ── Audio track ID (foreign reference into mediaFiles) ───────────────────────
   if (hasOwn(payload, 'audioTrackId')) {
     if (payload.audioTrackId === null) {

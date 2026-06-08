@@ -6,6 +6,7 @@ import TabTasksPanel from '../components/TabTasksPanel';
 import ReadOnlyBanner from '../components/ReadOnlyBanner';
 import FramePairViewer from '../components/FramePairViewer';
 import { resolveAssetUrl } from '../../../api/assets';
+import { projectsApi } from '../../../api/projects';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
 const tabColorEdit = '#FF391A';
@@ -104,7 +105,7 @@ const EditTab: React.FC<EditTabProps> = ({
   onUploadDocument, onDeleteDocument,
   canEdit, userRole, markers, onDeleteMarker, onMarkerSeek, onAddMarker,
   deptTasks, onTaskStatusChange,
-  scenes, onSceneStatusChange, onSaveScenes
+  scenes, onSceneStatusChange, onSaveScenes, projectId
 }) => {
   const mediaInputRef = useRef<HTMLInputElement>(null);
   const docInputRef = useRef<HTMLInputElement>(null);
@@ -124,17 +125,19 @@ const EditTab: React.FC<EditTabProps> = ({
     if (!file || !target) return;
     try {
       const dataUrl = await compressEditorShot(file);
+      const blob = await (await fetch(dataUrl)).blob();
+      const { url } = await projectsApi.uploadImage(projectId, blob);
       const updated = scenes.map(s => {
         if (s.id !== target.sceneId) return s;
         const count = s.storyboardFrameCount || DEFAULT_FRAME_COUNT;
         const frames = Array.from({ length: count }, (_, i) => (s.frames ?? [])[i] ?? { ...EMPTY_FRAME });
-        frames[target.frameIdx] = { ...frames[target.frameIdx], editorShotUrl: dataUrl };
+        frames[target.frameIdx] = { ...frames[target.frameIdx], editorShotUrl: url };
         return { ...s, frames };
       });
       await onSaveScenes(updated);
     } catch { /* ignore */ }
     setShotTarget(null);
-  }, [scenes, shotTarget, onSaveScenes]);
+  }, [scenes, shotTarget, onSaveScenes, projectId]);
 
   const triggerShotUpload = (sceneId: string, frameIdx: number) => {
     setShotTarget({ sceneId, frameIdx });

@@ -1,10 +1,168 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Play, Pause, Plus, X, Music } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { Play, Pause, Plus, X, Music, MonitorPlay } from 'lucide-react';
 import type { Scene, ClipFrame, MediaFile } from '../../../types';
 import { resolveAssetUrl } from '../../../api/assets';
 
 const DEFAULT_FRAME_DURATION = 2; // sec when frame.duration not set
 const PIXELS_PER_SEC = 24;
+
+// ── A single slide in the playback show ──
+interface Slide {
+  time: number;
+  imageUrl?: string;
+  sceneNumber: number;
+  frameIdx: number;
+  shotType?: string;
+  description?: string;
+}
+
+const fmtShow = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+
+/**
+ * Fullscreen slideshow: plays the audio track and switches the displayed
+ * storyboard frame to whichever clip-frame's start time has been reached.
+ */
+const MusicSlideshow: React.FC<{
+  t: (key: string) => string;
+  audioSrc: string;
+  trackName: string;
+  slides: Slide[];
+  onClose: () => void;
+}> = ({ t, audioSrc, trackName, slides, onClose }) => {
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [isPlaying, setIsPlaying] = useState(false);
+
+  // Active slide = last slide whose start time has been reached
+  const activeIdx = useMemo(() => {
+    let idx = -1;
+    for (let i = 0; i < slides.length; i++) {
+      if (slides[i].time <= currentTime + 0.001) idx = i; else break;
+    }
+    return idx;
+  }, [slides, currentTime]);
+  const active = activeIdx >= 0 ? slides[activeIdx] : null;
+
+  useEffect(() => {
+    const el = audioRef.current;
+    if (!el) return;
+    const onTime = () => setCurrentTime(el.currentTime);
+    const onMeta = () => setDuration(el.duration || 0);
+    const onPlay = () => setIsPlaying(true);
+    const onPause = () => setIsPlaying(false);
+    el.addEventListener('timeupdate', onTime);
+    el.addEventListener('loadedmetadata', onMeta);
+    el.addEventListener('play', onPlay);
+    el.addEventListener('pause', onPause);
+    // autoplay from the start
+    el.currentTime = 0;
+    el.play().catch(() => {});
+    return () => {
+      el.removeEventListener('timeupdate', onTime);
+      el.removeEventListener('loadedmetadata', onMeta);
+      el.removeEventListener('play', onPlay);
+      el.removeEventListener('pause', onPause);
+    };
+  }, [audioSrc]);
+
+  const toggle = () => {
+    const el = audioRef.current;
+    if (!el) return;
+    if (el.paused) el.play().catch(() => {}); else el.pause();
+  };
+
+  const seek = (e: React.MouseEvent<HTMLDivElement>) => {
+    const el = audioRef.current;
+    if (!el || !duration) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    el.currentTime = Math.max(0, Math.min(duration, ((e.clientX - rect.left) / rect.width) * duration));
+  };
+
+  // Keyboard: Space toggles, Esc closes + lock body scroll while open
+  useEffect(() => {
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const onKey = (e: KeyboardEvent) => {
+      if (e.code === 'Space') { e.preventDefault(); toggle(); }
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      window.removeEventListener('keydown', onKey);
+    };
+  }, [onClose]);
+
+  const progress = duration ? (currentTime / duration) * 100 : 0;
+
+  return createPortal(
+    <div
+      className="music-show-overlay"
+      role="dialog"
+      aria-modal="true"
+      onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div className="music-show-modal" onMouseDown={(e) => e.stopPropagation()}>
+        <audio ref={audioRef} src={audioSrc} preload="auto" />
+
+        <div className="music-show-header">
+          <h3>
+            <MonitorPlay size={15} style={{ color: '#06b6d4' }} />
+            {t('Раскадровка под музыку')}
+            <span className="music-show-header-track">— {trackName}</span>
+          </h3>
+          <button className="modal-close" onClick={onClose} aria-label={t('Закрыть')}>×</button>
+        </div>
+
+        <div className="music-show-stage" onClick={toggle}>
+          {active ? (
+            <div className="music-show-frame" key={activeIdx}>
+              {active.imageUrl
+                ? <img src={resolveAssetUrl(active.imageUrl)} alt="" className="music-show-img" />
+                : <div className="music-show-img music-show-img--empty"><Music size={56} opacity={0.25} /></div>
+              }
+              <div className="music-show-caption">
+                <span className="music-show-caption-num">Сц.{active.sceneNumber} · кадр {active.frameIdx + 1}</span>
+                {active.shotType && <span className="music-show-caption-type">{active.shotType}</span>}
+                {active.description && <span className="music-show-caption-desc">{active.description}</span>}
+              </div>
+            </div>
+          ) : (
+            <div className="music-show-intro">
+              <MonitorPlay size={48} opacity={0.4} />
+              <div className="music-show-intro-title">{trackName}</div>
+              <div className="music-show-intro-sub">{t('Нажмите, чтобы воспроизвести')}</div>
+            </div>
+          )}
+        </div>
+
+        <div className="music-show-controls">
+          <button className="music-show-play" onClick={toggle}>
+            {isPlaying ? <Pause size={16} /> : <Play size={16} />}
+          </button>
+          <span className="music-show-time">{fmtShow(currentTime)}</span>
+          <div className="music-show-progress" onClick={seek}>
+            <div className="music-show-progress-fill" style={{ width: `${progress}%` }} />
+            {slides.map((sl, i) => (
+              <span
+                key={i}
+                className="music-show-progress-marker"
+                style={{ left: `${duration ? (sl.time / duration) * 100 : 0}%` }}
+              />
+            ))}
+          </div>
+          <span className="music-show-time">{fmtShow(duration)}</span>
+          <span className="music-show-counter">
+            {activeIdx >= 0 ? activeIdx + 1 : 0} / {slides.length}
+          </span>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+};
 
 interface MusicClipTimelineProps {
   t: (key: string) => string;
@@ -27,6 +185,7 @@ const MusicClipTimeline: React.FC<MusicClipTimelineProps> = ({
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [picker, setPicker] = useState<{ open: boolean; insertAt: number } | null>(null);
+  const [showShow, setShowShow] = useState(false);
 
   // Audio URL: prefer mediaFile.url, prepend apiBase if relative
   const audioSrc = useMemo(() => {
@@ -87,6 +246,24 @@ const MusicClipTimeline: React.FC<MusicClipTimelineProps> = ({
     () => [...timeline].sort((a, b) => a.time - b.time),
     [timeline]
   );
+
+  // Slides for the fullscreen show — resolved frames in playback order
+  const showSlides = useMemo<Slide[]>(() => {
+    return sortedTimeline
+      .map(cf => {
+        const resolved = resolveFrame(cf);
+        if (!resolved) return null;
+        return {
+          time: cf.time,
+          imageUrl: resolved.frame.imageUrl,
+          sceneNumber: resolved.scene.number,
+          frameIdx: cf.frameIdx,
+          shotType: resolved.frame.shotType,
+          description: resolved.frame.description,
+        } as Slide;
+      })
+      .filter((s): s is Slide => s !== null);
+  }, [sortedTimeline, scenes]);
 
   const handleAddFrameHere = () => {
     if (!canEdit) return;
@@ -158,6 +335,14 @@ const MusicClipTimeline: React.FC<MusicClipTimelineProps> = ({
         </div>
         <div className="music-clip-head-stats">
           <span className="music-clip-counter">{timeline.length} {t('кадров')}</span>
+          <button
+            className="music-clip-show-btn"
+            onClick={() => setShowShow(true)}
+            disabled={showSlides.length === 0 || !audioSrc}
+            title={t('Слайд-шоу раскадровки под музыку')}
+          >
+            <MonitorPlay size={13} /> {t('Показать')}
+          </button>
           {canEdit && (
             <button className="music-clip-add-btn" onClick={handleAddFrameHere} disabled={!duration}>
               <Plus size={12} /> {t('Добавить кадр на')} {fmtTime(currentTime)}
@@ -279,6 +464,17 @@ const MusicClipTimeline: React.FC<MusicClipTimelineProps> = ({
             )}
           </div>
         </div>
+      )}
+
+      {/* Fullscreen slideshow under music */}
+      {showShow && (
+        <MusicSlideshow
+          t={t}
+          audioSrc={audioSrc}
+          trackName={audioFile.name}
+          slides={showSlides}
+          onClose={() => setShowShow(false)}
+        />
       )}
     </div>
   );

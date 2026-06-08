@@ -4,6 +4,7 @@ import Header from '../Header/Header';
 import './Project.css';
 import { projectsApi } from '../../api/projects';
 import { usersApi } from '../../api/users';
+import { resolveAssetUrl } from '../../api/assets';
 import { useToast } from '../../context/ToastContext';
 import { useI18n } from '../../context/I18nContext';
 import { useAuth } from '../../context/AuthContext';
@@ -55,6 +56,7 @@ import {
   Play, Pause, Music, MapPin, MapPinPlus, X,
   ArrowLeft, Clapperboard, Sparkles,
   ScrollText, Shirt, Zap, ClipboardList, Clock, CalendarDays,
+  Upload, Trash2, Image as ImageIcon,
   type LucideIcon
 } from 'lucide-react';
 
@@ -250,8 +252,8 @@ const ProjectPage: React.FC = () => {
     relatedMarkersCount: number;
   } | null>(null);
   const [showProjectSettings, setShowProjectSettings] = useState(false);
-  const [projectDraft, setProjectDraft] = useState<{ name: string; description: string; deadline: string; projectKind: import('../../types').ProjectKind; audioTrackId: number | null }>({
-    name: '', description: '', deadline: '', projectKind: 'short_film', audioTrackId: null
+  const [projectDraft, setProjectDraft] = useState<{ name: string; description: string; deadline: string; coverUrl: string; projectKind: import('../../types').ProjectKind; audioTrackId: number | null }>({
+    name: '', description: '', deadline: '', coverUrl: '', projectKind: 'short_film', audioTrackId: null
   });
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
   const [savedAt, setSavedAt] = useState<Date | null>(null);
@@ -361,6 +363,7 @@ const ProjectPage: React.FC = () => {
           name: normalizedProject.name || '',
           description: normalizedProject.description || '',
           deadline: normalizedProject.deadline || '',
+          coverUrl: normalizedProject.coverUrl || '',
           projectKind: (normalizedProject.projectKind as any) || 'short_film',
           audioTrackId: normalizedProject.audioTrackId ?? null
         });
@@ -396,6 +399,7 @@ const ProjectPage: React.FC = () => {
         name: project.name || '',
         description: project.description || '',
         deadline: project.deadline || '',
+        coverUrl: project.coverUrl || '',
         projectKind: (project.projectKind as any) || 'short_film',
         audioTrackId: project.audioTrackId ?? null
       });
@@ -806,10 +810,12 @@ const ProjectPage: React.FC = () => {
     input.type = 'file'; input.accept = 'image/*';
     input.onchange = async (e) => {
       const file = (e.target as HTMLInputElement).files?.[0];
-      if (!file) return;
+      if (!file || !project) return;
       try {
-        const img = await compressImage(file, 480, 320);
-        const updatedLooks = makeupLooks.map(l => l.id === lookId ? { ...l, referenceImage: img } : l);
+        const dataUrl = await compressImage(file, 480, 320);
+        const blob = await (await fetch(dataUrl)).blob();
+        const { url } = await projectsApi.uploadImage(project.id, blob);
+        const updatedLooks = makeupLooks.map(l => l.id === lookId ? { ...l, referenceImage: url } : l);
         await saveMakeupLooks(updatedLooks);
       } catch { showToast(t('Ошибка загрузки изображения'), 'error'); }
     };
@@ -872,10 +878,12 @@ const ProjectPage: React.FC = () => {
     input.type = 'file'; input.accept = 'image/*';
     input.onchange = async (e) => {
       const file = (e.target as HTMLInputElement).files?.[0];
-      if (!file) return;
+      if (!file || !project) return;
       try {
-        const img = await compressImage(file, 480, 320);
-        const updatedOutfits = costumeOutfits.map(o => o.id === outfitId ? { ...o, referenceImage: img } : o);
+        const dataUrl = await compressImage(file, 480, 320);
+        const blob = await (await fetch(dataUrl)).blob();
+        const { url } = await projectsApi.uploadImage(project.id, blob);
+        const updatedOutfits = costumeOutfits.map(o => o.id === outfitId ? { ...o, referenceImage: url } : o);
         await saveCostumeOutfits(updatedOutfits);
       } catch { showToast(t('Ошибка загрузки изображения'), 'error'); }
     };
@@ -1208,13 +1216,17 @@ const ProjectPage: React.FC = () => {
       showToast(t('Название проекта обязательно'), 'error');
       return;
     }
-    await saveProject({
+    const result = await saveProject({
       name: projectDraft.name.trim(),
       description: projectDraft.description.trim(),
       deadline: projectDraft.deadline,
+      coverUrl: projectDraft.coverUrl,
       projectKind: projectDraft.projectKind,
-      audioTrackId: projectDraft.audioTrackId === null ? undefined : projectDraft.audioTrackId
+      audioTrackId: projectDraft.audioTrackId === null ? undefined : projectDraft.audioTrackId,
+      // Anti-clobber: reject the save if another member changed the project meanwhile
+      baseUpdatedAt: project?.updatedAt
     } as Partial<Project>);
+    if (!result) return; // save failed (e.g. 409 conflict) — error already shown
     setShowProjectSettings(false);
     showToast(t('Настройки проекта сохранены'), 'success');
   };
@@ -2343,6 +2355,60 @@ const ProjectPage: React.FC = () => {
           value={projectDraft.deadline}
           onChange={(e) => setProjectDraft({ ...projectDraft, deadline: e.target.value })}
         />
+
+        {/* ── Cover image ── */}
+        <div className="form-label">{t('Обложка проекта')}</div>
+        <div className="project-cover-field">
+          <div
+            className="project-cover-preview"
+            style={projectDraft.coverUrl
+              ? { backgroundImage: `url(${resolveAssetUrl(projectDraft.coverUrl)})` }
+              : undefined}
+          >
+            {!projectDraft.coverUrl && (
+              <span className="project-cover-preview-empty">
+                <ImageIcon size={20} />
+                {t('Нет обложки')}
+              </span>
+            )}
+          </div>
+          <div className="project-cover-actions">
+            <label className="secondary-btn project-cover-upload">
+              <input
+                type="file"
+                accept="image/*"
+                style={{ display: 'none' }}
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  e.target.value = '';
+                  if (!file || !project) return;
+                  try {
+                    // Compress client-side, then upload as a file — stored on the
+                    // server (disk/S3), not as base64 in the DB.
+                    const dataUrl = await compressImage(file, 1024, 1024);
+                    const blob = await (await fetch(dataUrl)).blob();
+                    const resp = await projectsApi.uploadCover(project.id, blob);
+                    setProjectDraft(d => ({ ...d, coverUrl: resp.coverUrl }));
+                    setProject(p => (p ? { ...p, coverUrl: resp.coverUrl } : p));
+                  } catch (err) {
+                    showToast(err instanceof Error ? err.message : t('Не удалось загрузить обложку'), 'error');
+                  }
+                }}
+              />
+              <Upload size={13} /> {projectDraft.coverUrl ? t('Заменить') : t('Загрузить')}
+            </label>
+            {projectDraft.coverUrl && (
+              <button
+                type="button"
+                className="secondary-btn project-cover-remove"
+                onClick={() => setProjectDraft(d => ({ ...d, coverUrl: '' }))}
+              >
+                <Trash2 size={13} /> {t('Убрать')}
+              </button>
+            )}
+          </div>
+          <div className="project-cover-hint">{t('Квадратная обложка 1:1. PNG или JPG.')}</div>
+        </div>
 
         {/* ── Project kind ── */}
         <div className="form-label">{t('Тип проекта')}</div>

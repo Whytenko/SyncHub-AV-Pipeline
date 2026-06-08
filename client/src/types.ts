@@ -305,6 +305,7 @@ export interface Project {
   ownerId: string;
   members: string[] | UserSummary[];
   deadline: string;
+  coverUrl?: string;
   timelineDuration: number;
   createdAt: string;
   updatedAt: string;
@@ -380,6 +381,7 @@ export interface ProjectSummary {
   name: string;
   description: string;
   deadline: string;
+  coverUrl?: string;
   createdAt: string;
   updatedAt: string;
   members: UserSummary[];

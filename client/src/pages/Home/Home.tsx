@@ -7,6 +7,7 @@ import type { ProjectSummary } from '../../types'
 import { useAuth } from '../../context/AuthContext'
 import { useToast } from '../../context/ToastContext'
 import { useI18n } from '../../context/I18nContext'
+import { resolveAssetUrl } from '../../api/assets'
 
 const Home: React.FC = () => {
   const navigate = useNavigate()
@@ -101,12 +102,22 @@ const Home: React.FC = () => {
                     className="recent-item"
                     onClick={() => navigate(`/project/${project.id}`)}
                   >
-                    <div className="recent-name">{project.name}</div>
-                    <div className="recent-meta">
-                      {t('{count} участников · {deadline}', {
-                        count: project.members.length,
-                        deadline: formatDeadline(project.deadline)
-                      })}
+                    <div
+                      className={`recent-thumb${project.coverUrl ? '' : ' recent-thumb--empty'}`}
+                      style={project.coverUrl
+                        ? { backgroundImage: `url(${resolveAssetUrl(project.coverUrl)})` }
+                        : undefined}
+                    >
+                      {!project.coverUrl && project.name.charAt(0).toUpperCase()}
+                    </div>
+                    <div className="recent-item-body">
+                      <div className="recent-name">{project.name}</div>
+                      <div className="recent-meta">
+                        {t('{count} участников · {deadline}', {
+                          count: project.members.length,
+                          deadline: formatDeadline(project.deadline)
+                        })}
+                      </div>
                     </div>
                   </button>
                 ))}

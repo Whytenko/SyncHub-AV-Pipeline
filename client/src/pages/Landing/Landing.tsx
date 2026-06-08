@@ -1,17 +1,16 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Check as CheckIcon, X as XIcon, Minus as MinusIcon } from 'lucide-react'
 import './Landing.css'
 import logo from '../assets/logo.svg'
 import { useAuth } from '../../context/AuthContext'
 
 const ROLES = [
-  { color: '#9C27B0', label: 'Сценарист', desc: 'Загрузите PDF или Word-сценарий, заполните параметры съёмки: актёры, локации, реквизит, спецэффекты. Данные автоматически передаются в другие отделы.', num: '01' },
-  { color: '#2196F3', label: 'Режиссёр', desc: 'Интерактивная раскадровка: строки — локации, столбцы — кадры. Прикрепляйте фото к каждой ячейке.', num: '02' },
-  { color: '#FF9800', label: 'Костюмер', desc: 'Анатомическая карта персонажа. Отмечайте каждый элемент костюма. Персонажи из сценария — автоматически.', num: '03' },
-  { color: '#E91E63', label: 'Визажист', desc: 'Детальная схема лица по зонам. Записывайте технику и материалы. Персонажи синхронизированы со сценарием.', num: '04' },
-  { color: '#FF391A', label: 'Монтажёр', desc: 'Таймлайн с маркерами. Точная синхронизация по секундам. Управляйте точками пересинхронизации.', num: '05' },
-  { color: '#06b6d4', label: 'Звукорежиссёр', desc: 'Отмечайте ключевые звуковые моменты на таймлайне. Комментарии и синхронизация с видеорядом.', num: '06' },
+  { color: '#9C27B0', label: 'Сценарист', desc: 'Загрузите сценарий PDF или Word, разбейте на сцены и заполните карту производства: актёрский состав, реквизит, эффекты, камера, риски. Данные расходятся по всем отделам.', num: '01' },
+  { color: '#2196F3', label: 'Режиссёр', desc: 'Раскадровка по сценам: кадры с типом плана, фото и длительностью. Покрытие, хронометраж и таймлайн считаются автоматически.', num: '02' },
+  { color: '#FF9800', label: 'Костюмер', desc: 'Образы костюмов с привязкой к сценам: гардероб со статусом и ценой, цветовая палитра и фото-референсы. Персонажи — из сценария.', num: '03' },
+  { color: '#E91E63', label: 'Визажист', desc: 'Образы грима по сценам: продукты по зонам лица, техника, время нанесения и заметки по коже. Фото-референсы и синхронизация со сценарием.', num: '04' },
+  { color: '#FF391A', label: 'Монтажёр', desc: 'Сверка монтажа с раскадровкой по сценам, медиатека финальных шотов и прогресс по каждой сцене. Синхронизация с режиссёрским таймлайном.', num: '05' },
+  { color: '#06b6d4', label: 'Звукорежиссёр', desc: 'Главный аудиотрек, звуковые метки на таймлайне и режимы «на площадке» / «пост-продакшн». Комментарии и синхронизация с видеорядом по сценам.', num: '06' },
 ]
 
 const TICKER_ITEMS = [
@@ -40,44 +39,93 @@ const USE_CASES = [
   { stat: '0', label: 'потерь данных', title: 'Корпоративное видео', desc: 'Три города, одна команда. Офлайн-режим — не помеха, все данные сохранены.', color: '#06b6d4' },
 ]
 
-const BENEFITS = [
-  { num: '01', title: 'Экономия времени', desc: 'Снижение времени на координацию на 70%. Всё в одном месте — ноль переписок.' },
-  { num: '02', title: 'Экономия бюджета', desc: 'Бесплатный для команд до 5 человек. Дешевле любого аналога на рынке.' },
-  { num: '03', title: 'Реальное время', desc: 'Изменения синхронизируются мгновенно. Работайте асинхронно без потерь.' },
-  { num: '04', title: 'Любая точка мира', desc: 'Распределённые команды. Часовые пояса и расстояния — не помеха.' },
-  { num: '05', title: 'Офлайн режим', desc: 'Данные кешируются локально. Синхронизация автоматически при восстановлении.' },
-  { num: '06', title: 'Безопасность', desc: 'Шифрование, история изменений, защищённые серверы.' },
-]
-
-type CmpVal = boolean | 'part'
-const COMPARISON: { feature: string; synchub: CmpVal; cerebro: CmpVal; celtx: CmpVal; studio: CmpVal }[] = [
-  { feature: 'Русский интерфейс', synchub: true, cerebro: true, celtx: false, studio: false },
-  { feature: 'Бесплатный план', synchub: true, cerebro: false, celtx: 'part', studio: false },
-  { feature: 'Костюмер и визажист', synchub: true, cerebro: false, celtx: false, studio: false },
-  { feature: 'Офлайн-режим', synchub: true, cerebro: false, celtx: false, studio: false },
-  { feature: 'Тёмная тема', synchub: true, cerebro: true, celtx: false, studio: false },
-  { feature: 'Не нужна установка', synchub: true, cerebro: false, celtx: 'part', studio: true },
-]
-
-const TESTIMONIALS = [
-  { text: 'Работал с 5 инструментами одновременно. SyncHub объединил всё. Время на синхронизацию упало в 10 раз.', author: 'Иван Петров', role: 'Режиссёр-постановщик' },
-  { text: 'Команда в 3 городах. Офлайн-режим спасал нас несколько раз. Просто работает — и это главное.', author: 'Мария Сидорова', role: 'Монтажёр' },
-  { text: 'Студия перешла на SyncHub для всех проектов. Себестоимость обработки упала на 40%.', author: 'Алексей Новиков', role: 'Продюсер' },
-]
-
 const FAQS = [
   { q: 'Это платно?', a: 'Базовый доступ полностью бесплатный. В планах — профессиональный план для студий с расширенными функциями совместной работы.' },
   { q: 'Нужно ли что-то устанавливать?', a: 'Нет. SyncHub работает полностью в браузере — Chrome, Firefox, Safari, Edge. Никаких плагинов и дистрибутивов.' },
   { q: 'Работает ли без интернета?', a: 'Да. При потере соединения данные кешируются локально и синхронизируются автоматически при восстановлении связи.' },
-  { q: 'Сколько участников может быть в проекте?', a: 'Без ограничений. Каждый участник регистрирует отдельный аккаунт и получает доступ к своим разделам.' },
-  { q: 'Поддерживаются ли другие языки?', a: 'Да: русский, английский, китайский. Переключить язык можно в любой момент без перезагрузки страницы.' },
 ]
 
-function Check({ ok }: { ok: boolean | 'part' }) {
-  if (ok === true) return <span className="cmp-yes"><CheckIcon size={14} /></span>
-  if (ok === 'part') return <span className="cmp-part"><MinusIcon size={14} /></span>
-  return <span className="cmp-no"><XIcon size={14} /></span>
-}
+// Frames shown in the hero interface mockup — mirrors the real director storyboard.
+const MOCK_FRAMES = [
+  { n: 1, type: 'ДЛ', dur: '3с', rc: '#2196F3', filled: true },
+  { n: 2, type: 'СП', dur: '5с', rc: '#9C27B0', filled: true },
+  { n: 3, type: 'КП', dur: '2с', rc: '#E91E63', filled: true },
+  { n: 4, type: 'ДТЛ', dur: '4с', rc: '#FF391A', filled: false },
+]
+
+/** High-fidelity replica of the in-app director / storyboard screen. */
+const HeroMockup: React.FC = () => (
+  <div className="land-ui" role="img" aria-label="Интерфейс SyncHub — раскадровка режиссёра">
+    {/* window chrome */}
+    <div className="land-ui-bar">
+      <span className="land-ui-dot" style={{ background: '#ef4444' }} />
+      <span className="land-ui-dot" style={{ background: '#fbbf24' }} />
+      <span className="land-ui-dot" style={{ background: '#4ade80' }} />
+      <span className="land-ui-bar-title">SyncHub · «Хаски» — короткометражка</span>
+    </div>
+
+    {/* role tabs */}
+    <div className="land-ui-tabs">
+      {ROLES.map((r, i) => (
+        <span
+          key={i}
+          className={`land-ui-tab${r.label === 'Режиссёр' ? ' land-ui-tab--active' : ''}`}
+          style={{ '--rc': r.color } as React.CSSProperties}
+        >
+          {r.label === 'Сценарист' ? 'Сценарий'
+            : r.label === 'Монтажёр' ? 'Монтаж'
+            : r.label === 'Звукорежиссёр' ? 'Звук' : r.label}
+        </span>
+      ))}
+    </div>
+
+    <div className="land-ui-body">
+      {/* director stat row */}
+      <div className="land-ui-stats">
+        <div className="land-ui-stat"><b>6</b><span>Сцен</span></div>
+        <div className="land-ui-stat"><b>21<i>/24</i></b><span>Кадров</span></div>
+        <div className="land-ui-stat"><b>88<i>%</i></b><span>Покрытие</span></div>
+        <div className="land-ui-stat"><b>4:12</b><span>Хронометраж</span></div>
+      </div>
+      <div className="land-ui-coverage"><div className="land-ui-coverage-fill" /></div>
+
+      {/* storyboard scene */}
+      <div className="land-ui-scene">
+        <div className="land-ui-scene-head">
+          <span className="land-ui-scene-dot" />
+          <span className="land-ui-scene-num">Сц. 1</span>
+          <span className="land-ui-scene-ie">ИНТ · ДЕНЬ</span>
+          <span className="land-ui-scene-title">Кухня, утро</span>
+          <span className="land-ui-scene-cov">4 / 4</span>
+        </div>
+        <div className="land-ui-frames">
+          {MOCK_FRAMES.map(f => (
+            <div key={f.n} className={`land-ui-frame${f.filled ? ' is-filled' : ''}`}>
+              <span className="land-ui-frame-num">{f.n}</span>
+              <div className="land-ui-frame-thumb" style={{ '--rc': f.rc } as React.CSSProperties} />
+              <span className="land-ui-frame-type">{f.type}</span>
+              <span className="land-ui-frame-dur">{f.dur}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* timeline */}
+      <div className="land-ui-timeline">
+        <span className="land-ui-tl-label">TIMELINE</span>
+        <div className="land-ui-tl-track">
+          <div className="land-ui-tl-progress" />
+          <span className="land-ui-tl-playhead" />
+          <span className="land-ui-tl-marker" style={{ left: '18%', background: '#9C27B0' }} />
+          <span className="land-ui-tl-marker" style={{ left: '34%', background: '#FF391A' }} />
+          <span className="land-ui-tl-marker" style={{ left: '52%', background: '#2196F3' }} />
+          <span className="land-ui-tl-marker" style={{ left: '71%', background: '#E91E63' }} />
+          <span className="land-ui-tl-marker" style={{ left: '86%', background: '#06b6d4' }} />
+        </div>
+      </div>
+    </div>
+  </div>
+)
 
 const CountUp: React.FC<{ target: string; active: boolean; delay?: number }> = ({ target, active, delay = 0 }) => {
   const isAnimatable = /^\d/.test(target) && parseInt(target) > 0
@@ -110,6 +158,7 @@ const Landing: React.FC = () => {
   const auth = useAuth()
   const [openFaq, setOpenFaq] = useState<number | null>(null)
   const [seconds, setSeconds] = useState(0)
+  const [scrollProgress, setScrollProgress] = useState(0)
   const statsRef = useRef<HTMLDivElement>(null)
   const [statsVisible, setStatsVisible] = useState(false)
 
@@ -125,6 +174,18 @@ const Landing: React.FC = () => {
   useEffect(() => {
     const id = setInterval(() => setSeconds(s => s + 1), 1000)
     return () => clearInterval(id)
+  }, [])
+
+  // Scroll progress bar
+  useEffect(() => {
+    const onScroll = () => {
+      const h = document.documentElement
+      const max = h.scrollHeight - h.clientHeight
+      setScrollProgress(max > 0 ? (h.scrollTop / max) * 100 : 0)
+    }
+    onScroll()
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
   }, [])
 
   useEffect(() => {
@@ -153,6 +214,12 @@ const Landing: React.FC = () => {
 
   return (
     <div className="landing">
+
+      {/* scroll progress */}
+      <div className="land-scroll-progress" style={{ transform: `scaleX(${scrollProgress / 100})` }} aria-hidden="true" />
+
+      {/* ambient aurora background */}
+      <div className="land-aurora" aria-hidden="true" />
 
       {/* ── NAV ── */}
       <nav className="land-nav">
@@ -208,46 +275,7 @@ const Landing: React.FC = () => {
               ))}
             </div>
             <div className="land-hero-mockup-frame">
-              <svg viewBox="0 0 440 240" xmlns="http://www.w3.org/2000/svg" className="land-mockup-svg">
-                <rect width="440" height="240" rx="0" fill="#080808"/>
-                <rect width="440" height="28" fill="#0f0f0f"/>
-                <circle cx="16" cy="14" r="4" fill="#ef4444" opacity="0.6"/>
-                <circle cx="28" cy="14" r="4" fill="#fbbf24" opacity="0.6"/>
-                <circle cx="40" cy="14" r="4" fill="#4ade80" opacity="0.6"/>
-                <text x="220" y="17" textAnchor="middle" fill="rgba(255,255,255,0.2)" fontSize="8" fontFamily="monospace">SyncHub · Дипломный проект 2026</text>
-                <rect x="0" y="28" width="440" height="22" fill="#0a0a0a"/>
-                <rect x="6" y="34" width="52" height="12" rx="6" fill="#9C27B0"/>
-                <text x="32" y="43" textAnchor="middle" fill="white" fontSize="7" fontFamily="system-ui">Сценарий</text>
-                <rect x="64" y="34" width="52" height="12" rx="6" fill="rgba(33,150,243,0.15)" stroke="rgba(33,150,243,0.4)" strokeWidth="0.5"/>
-                <text x="90" y="43" textAnchor="middle" fill="rgba(33,150,243,0.8)" fontSize="7" fontFamily="system-ui">Режиссёр</text>
-                <rect x="122" y="34" width="52" height="12" rx="6" fill="rgba(255,152,0,0.15)" stroke="rgba(255,152,0,0.4)" strokeWidth="0.5"/>
-                <text x="148" y="43" textAnchor="middle" fill="rgba(255,152,0,0.8)" fontSize="7" fontFamily="system-ui">Костюмер</text>
-                <rect x="180" y="34" width="52" height="12" rx="6" fill="rgba(233,30,99,0.15)" stroke="rgba(233,30,99,0.4)" strokeWidth="0.5"/>
-                <text x="206" y="43" textAnchor="middle" fill="rgba(233,30,99,0.8)" fontSize="7" fontFamily="system-ui">Визажист</text>
-                <rect x="238" y="34" width="52" height="12" rx="6" fill="rgba(255,57,26,0.15)" stroke="rgba(255,57,26,0.4)" strokeWidth="0.5"/>
-                <text x="264" y="43" textAnchor="middle" fill="rgba(255,57,26,0.8)" fontSize="7" fontFamily="system-ui">Монтаж</text>
-                <rect x="296" y="34" width="52" height="12" rx="6" fill="rgba(6,182,212,0.15)" stroke="rgba(6,182,212,0.4)" strokeWidth="0.5"/>
-                <text x="322" y="43" textAnchor="middle" fill="rgba(6,182,212,0.8)" fontSize="7" fontFamily="system-ui">Звук</text>
-                <rect x="0" y="50" width="440" height="190" fill="#060606"/>
-                <rect x="8" y="58" width="424" height="130" rx="4" fill="rgba(255,255,255,0.015)" stroke="rgba(255,255,255,0.05)" strokeWidth="0.5"/>
-                <text x="18" y="70" fill="rgba(255,255,255,0.15)" fontSize="7" fontFamily="monospace">РАСКАДРОВКА · 3 ЛОКАЦИИ · 4 КАДРА</text>
-                <line x1="112" y1="58" x2="112" y2="188" stroke="rgba(255,255,255,0.04)" strokeWidth="0.5"/>
-                <line x1="216" y1="58" x2="216" y2="188" stroke="rgba(255,255,255,0.04)" strokeWidth="0.5"/>
-                <line x1="320" y1="58" x2="320" y2="188" stroke="rgba(255,255,255,0.04)" strokeWidth="0.5"/>
-                <line x1="8" y1="108" x2="432" y2="108" stroke="rgba(255,255,255,0.04)" strokeWidth="0.5"/>
-                <line x1="8" y1="148" x2="432" y2="148" stroke="rgba(255,255,255,0.04)" strokeWidth="0.5"/>
-                <rect x="9" y="59" width="102" height="48" rx="3" fill="rgba(33,150,243,0.08)" stroke="rgba(33,150,243,0.25)" strokeWidth="0.5"/>
-                <rect x="217" y="109" width="102" height="38" rx="3" fill="rgba(255,152,0,0.08)" stroke="rgba(255,152,0,0.2)" strokeWidth="0.5"/>
-                <rect x="321" y="59" width="102" height="48" rx="3" fill="rgba(233,30,99,0.08)" stroke="rgba(233,30,99,0.2)" strokeWidth="0.5"/>
-                <rect x="8" y="198" width="424" height="34" rx="4" fill="rgba(255,255,255,0.015)" stroke="rgba(255,255,255,0.05)" strokeWidth="0.5"/>
-                <text x="18" y="208" fill="rgba(255,255,255,0.12)" fontSize="6" fontFamily="monospace">TIMELINE</text>
-                <rect x="16" y="214" width="408" height="1.5" rx="1" fill="rgba(255,255,255,0.05)"/>
-                <rect x="16" y="214" width="200" height="1.5" rx="1" fill="rgba(255,255,255,0.18)"/>
-                <circle cx="80" cy="214" r="4" fill="#9C27B0" opacity="0.85"/>
-                <circle cx="150" cy="214" r="4" fill="#FF391A" opacity="0.85"/>
-                <circle cx="216" cy="214" r="4" fill="#2196F3" opacity="0.85"/>
-                <circle cx="290" cy="214" r="4" fill="#E91E63" opacity="0.85"/>
-              </svg>
+              <HeroMockup />
             </div>
           </div>
         </div>
@@ -281,7 +309,7 @@ const Landing: React.FC = () => {
               <div
                 className={`land-role-card${i === 0 ? ' land-role-card--hero' : ''}${i === ROLES.length - 1 ? ' land-role-card--full' : ''}`}
                 key={i}
-                style={{ '--rc': r.color } as React.CSSProperties}
+                style={{ '--rc': r.color, '--stagger': `${i * 70}ms` } as React.CSSProperties}
               >
                 <div className="land-role-card-accent" />
                 <div className="land-role-card-num">{r.num}</div>
@@ -349,7 +377,7 @@ const Landing: React.FC = () => {
           <h2 className="land-section-title anim">Как SyncHub помогает командам</h2>
           <div className="land-cases-grid anim">
             {USE_CASES.map((uc, i) => (
-              <div className="land-case-card" key={i} style={{ '--uc': uc.color } as React.CSSProperties}>
+              <div className="land-case-card" key={i} style={{ '--uc': uc.color, '--stagger': `${i * 90}ms` } as React.CSSProperties}>
                 <div className="land-case-stat-block">
                   <span className="land-case-stat-value">{uc.stat}</span>
                   <span className="land-case-stat-label">{uc.label}</span>
@@ -362,94 +390,11 @@ const Landing: React.FC = () => {
         </div>
       </section>
 
-      {/* ── 04 BENEFITS ── */}
+      {/* ── 04 FAQ ── */}
       <section className="land-section">
         <div className="land-section-inner">
           <div className="land-eyebrow anim">
             <span className="land-eyebrow-num">04</span>
-            <span className="land-eyebrow-label">Преимущества</span>
-          </div>
-          <h2 className="land-section-title anim">Почему выбирают SyncHub</h2>
-          <div className="land-benefits-list anim">
-            {BENEFITS.map((b, i) => (
-              <div className="land-benefit-item" key={i}>
-                <span className="land-benefit-item-num">{b.num}</span>
-                <div>
-                  <h3 className="land-benefit-item-title">{b.title}</h3>
-                  <p className="land-benefit-item-desc">{b.desc}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── 05 COMPARISON ── */}
-      <section className="land-section land-section-dark">
-        <div className="land-section-inner">
-          <div className="land-eyebrow anim">
-            <span className="land-eyebrow-num">05</span>
-            <span className="land-eyebrow-label">Сравнение</span>
-          </div>
-          <h2 className="land-section-title anim">SyncHub vs альтернативы</h2>
-          <div className="land-cmp-wrap anim">
-            <table className="land-cmp-table">
-              <thead>
-                <tr>
-                  <th>Функция</th>
-                  <th className="cmp-synchub">SyncHub</th>
-                  <th>Cerebro</th>
-                  <th>Celtx</th>
-                  <th>StudioBinder</th>
-                </tr>
-              </thead>
-              <tbody>
-                {COMPARISON.map((row, i) => (
-                  <tr key={i}>
-                    <td>{row.feature}</td>
-                    <td className="cmp-synchub"><Check ok={row.synchub} /></td>
-                    <td><Check ok={row.cerebro} /></td>
-                    <td><Check ok={row.celtx} /></td>
-                    <td><Check ok={row.studio} /></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </section>
-
-      {/* ── 06 TESTIMONIALS ── */}
-      <section className="land-section">
-        <div className="land-section-inner">
-          <div className="land-eyebrow anim">
-            <span className="land-eyebrow-num">06</span>
-            <span className="land-eyebrow-label">Отзывы</span>
-          </div>
-          <h2 className="land-section-title anim">Что говорят пользователи</h2>
-          <div className="land-quotes-grid anim">
-            {TESTIMONIALS.map((t, i) => (
-              <div className="land-quote-card" key={i}>
-                <div className="land-quote-mark">"</div>
-                <p className="land-quote-text">{t.text}</p>
-                <div className="land-quote-footer">
-                  <div className="land-quote-avatar">{t.author.charAt(0)}</div>
-                  <div>
-                    <div className="land-quote-name">{t.author}</div>
-                    <div className="land-quote-role">{t.role}</div>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── 07 FAQ ── */}
-      <section className="land-section land-section-dark">
-        <div className="land-section-inner">
-          <div className="land-eyebrow anim">
-            <span className="land-eyebrow-num">07</span>
             <span className="land-eyebrow-label">FAQ</span>
           </div>
           <h2 className="land-section-title anim">Частые вопросы</h2>

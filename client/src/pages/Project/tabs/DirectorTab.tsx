@@ -8,6 +8,7 @@ import ReadOnlyBanner from '../components/ReadOnlyBanner';
 import Modal from '../../../components/Modal';
 import MusicClipTimeline from '../components/MusicClipTimeline';
 import { resolveAssetUrl } from '../../../api/assets';
+import { projectsApi } from '../../../api/projects';
 
 const SHOT_TYPES = [
   { code: 'ДЛ',  label: 'Дальний план' },
@@ -161,7 +162,9 @@ const DirectorTab: React.FC<DirectorTabProps> = ({
     if (!file) return;
     try {
       const dataUrl = await compressImage(file);
-      setEditorDraft(prev => ({ ...prev, imageUrl: dataUrl }));
+      const blob = await (await fetch(dataUrl)).blob();
+      const { url } = await projectsApi.uploadImage(projectId, blob);
+      setEditorDraft(prev => ({ ...prev, imageUrl: url }));
     } catch { /* ignore */ }
     e.target.value = '';
   };

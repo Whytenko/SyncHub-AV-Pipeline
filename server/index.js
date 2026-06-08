@@ -12,6 +12,7 @@ const crypto = require('crypto');
 const swaggerUi = require('swagger-ui-express');
 const swaggerDefinition = require('./src/swagger');
 const pool = require('./src/pool');
+const storage = require('./src/storage');
 const {
   nowISO, createId, hashPassword, verifyPassword,
   sanitizeUser, mapUser, mapProject, cleanExpiredSessions
@@ -24,6 +25,11 @@ const {
 
 const app = express();
 const PORT = process.env.PORT || 5001;
+
+// Behind a reverse proxy (Render/Railway/Fly/Nginx) the real client IP arrives in
+// X-Forwarded-For. Without this, express-rate-limit keys every request to the proxy
+// IP and either does nothing or throttles all users together.
+app.set('trust proxy', 1);
 
 const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || 'http://localhost:5173,http://localhost:3000').split(',');
 
@@ -107,6 +113,18 @@ const uploadDoc = multer({
   }
 });
 
+// ─── Multer for images (in-memory → storage abstraction) ────────────────────────
+// Used for covers, storyboard frames, editor shots and look references — all
+// small, client-compressed images. Stored as files, never base64 in the DB.
+const uploadImageMem = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 6 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    if (/^image\//.test(file.mimetype) && file.mimetype !== 'image/svg+xml') cb(null, true);
+    else cb(new Error('Файл должен быть изображением (PNG/JPG/WebP)'));
+  }
+});
+
 // ─── Security ──────────────────────────────────────────────────────────────────
 app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
 
@@ -173,6 +191,10 @@ app.use((req, res, next) => {
 
 // ─── Auth helpers ──────────────────────────────────────────────────────────────
 const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+
+// Verified against when a login nickname doesn't exist, so the response time
+// matches the "wrong password" path and doesn't leak whether an account exists.
+const DUMMY_PASSWORD_HASH = hashPassword('synchub-dummy-equalizer');
 
 const getTokenFromReq = (req) => {
   const header = req.headers.authorization || '';
@@ -325,10 +347,14 @@ app.post('/api/auth/login', async (req, res) => {
       'SELECT * FROM users WHERE LOWER(nickname) = LOWER($1) OR LOWER(email) = LOWER($1)',
       [nickname.trim()]
     );
-    if (!userRow) return res.status(401).json({ success: false, message: 'Пользователь не найден' });
+    // Uniform message + dummy verify on the missing-user path → no account enumeration
+    if (!userRow) {
+      verifyPassword(password, DUMMY_PASSWORD_HASH);
+      return res.status(401).json({ success: false, message: 'Неверный никнейм/email или пароль' });
+    }
 
     if (!verifyPassword(password, userRow.password_hash))
-      return res.status(401).json({ success: false, message: 'Неверный пароль' });
+      return res.status(401).json({ success: false, message: 'Неверный никнейм/email или пароль' });
 
     const token = createId('session');
     const expiresAt = new Date(Date.now() + SESSION_TTL_MS).toISOString();
@@ -462,6 +488,7 @@ app.get('/api/projects', authRequired, async (req, res) => {
       name: row.name,
       description: row.description,
       deadline: row.deadline,
+      coverUrl: row.cover_url || '',
       createdAt: row.created_at instanceof Date ? row.created_at.toISOString() : row.created_at,
       updatedAt: row.updated_at instanceof Date ? row.updated_at.toISOString() : row.updated_at,
       members: (row.members || []).map(uid => {
@@ -536,9 +563,50 @@ app.patch('/api/projects/:id', authRequired, async (req, res) => {
 
     const p = validation.patch;
 
+    // ── Optimistic concurrency guard (opt-in) ──
+    // A client that sends baseUpdatedAt (the version it loaded) gets a 409 if the
+    // row changed meanwhile — prevents silently clobbering another member's edit.
+    // Clients that omit it keep the previous last-write-wins behaviour.
+    if (req.body && req.body.baseUpdatedAt) {
+      const current = row.updated_at instanceof Date ? row.updated_at.toISOString() : row.updated_at;
+      if (current && new Date(current).getTime() !== new Date(req.body.baseUpdatedAt).getTime()) {
+        return res.status(409).json({
+          success: false,
+          code: 'CONFLICT',
+          message: 'Проект был изменён другим участником. Обновите страницу.',
+          currentUpdatedAt: current
+        });
+      }
+    }
+
+    // ── Development-stage edit gate (mirrors client canEditTab) ──
+    // While the project is in "development" and no scene is locked yet, only the
+    // owner edits freely; a scriptwriter may touch script fields and a manager
+    // may touch management fields. Everyone else is read-only. Enforced here so
+    // the gate cannot be bypassed by calling the API directly.
+    const isOwner = row.owner_id === req.user.id;
+    const stage = row.production_stage || 'development';
+    const LOCKED = new Set(['locked', 'shot', 'approved']);
+    const hasLockedScene = (row.scenes || []).some(s => s && LOCKED.has(s.status));
+    if (stage === 'development' && !hasLockedScene && !isOwner) {
+      const projectRole = (row.project_roles && row.project_roles[req.user.id]) || req.user.role || '';
+      const isScriptwriter = /сценарист|script|writer/i.test(projectRole);
+      const isManager = /менеджер|manager|producer|продюсер/i.test(projectRole);
+      const SCRIPT_FIELDS = new Set(['scriptText', 'scriptParams', 'scenes']);
+      const MANAGER_FIELDS = new Set(['productionStage', 'shootingDays', 'projectRoles', 'name', 'description', 'deadline', 'projectKind', 'coverUrl']);
+      const allowed = isScriptwriter ? SCRIPT_FIELDS : isManager ? MANAGER_FIELDS : null;
+      const blocked = !allowed || Object.keys(p).some(f => !allowed.has(f));
+      if (blocked) {
+        return res.status(403).json({
+          success: false,
+          message: 'На стадии «разработка» правки доступны только владельцу, сценаристу и менеджеру'
+        });
+      }
+    }
+
     // Build SET clause dynamically from validated patch
     const fieldMap = {
-      name: 'name', description: 'description', deadline: 'deadline',
+      name: 'name', description: 'description', deadline: 'deadline', coverUrl: 'cover_url',
       timelineDuration: 'timeline_duration', scriptText: 'script_text',
       directorNotes: 'director_notes', markers: 'markers',
       bodyMarkers: 'body_markers', bodySilhouettes: 'body_silhouettes',
@@ -688,6 +756,66 @@ app.get('/api/projects/:id/export', authRequired, async (req, res) => {
   } catch (err) {
     console.error('[EXPORT ERROR]', err.message);
     res.status(500).json({ success: false, message: 'Ошибка экспорта' });
+  }
+});
+
+// ─── Cover image: upload (stored as a file, not base64 in the DB) ───────────────
+app.post('/api/projects/:id/cover', authRequired, (req, res, next) => {
+  uploadImageMem.single('file')(req, res, (err) => {
+    if (err) return res.status(400).json({ success: false, message: err.message });
+    next();
+  });
+}, async (req, res) => {
+  try {
+    const { rows: [row] } = await pool.query('SELECT * FROM projects WHERE id = $1', [req.params.id]);
+    if (!row) return res.status(404).json({ success: false, message: 'Проект не найден' });
+    if (!(row.members || []).includes(req.user.id))
+      return res.status(403).json({ success: false, message: 'Недостаточно прав доступа' });
+    if (!req.file) return res.status(400).json({ success: false, message: 'Файл не передан' });
+
+    const ext = (path.extname(req.file.originalname).toLowerCase() || '.jpg').slice(0, 8);
+    const url = await storage.save(req.file.buffer, {
+      projectId: req.params.id, subdir: 'cover', ext, contentType: req.file.mimetype
+    });
+
+    // Drop the previous stored cover (ignore legacy base64 data: URLs)
+    if (row.cover_url) storage.remove(row.cover_url).catch(() => {});
+
+    const { rows: [updated] } = await pool.query(
+      'UPDATE projects SET cover_url = $1, updated_at = NOW() WHERE id = $2 RETURNING *',
+      [url, req.params.id]
+    );
+    res.json({ success: true, coverUrl: url, project: mapProject(updated) });
+  } catch (err) {
+    console.error('[COVER UPLOAD ERROR]', err.message);
+    res.status(500).json({ success: false, message: 'Ошибка загрузки обложки' });
+  }
+});
+
+// ─── Image asset: upload (storyboard frames, editor shots, look refs) ───────────
+// Stores a compressed image as a file and returns its URL. The client puts that
+// URL into the relevant JSON field instead of a base64 data URL.
+app.post('/api/projects/:id/image', authRequired, (req, res, next) => {
+  uploadImageMem.single('file')(req, res, (err) => {
+    if (err) return res.status(400).json({ success: false, message: err.message });
+    next();
+  });
+}, async (req, res) => {
+  try {
+    const { rows: [row] } = await pool.query('SELECT members FROM projects WHERE id = $1', [req.params.id]);
+    if (!row) return res.status(404).json({ success: false, message: 'Проект не найден' });
+    if (!(row.members || []).includes(req.user.id))
+      return res.status(403).json({ success: false, message: 'Недостаточно прав доступа' });
+    if (!req.file) return res.status(400).json({ success: false, message: 'Файл не передан' });
+
+    const ext = (path.extname(req.file.originalname).toLowerCase() || '.jpg').slice(0, 8);
+    const url = await storage.save(req.file.buffer, {
+      projectId: req.params.id, subdir: 'images', ext, contentType: req.file.mimetype
+    });
+    res.json({ success: true, url });
+  } catch (err) {
+    console.error('[IMAGE UPLOAD ERROR]', err.message);
+    res.status(500).json({ success: false, message: 'Ошибка загрузки изображения' });
   }
 });
 
