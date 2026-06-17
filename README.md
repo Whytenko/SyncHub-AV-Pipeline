@@ -35,13 +35,13 @@
 
 ## Скриншоты
 
-Лежат в `docs/screenshots/`. Если хочется быстро посмотреть — там есть прогон по основным вкладкам в демо-проекте.
+Лежат в `screenshots/` (полные и пустые состояния всех вкладок). Ниже — прогон по основным экранам в демо-проекте.
 
 | | |
 |---|---|
-| ![Dashboard](docs/screenshots/01-dashboard.png) | ![Сценарий](docs/screenshots/02-script.png) |
-| ![Режиссёр](docs/screenshots/03-director.png) | ![Монтажёр](docs/screenshots/04-editor-match.png) |
-| ![Костюмер](docs/screenshots/05-costumes.png) | ![Менеджер](docs/screenshots/06-manager.png) |
+| ![Dashboard](screenshots/01-dashboard.png) | ![Сценарий](screenshots/02-script.png) |
+| ![Режиссёр](screenshots/03-director.png) | ![Монтажёр](screenshots/04-editor-match.png) |
+| ![Костюмер](screenshots/05-costumes.png) | ![Менеджер](screenshots/06-manager.png) |
 
 ---
 
