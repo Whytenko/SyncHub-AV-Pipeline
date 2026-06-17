@@ -41,7 +41,9 @@
 |---|---|
 | ![Dashboard](screenshots/01-dashboard.png) | ![Сценарий](screenshots/02-script.png) |
 | ![Режиссёр](screenshots/03-director.png) | ![Монтажёр](screenshots/04-editor-match.png) |
-| ![Костюмер](screenshots/05-costumes.png) | ![Менеджер](screenshots/06-manager.png) |
+| ![Костюмер](screenshots/05-costumes.png) | ![Визажист](screenshots/07-makeup.png) |
+| ![Звукорежиссёр](screenshots/08-sound.png) | ![Менеджер](screenshots/06-manager.png) |
+| ![Профиль](screenshots/16-profile.png) | ![Лендинг](screenshots/landing.png) |
 
 ---
 
